@@ -1,0 +1,445 @@
+/* Enhanced Reset and Base Styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 🌀 Enhanced Form Wrapper - Purple Gradient Background */
+.form-wrapper {
+  min-height: 100vh;
+  width: 100%;
+  /* Purple gradient background matching theme */
+  background: linear-gradient(135deg, #f5f7ff 0%, #f0f2ff 40%, #e6e9ff 70%, #8b5cf6 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 20s ease infinite;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dashboard Button (Purple Glassmorphism) */
+.dashboard-btn {
+  position: absolute;
+  top: 28px;
+  left: 28px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  border-radius: 12px;
+  color: #8b5cf6;
+  font-size: 0.9em;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.15);
+  transition: all 0.3s ease;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  z-index: 100;
+  letter-spacing: 0.3px;
+}
+
+.dashboard-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px rgba(139, 92, 246, 0.25);
+  border-color: rgba(139, 92, 246, 0.3);
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.dashboard-btn:active {
+  transform: translateY(0);
+}
+
+/* Form Container */
+.form-container {
+  width: 100%;
+  max-width: 680px;
+}
+
+/* Form Header */
+.form-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.logo {
+  width: 72px;
+  height: 72px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  box-shadow: 0 15px 35px rgba(139, 92, 246, 0.3);
+}
+
+.logo-svg {
+  width: 36px;
+  height: 36px;
+  color: white;
+  stroke-width: 2.5;
+}
+
+.form-title {
+  font-size: 2em;
+  font-weight: 700;
+  color: #2c3e50;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+  text-align: center;
+}
+
+.form-subtitle {
+  color: #6b7280;
+  font-size: 0.95em;
+  font-weight: 400;
+  text-align: center;
+}
+
+/* Form Card - Glass Morphism */
+.form-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 50px 60px;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  box-shadow: 0 20px 60px rgba(139, 92, 246, 0.15);
+  position: relative;
+  z-index: 1;
+}
+
+/* Success Message */
+.success-message {
+  background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+  color: white;
+  padding: 16px 24px;
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 1em;
+  margin-bottom: 32px;
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.25);
+  animation: slideDown 0.6s ease;
+}
+
+/* Form Content */
+.form-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: #2c3e50;
+  letter-spacing: 0.3px;
+}
+
+/* Form Inputs */
+.input,
+.select,
+.textarea {
+  width: 100%;
+  padding: 14px 18px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 15px;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s ease;
+  outline: none;
+  background: white;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.input:hover,
+.select:hover,
+.textarea:hover {
+  border-color: #a78bfa;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: #9ca3af;
+}
+
+/* Disabled Input */
+.disabled-input {
+  background: #f8f9ff;
+  color: #6b7280;
+  cursor: not-allowed;
+  border-color: rgba(139, 92, 246, 0.1);
+}
+
+/* Select Styling */
+.select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%238b5cf6' d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 18px center;
+  padding-right: 48px;
+}
+
+.textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+/* Error States */
+.input-error {
+  border-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.05) !important;
+}
+
+.input-error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.error-text {
+  font-size: 0.85em;
+  color: #ef4444;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+/* Selected Chips for Area of Interest */
+.selected-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  margin: 4px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4b5563;
+  transition: all 0.2s ease;
+}
+
+.selected-chip:hover {
+  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+}
+
+.selected-chip button {
+  margin-left: 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-weight: bold;
+  color: #6b7280;
+  font-size: 1.2em;
+  transition: color 0.2s ease;
+}
+
+.selected-chip button:hover {
+  color: #ef4444;
+}
+
+/* Submit Button */
+.submit-btn {
+  width: 100%;
+  padding: 16px 30px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Inter', sans-serif;
+  margin-top: 10px;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
+}
+
+.submit-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #a78bfa 0%, #c4b5fd 100%);
+  transform: none;
+  box-shadow: none;
+}
+
+/* Small Add Button inside form */
+.submit-btn[style*="padding: 0.4rem 0.7rem"] {
+  background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+  padding: 10px 20px !important;
+  border-radius: 8px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.submit-btn[style*="padding: 0.4rem 0.7rem"]:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+}
+
+/* Form Footer */
+.form-footer {
+  text-align: center;
+  margin-top: 24px;
+  font-size: 0.85em;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .form-wrapper {
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #f5f7ff 0%, #f0f2ff 100%);
+  }
+
+  .dashboard-btn {
+    top: 20px;
+    left: 20px;
+    padding: 10px 20px;
+    font-size: 0.85em;
+  }
+
+  .form-card {
+    padding: 40px 30px;
+    border-radius: 20px;
+  }
+
+  .form-title {
+    font-size: 1.8em;
+  }
+
+  .form-subtitle {
+    font-size: 0.9em;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .input,
+  .select,
+  .textarea {
+    padding: 12px 16px;
+  }
+
+  .selected-chip {
+    padding: 6px 12px;
+    font-size: 0.8em;
+  }
+}
+
+@media (max-width: 480px) {
+  .form-wrapper {
+    padding: 30px 16px;
+  }
+
+  .dashboard-btn {
+    top: 16px;
+    left: 16px;
+    padding: 8px 16px;
+    font-size: 0.8em;
+  }
+
+  .form-card {
+    padding: 32px 24px;
+    border-radius: 16px;
+  }
+
+  .logo {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 20px;
+  }
+
+  .logo-svg {
+    width: 30px;
+    height: 30px;
+  }
+
+  .form-title {
+    font-size: 1.6em;
+  }
+
+  .form-subtitle {
+    font-size: 0.85em;
+  }
+
+  .input,
+  .select,
+  .textarea {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
+  .textarea {
+    min-height: 100px;
+  }
+
+  .submit-btn {
+    padding: 14px 24px;
+    font-size: 15px;
+  }
+
+  .success-message {
+    font-size: 0.9em;
+    padding: 12px;
+  }
+}

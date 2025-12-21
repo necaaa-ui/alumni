@@ -1,0 +1,204 @@
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import "./MentorMentee.css";
+
+export default function MenteeMentorAssignment() {
+  const [formData, setFormData] = useState({
+    mentorName: "",
+    phaseId: null,          // auto-filled Phase ID
+    phaseName: "",          // auto-filled Phase Name
+    mentee1: "",
+    mentee2: "",
+    mentee3: ""
+  });
+
+  const [errors, setErrors] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+  const [mentors, setMentors] = useState([]);
+  const [mentees, setMentees] = useState([]);
+  const [loadingPhase, setLoadingPhase] = useState(false);
+
+  useEffect(() => {
+    fetchMentors();
+    fetchMentees();
+    fetchCurrentPhase();
+  }, []);
+
+  const fetchMentors = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/mentor-mentee/mentors");
+      setMentors(res.data || []);
+    } catch (err) {
+      console.error("Error fetching mentors:", err);
+    }
+  };
+
+  const fetchMentees = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/mentor-mentee/mentees");
+      setMentees(res.data || []);
+    } catch (err) {
+      console.error("Error fetching mentees:", err);
+    }
+  };
+
+  const fetchCurrentPhase = async () => {
+    setLoadingPhase(true);
+    try {
+      const res = await axios.get("http://localhost:5000/api/phase");
+      const phases = res.data.phases || [];
+      const currentPhase = phases.find(
+        (p) => new Date(p.startDate) <= new Date() && new Date() <= new Date(p.endDate)
+      );
+      if (currentPhase) {
+        setFormData(prev => ({
+          ...prev,
+          phaseId: currentPhase.phaseId,
+          phaseName: `${currentPhase.name} (${new Date(currentPhase.startDate).toLocaleDateString()} - ${new Date(currentPhase.endDate).toLocaleDateString()})`
+        }));
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          phaseId: null,
+          phaseName: "No active phase"
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to fetch phases:", err);
+    } finally {
+      setLoadingPhase(false);
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.mentorName) newErrors.mentorName = "Mentor name is required";
+    if (!formData.mentee1) newErrors.mentee1 = "At least 1 mentee is mandatory";
+    if (!formData.phaseId) newErrors.phase = "No active phase available";
+    return newErrors;
+  };
+
+  const handleSubmit = async () => {
+    const newErrors = validateForm();
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    try {
+      const menteeIds = [formData.mentee1, formData.mentee2, formData.mentee3].filter(Boolean);
+
+      await axios.post("http://localhost:5000/api/mentor-mentee/assign", {
+        mentor_user_id: formData.mentorName,
+        mentee_user_ids: menteeIds,
+        phaseId: formData.phaseId
+      });
+
+      setSubmitted(true);
+      setTimeout(() => {
+        setFormData({
+          mentorName: "",
+          phaseId: formData.phaseId,
+          phaseName: formData.phaseName,
+          mentee1: "",
+          mentee2: "",
+          mentee3: ""
+        });
+        setSubmitted(false);
+      }, 2500);
+    } catch (err) {
+      console.error(err);
+      alert("Error assigning mentor. Please try again.");
+    }
+  };
+
+  return (
+    <div className="form-wrapper">
+      <button className="dashboard-btn" onClick={() => (window.location.href = "/")}>
+        ← Go to Dashboard
+      </button>
+
+      <div className="form-container">
+        <div className="form-header">
+          <h1 className="form-title">Mentee-Mentor Assignment</h1>
+          <p className="form-subtitle">Assign mentees to mentors</p>
+        </div>
+
+        <div className="form-card">
+          {submitted && <div className="success-message">✓ Assignment submitted successfully!</div>}
+
+          <div className="form-content">
+
+            {/* Mentor dropdown */}
+            <div className="form-group">
+              <label className="label">Mentor Name <span className="required">*</span></label>
+              <select
+                name="mentorName"
+                value={formData.mentorName}
+                onChange={handleChange}
+                className={`select ${errors.mentorName ? "input-error" : ""}`}
+              >
+                <option value="">-- Select Mentor --</option>
+                {mentors.map((mentor) => (
+                  <option key={mentor.user_id} value={mentor.user_id}>
+                    {mentor.name} ({mentor.email})
+                  </option>
+                ))}
+              </select>
+              {errors.mentorName && <span className="error-text">{errors.mentorName}</span>}
+            </div>
+
+            {/* Auto-filled Phase */}
+            <div className="form-group">
+              <label className="label">Phase <span className="required">*</span></label>
+              <input
+                type="text"
+                value={formData.phaseName}
+                readOnly
+                className="input readonly-input"
+              />
+              {errors.phase && <span className="error-text">{errors.phase}</span>}
+            </div>
+
+            {/* Mentee dropdowns */}
+            {[1, 2, 3].map((i) => (
+              <div className="form-group" key={i}>
+                <label className="label">
+                  Mentee {i} {i === 1 ? <span className="required">*</span> : <span className="optional-text">(Optional)</span>}
+                </label>
+                <select
+                  name={`mentee${i}`}
+                  value={formData[`mentee${i}`]}
+                  onChange={handleChange}
+                  className={`select ${i === 1 && errors.mentee1 ? "input-error" : ""}`}
+                >
+                  <option value="">-- Select Mentee --</option>
+                  {mentees.map((mentee) => (
+                    <option key={mentee.user_id} value={mentee.user_id}>
+                      {mentee.name} ({mentee.email}) - {mentee.area_of_interest}
+                    </option>
+                  ))}
+                </select>
+                {i === 1 && errors.mentee1 && <span className="error-text">{errors.mentee1}</span>}
+              </div>
+            ))}
+
+            <button
+              onClick={handleSubmit}
+              className="submit-btn"
+              disabled={submitted || loadingPhase}
+            >
+              {submitted ? "Submitted!" : "Assign Mentor"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
