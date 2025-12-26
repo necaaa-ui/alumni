@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./MenteeRegistration.css";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export default function MenteeRegistrationForm() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -67,7 +69,7 @@ export default function MenteeRegistrationForm() {
 
   const fetchPhases = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/phase");
+      const res = await fetch(`${API_BASE_URL}/api/phase`);
       const data = await res.json();
       if (res.ok && data.phases) {
         setPhases(data.phases);
@@ -123,7 +125,7 @@ export default function MenteeRegistrationForm() {
     try {
       setLoadingEmail(true);
       const res = await fetch(
-        `http://localhost:5000/api/users/get-by-email?email=${encodeURIComponent(email)}`
+        `${API_BASE_URL}/api/users/get-by-email?email=${encodeURIComponent(email)}`
       );
       const data = await res.json();
 
@@ -188,7 +190,7 @@ export default function MenteeRegistrationForm() {
     setSubmitting(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/mentee/requests/mentee", {
+      const res = await fetch(`${API_BASE_URL}/api/mentee/requests/mentee`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -245,7 +247,6 @@ export default function MenteeRegistrationForm() {
           <p className="form-subtitle">
             {formData.email ? `Registering as: ${formData.email}` : "Only registered alumni can apply"}
           </p>
-         
         </div>
 
         <div className="form-card">

@@ -3,6 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import './MeetingStatus.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export default function MeetingStatusUpdateForm() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -39,7 +41,7 @@ export default function MeetingStatusUpdateForm() {
   const fetchPhases = async () => {
     try {
       setLoadingPhase(true);
-      const res = await axios.get("http://localhost:5000/api/phase");
+      const res = await axios.get(`${API_BASE_URL}/api/phase`);
       const data = res.data;
       
       if (data.phases) {
@@ -80,7 +82,7 @@ export default function MeetingStatusUpdateForm() {
     const fetchMenteeId = async () => {
       try {
         const res = await axios.get(
-          `http://localhost:5000/api/meeting-status/mentee/by-email?email=${encodeURIComponent(menteeEmailParam)}`
+          `${API_BASE_URL}/api/meeting-status/mentee/by-email?email=${encodeURIComponent(menteeEmailParam)}`
         );
 
         if (!res.data || !res.data._id) {
@@ -150,7 +152,7 @@ export default function MeetingStatusUpdateForm() {
 
     try {
       // ✅ Updated to include phaseId in the request
-      await axios.post("http://localhost:5000/api/meeting-status/update", {
+      await axios.post(`${API_BASE_URL}/api/meeting-status/update`, {
         mentorEmail: formData.mentorEmail,
         menteeIds: [menteeId],
         meetingId: meetingIdParam,

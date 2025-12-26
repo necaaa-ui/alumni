@@ -4,6 +4,9 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import './MentorshippDashboard1.css';
 
+// Add API base URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
 // Simple icon components
 const PeopleIcon = () => <span className="md-icon">👨‍🏫</span>;
 const SchoolIcon = () => <span className="md-icon">👨‍🎓</span>;
@@ -86,7 +89,7 @@ export default function MentorshipDashboard() {
   // Fetch dashboard statistics - keeping for stats display in sidebar if needed
   const fetchDashboardStats = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/dashboard/stats");
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/stats`);
       if (res.data.success) {
         setStats(res.data);
       }
@@ -98,7 +101,7 @@ export default function MentorshipDashboard() {
   // Fetch all mentors
   const fetchMentors = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/dashboard/mentors");
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/mentors`);
       console.log("Mentors API Response:", res.data);
       if (res.data.success) {
         const mentorsData = res.data.mentors || [];
@@ -115,7 +118,7 @@ export default function MentorshipDashboard() {
   // Fetch all mentees
   const fetchMentees = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/dashboard/mentees");
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/mentees`);
       if (res.data.success) {
         const menteesData = res.data.mentees || [];
         setMentees(menteesData);
@@ -131,7 +134,7 @@ export default function MentorshipDashboard() {
   // Fetch assignments
   const fetchAssignments = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/dashboard/assignments");
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/assignments`);
       if (res.data.success) {
         const assignmentsData = res.data.assignments || [];
         setAssignments(assignmentsData);
@@ -152,7 +155,7 @@ export default function MentorshipDashboard() {
       if (meetingFilters.dateTo) params.dateTo = meetingFilters.dateTo;
       if (meetingFilters.status !== 'all') params.status = meetingFilters.status;
       
-      const res = await axios.get("http://localhost:5000/api/dashboard/meetings", { params });
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/meetings`, { params });
       if (res.data.success) {
         setMeetings(res.data.meetings || []);
         // Use backend-provided stats
@@ -170,7 +173,7 @@ export default function MentorshipDashboard() {
   // Fetch feedbacks
   const fetchFeedbacks = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/dashboard/feedbacks");
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/feedbacks`);
       if (res.data.success) {
         setFeedbacks(res.data.feedbacks || []);
       }

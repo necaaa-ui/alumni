@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./MentorMentee.css";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export default function MenteeMentorAssignment() {
   const [formData, setFormData] = useState({
     mentorName: "",
@@ -26,7 +28,7 @@ export default function MenteeMentorAssignment() {
 
   const fetchMentors = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/mentor-mentee/mentors");
+      const res = await axios.get(`${API_BASE_URL}/api/mentor-mentee/mentors`);
       setMentors(res.data || []);
     } catch (err) {
       console.error("Error fetching mentors:", err);
@@ -35,7 +37,7 @@ export default function MenteeMentorAssignment() {
 
   const fetchMentees = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/mentor-mentee/mentees");
+      const res = await axios.get(`${API_BASE_URL}/api/mentor-mentee/mentees`);
       setMentees(res.data || []);
     } catch (err) {
       console.error("Error fetching mentees:", err);
@@ -45,7 +47,7 @@ export default function MenteeMentorAssignment() {
   const fetchCurrentPhase = async () => {
     setLoadingPhase(true);
     try {
-      const res = await axios.get("http://localhost:5000/api/phase");
+      const res = await axios.get(`${API_BASE_URL}/api/phase`);
       const phases = res.data.phases || [];
       const currentPhase = phases.find(
         (p) => new Date(p.startDate) <= new Date() && new Date() <= new Date(p.endDate)
@@ -94,7 +96,7 @@ export default function MenteeMentorAssignment() {
     try {
       const menteeIds = [formData.mentee1, formData.mentee2, formData.mentee3].filter(Boolean);
 
-      await axios.post("http://localhost:5000/api/mentor-mentee/assign", {
+      await axios.post(`${API_BASE_URL}/api/mentor-mentee/assign`, {
         mentor_user_id: formData.mentorName,
         mentee_user_ids: menteeIds,
         phaseId: formData.phaseId

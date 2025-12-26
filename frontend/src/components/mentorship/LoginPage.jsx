@@ -3,6 +3,8 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "./LoginPage.css";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -31,7 +33,7 @@ export default function LoginPage() {
       } 
       else {
         // Use existing endpoint to check if user exists
-        const res = await axios.post("http://localhost:5000/api/auth/login", { email });
+        const res = await axios.post(`${API_BASE_URL}/api/auth/login`, { email });
 
         if (!res.data.success) {
           setError(res.data.message || "User not found");

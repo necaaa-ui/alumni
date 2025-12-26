@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./MentorRegistration.css";
 
+// Add API base URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
 export default function MentorRegistrationForm() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -69,7 +72,7 @@ export default function MentorRegistrationForm() {
 
   const fetchPhases = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/phase");
+      const res = await fetch(`${API_BASE_URL}/api/phase`);
       const data = await res.json();
       if (res.ok && data.phases) {
         setPhases(data.phases);
@@ -91,6 +94,7 @@ export default function MentorRegistrationForm() {
       console.error("Failed to fetch phases:", err);
     }
   };
+  
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -118,7 +122,7 @@ export default function MentorRegistrationForm() {
     try {
       setLoadingEmail(true);
       const res = await fetch(
-        `http://localhost:5000/api/mentor/fetch-user?email=${encodeURIComponent(email)}`
+        `${API_BASE_URL}/api/mentor/fetch-user?email=${encodeURIComponent(email)}`
       );
       const data = await res.json();
 
@@ -182,7 +186,7 @@ export default function MentorRegistrationForm() {
     setSubmitting(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/mentor/register", {
+      const res = await fetch(`${API_BASE_URL}/api/mentor/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

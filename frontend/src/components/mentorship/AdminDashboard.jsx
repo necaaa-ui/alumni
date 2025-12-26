@@ -3,6 +3,8 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import './AdminDashboard.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export default function AdminDashboard() {
   const [phases, setPhases] = useState([]);
   const [name, setName] = useState("");
@@ -16,7 +18,7 @@ export default function AdminDashboard() {
   // Fetch all phases and counts
   const fetchPhases = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/phase");
+      const res = await axios.get(`${API_BASE_URL}/api/phase`);
       const phasesData = res.data.phases;
 
       // Fetch mentee and mentor counts for each phase
@@ -25,10 +27,10 @@ export default function AdminDashboard() {
           try {
             const [menteeRes, mentorRes] = await Promise.all([
               axios.get(
-                `http://localhost:5000/api/phase/mentee-count?phaseId=${phase.phaseId}`
+                `${API_BASE_URL}/api/phase/mentee-count?phaseId=${phase.phaseId}`
               ),
               axios.get(
-                `http://localhost:5000/api/phase/mentor-count?phaseId=${phase.phaseId}`
+                `${API_BASE_URL}/api/phase/mentor-count?phaseId=${phase.phaseId}`
               ),
             ]);
 
@@ -68,7 +70,7 @@ export default function AdminDashboard() {
     setLoading(true);
 
     try {
-      await axios.post("http://localhost:5000/api/phase", {
+      await axios.post(`${API_BASE_URL}/api/phase`, {
         name,
         startDate,
         endDate,

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './MentorshipSchedulingForm.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export default function MentorshipSchedulingForm() {
   const navigate = useNavigate();
   
@@ -72,7 +74,7 @@ export default function MentorshipSchedulingForm() {
   const fetchPhases = async () => {
     try {
       setLoadingPhase(true);
-      const res = await axios.get("http://localhost:5000/api/phase");
+      const res = await axios.get(`${API_BASE_URL}/api/phase`);
       const data = res.data;
       if (data.phases) {
         setPhases(data.phases);
@@ -148,7 +150,7 @@ export default function MentorshipSchedulingForm() {
 
   const fetchMentorData = async (email) => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/meetings/mentor-details?email=${email}`);
+      const res = await axios.get(`${API_BASE_URL}/api/meetings/mentor-details?email=${email}`);
 
       const mentor = res.data.mentor || {};
       const assigned = res.data.assignedMentees || [];
@@ -315,7 +317,7 @@ export default function MentorshipSchedulingForm() {
         ...customDates.map(d => new Date(d))
       ].map(d => new Date(d).toISOString());
 
-      await axios.post("http://localhost:5000/api/meetings/schedule", {
+      await axios.post(`${API_BASE_URL}/api/meetings/schedule`, {
         mentor_user_id: formData.mentorId,
         mentee_user_ids: selectedMentees.map(m => m._id),
         meeting_dates: allDates,
@@ -386,7 +388,6 @@ export default function MentorshipSchedulingForm() {
           <p className="form-subtitle">
             {formData.mentorEmail ? `Scheduling as mentor: ${formData.mentorEmail}` : "Manage mentees for the mentor"}
           </p>
-        
         </div>
 
         <div className="form-card">
@@ -671,6 +672,9 @@ export default function MentorshipSchedulingForm() {
               "Scheduled!"
             ) : !formData.phaseId ? (
               "No Active Phase"
+
+
+              
             ) : (
               "Schedule Meeting"
             )}

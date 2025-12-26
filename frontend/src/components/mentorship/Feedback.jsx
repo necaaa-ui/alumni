@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./ProgramFeedback.css";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export default function ProgramFeedbackForm() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -93,7 +95,7 @@ export default function ProgramFeedbackForm() {
     try {
       setLoadingEmail(true);
       const res = await fetch(
-        `http://localhost:5000/api/program-feedback/get-user-by-email?email=${encodeURIComponent(email)}`
+        `${API_BASE_URL}/api/program-feedback/get-user-by-email?email=${encodeURIComponent(email)}`
       );
       const data = await res.json();
 
@@ -145,7 +147,7 @@ export default function ProgramFeedbackForm() {
     setSubmitting(true);
 
     try {
-      const res = await fetch("http://localhost:5000/api/program-feedback/submit-feedback", {
+      const res = await fetch(`${API_BASE_URL}/api/program-feedback/submit-feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -233,7 +235,6 @@ export default function ProgramFeedbackForm() {
           <p className="form-subtitle">
             {formData.email ? `Providing feedback as: ${formData.email}` : "Share your experience with us"}
           </p>
-         
         </div>
 
         <div className="form-card">

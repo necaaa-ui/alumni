@@ -30,6 +30,8 @@ import {
 } from 'lucide-react';
 import './MentorshipDashboard.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const REFRESH_INTERVALS = {
   STATS: 30000,
   PHASE_STATS: 60000,
@@ -87,7 +89,7 @@ export default function RealTimeDashboard() {
   const checkUserRole = useCallback(async (email) => {
     try {
       // Use the same login endpoint to get user's actual role
-      const res = await axios.post('http://localhost:5000/api/auth/login', { email });
+      const res = await axios.post(`${API_BASE_URL}/api/auth/login`, { email });
       
       if (res.data.success) {
         // The existing endpoint returns role: "mentor", "mentee", or "new_user"
@@ -147,7 +149,7 @@ export default function RealTimeDashboard() {
   // Real-time data fetching functions
   const fetchDashboardStats = useCallback(async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/dashboard/stats');
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/stats`);
       if (res.data.success) {
         setDashboardStats(res.data.stats);
         setLastUpdated(res.data.lastUpdated || new Date());
@@ -159,7 +161,7 @@ export default function RealTimeDashboard() {
 
   const fetchPhaseStats = useCallback(async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/dashboard/phase-stats');
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/phase-stats`);
       if (res.data.success) {
         setPhaseStats(res.data.phases || []);
       }
@@ -170,7 +172,7 @@ export default function RealTimeDashboard() {
 
   const fetchAllMentors = useCallback(async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/dashboard/mentors');
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/mentors`);
       if (res.data.success) {
         setAllMentors(res.data.mentors || []);
       }
@@ -181,7 +183,7 @@ export default function RealTimeDashboard() {
 
   const fetchAllMentees = useCallback(async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/dashboard/mentees');
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/mentees`);
       if (res.data.success) {
         setAllMentees(res.data.mentees || []);
       }
@@ -192,7 +194,7 @@ export default function RealTimeDashboard() {
 
   const fetchAllAssignments = useCallback(async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/dashboard/assignments');
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/assignments`);
       if (res.data.success) {
         setAllAssignments(res.data.assignments || []);
       }
@@ -203,7 +205,7 @@ export default function RealTimeDashboard() {
 
   const fetchAllMeetings = useCallback(async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/dashboard/meetings');
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/meetings`);
       if (res.data.success) {
         setAllMeetings(res.data.meetings || []);
         setMeetingStats(res.data.stats);
@@ -215,7 +217,7 @@ export default function RealTimeDashboard() {
 
   const fetchAllFeedbacks = useCallback(async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/dashboard/feedbacks');
+      const res = await axios.get(`${API_BASE_URL}/api/dashboard/feedbacks`);
       if (res.data.success) {
         setAllFeedbacks(res.data.feedbacks || []);
       }
