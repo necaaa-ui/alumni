@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const AssignedCompanies = ({ userEmail }) => {
   const [alumniInfo, setAlumniInfo] = useState(null);
   const [companies, setCompanies] = useState([]);
@@ -78,7 +78,7 @@ const AssignedCompanies = ({ userEmail }) => {
 
       console.log('🔍 Fetching alumni with email:', email);
       
-      const response = await axios.get(`http://localhost:5000/api/members/email/${encodeURIComponent(email)}`);
+      const response = await axios.get(`${API_BASE_URL}/api/members/email/${encodeURIComponent(email)}`);
       
       console.log('📦 Response:', response.data);
       
@@ -123,7 +123,7 @@ const AssignedCompanies = ({ userEmail }) => {
       setLoading(true);
       console.log('🔍 Fetching company mappings for alumni ID:', alumniId);
       
-      const response = await axios.get(`http://localhost:5000/api/company-mapping/alumni/${alumniId}`);
+      const response = await axios.get(`${API_BASE_URL}/api/company-mapping/alumni/${alumniId}`);
       
       console.log('📦 Company mappings response:', response.data);
       
@@ -146,7 +146,7 @@ const AssignedCompanies = ({ userEmail }) => {
     try {
       console.log('🔄 Updating status:', { mappingId, newStatus });
       
-      const response = await axios.patch(`http://localhost:5000/api/company-mapping/${mappingId}`, {
+      const response = await axios.patch(`${API_BASE_URL}/api/company-mapping/${mappingId}`, {
         alumni_status: newStatus,
         remarks: newRemarks || ''
       });
@@ -172,7 +172,7 @@ const AssignedCompanies = ({ userEmail }) => {
     try {
       console.log('📝 Updating remarks for mapping:', mappingId);
       
-      await axios.patch(`http://localhost:5000/api/company-mapping/${mappingId}`, {
+      await axios.patch(`${API_BASE_URL}/api/company-mapping/${mappingId}`, {
         remarks: remarks
       });
       

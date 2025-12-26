@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const AlumniJobRequestsAdmin = ({ onBackToDashboard }) => {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [jobRequests, setJobRequests] = useState([]);
@@ -23,7 +23,7 @@ const AlumniJobRequestsAdmin = ({ onBackToDashboard }) => {
       setLoading(true);
       setError(null);
       
-      const response = await axios.get('http://localhost:5000/api/job-requests');
+      const response = await axios.get('${API_BASE_URL}/api/job-requests');
       
       if (response.data.success) {
         setJobRequests(response.data.data);
@@ -40,7 +40,7 @@ const AlumniJobRequestsAdmin = ({ onBackToDashboard }) => {
 
   const fetchCompanies = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/company-mapping/available-companies');
+      const response = await axios.get(`${API_BASE_URL}/api/company-mapping/available-companies`);
       
       if (response.data.success) {
         setCompanies(response.data.data);
@@ -55,7 +55,7 @@ const AlumniJobRequestsAdmin = ({ onBackToDashboard }) => {
   // Fetch already assigned companies for alumni
   const fetchAssignedCompanies = async (alumniId) => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/company-mapping/alumni/${alumniId}/assigned-companies`);
+      const response = await axios.get(`${API_BASE_URL}/api/company-mapping/alumni/${alumniId}/assigned-companies`);
       if (response.data.success) {
         setAssignedCompanies(response.data.data.assigned_company_ids || []);
       }
@@ -102,7 +102,7 @@ const AlumniJobRequestsAdmin = ({ onBackToDashboard }) => {
 
     try {
       // Step 1: Assign multiple companies to alumni
-      const mappingResponse = await axios.post('http://localhost:5000/api/company-mapping/assign-multiple', {
+      const mappingResponse = await axios.post(`${API_BASE_URL}/api/company-mapping/assign-multiple`, {
         alumni_user_id: selectedRequest.alumni_user_id,
         company_ids: selectedCompanies,
         remarks: remarks || null
@@ -111,7 +111,7 @@ const AlumniJobRequestsAdmin = ({ onBackToDashboard }) => {
       if (mappingResponse.data.success) {
         // Step 2: Update job request status to "Approved"
         const updateResponse = await axios.patch(
-          `http://localhost:5000/api/job-requests/${selectedRequest.request_id}`,
+          `${API_BASE_URL}/api/job-requests/${selectedRequest.request_id}`,
           { status: 'Approved' }
         );
 
@@ -174,7 +174,7 @@ const AlumniJobRequestsAdmin = ({ onBackToDashboard }) => {
 
     try {
       const response = await axios.patch(
-        `http://localhost:5000/api/job-requests/${selectedRequest.request_id}`,
+        `${API_BASE_URL}/api/job-requests/${selectedRequest.request_id}`,
         { status: 'Rejected' }
       );
 

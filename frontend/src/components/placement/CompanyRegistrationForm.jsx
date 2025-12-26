@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { Plus, XCircle } from 'lucide-react';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const styles = {
   container: {
@@ -542,7 +542,7 @@ const CompanyRegistrationForm = () => {
       console.log('Sending form data:', Object.fromEntries(formDataToSend));
 
       const response = await axios.post(
-        'http://localhost:5000/api/company/register',
+        '${API_BASE_URL}/api/company/register',
         formDataToSend,
         {
           headers: {

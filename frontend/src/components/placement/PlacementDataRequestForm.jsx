@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, Mail, Phone, GraduationCap, MapPin, Zap, Building2, Clock, DollarSign, MessageSquare, Paperclip, CheckCircle, AlertCircle, X, Loader2, XCircle } from 'lucide-react';
 
-// API Base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // Define styles as JavaScript objects
 const styles = {

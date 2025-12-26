@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./PlacementFeedbackForm.css";
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const PlacementFeedbackForm = () => {
   const [email, setEmail] = useState("");
   const [feedback, setFeedback] = useState("");
@@ -35,7 +35,7 @@ const PlacementFeedbackForm = () => {
   const fetchPlacementRequestEmails = async () => {
     try {
       setLoadingEmails(true);
-      const res = await axios.get("http://localhost:5000/api/placement-requests");
+      const res = await axios.get("${API_BASE_URL}/api/placement-requests");
       
       if (res.data.success && res.data.data) {
         // Extract unique emails from placement requests
@@ -68,7 +68,7 @@ const PlacementFeedbackForm = () => {
       
       // First check if user has placement request
       const placementCheckRes = await axios.get(
-        `http://localhost:5000/api/placement-requests/check/${encodedEmail}`
+        `${API_BASE_URL}/api/placement-requests/check/${encodedEmail}`
       );
 
       if (placementCheckRes.data.success && !placementCheckRes.data.hasRequested) {
@@ -80,7 +80,7 @@ const PlacementFeedbackForm = () => {
 
       // If user has placement request, fetch their details
       const res = await axios.get(
-        `http://localhost:5000/api/members/email/${encodedEmail}`
+        `${API_BASE_URL}/api/members/email/${encodedEmail}`
       );
 
       console.log("Backend response:", res.data);
@@ -181,7 +181,7 @@ const PlacementFeedbackForm = () => {
     try {
       // Submit feedback with MongoDB _id as string
       const response = await axios.post(
-        "http://localhost:5000/api/feedback/submit-feedback",
+        `${API_BASE_URL}/api/feedback/submit-feedback`,
         {
           user_id: autoData.userId, // MongoDB _id as string
           feedback_text: feedback

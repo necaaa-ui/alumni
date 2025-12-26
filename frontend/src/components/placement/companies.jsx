@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const Companies = () => {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +18,7 @@ const Companies = () => {
 const fetchCompanies = async () => {
   try {
     setLoading(true);
-    const response = await axios.get('http://localhost:5000/api/company-mapping/available-companies');
+    const response = await axios.get('${API_BASE_URL}/api/company-mapping/available-companies');
     
     if (response.data.success) {
       setCompanies(response.data.data);

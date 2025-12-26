@@ -18,9 +18,7 @@ const InterviewResults = () => {
   const [finalStatus, setFinalStatus] = useState('');
   const [coordinatorRemark, setCoordinatorRemark] = useState('');
   const [isSavingFinalStatus, setIsSavingFinalStatus] = useState(false);
-
-  const API_BASE = 'http://localhost:5000/api';
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   // Fetch all alumni with company count
   useEffect(() => {
     fetchAlumniWithCounts();
@@ -31,7 +29,7 @@ const InterviewResults = () => {
     try {
       setLoading(true);
       
-      const mappingsRes = await fetch(`${API_BASE}/company-mapping`);
+      const mappingsRes = await fetch(`${API_BASE_URL}/company-mapping`);
       const mappingsData = await mappingsRes.json();
       
       if (mappingsData.success) {
@@ -42,7 +40,8 @@ const InterviewResults = () => {
           
           if (!alumniMap.has(alumniId)) {
             alumniMap.set(alumniId, {
-              id: alumniId,
+    
+          id: alumniId,
               name: mapping.alumniName,
               batch: mapping.alumniBatch,
               email: mapping.alumniEmail,
@@ -123,7 +122,7 @@ const InterviewResults = () => {
       setEditingCompany(null);
       
       // Fetch companies assigned to this alumni
-      const companiesRes = await fetch(`${API_BASE}/company-mapping/alumni/${alumni.id}`);
+      const companiesRes = await fetch(`${API_BASE_URL}/company-mapping/alumni/${alumni.id}`);
       const companiesData = await companiesRes.json();
       
       if (companiesData.success) {
@@ -131,7 +130,7 @@ const InterviewResults = () => {
       }
       
       // Fetch alumni details from members collection
-      const memberRes = await fetch(`${API_BASE}/members/email/${encodeURIComponent(alumni.email)}`);
+      const memberRes = await fetch(`${API_BASE_URL}/members/email/${encodeURIComponent(alumni.email)}`);
       const memberData = await memberRes.json();
       
       if (memberData.success && memberData.member) {
@@ -186,7 +185,7 @@ const InterviewResults = () => {
       setUpdatingStatus(mappingId);
       setUpdateError(null);
       
-      const response = await fetch(`${API_BASE}/company-mapping/${mappingId}`, {
+      const response = await fetch(`${API_BASE_URL}/company-mapping/${mappingId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -247,7 +246,7 @@ const InterviewResults = () => {
       setIsSavingFinalStatus(true);
       setUpdateError(null);
 
-      const response = await fetch(`${API_BASE}/company-mapping/${mappingId}`, {
+      const response = await fetch(`${API_BASE_URL}/company-mapping/${mappingId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

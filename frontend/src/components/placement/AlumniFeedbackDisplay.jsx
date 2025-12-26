@@ -7,7 +7,7 @@ import {
   GraduationCap,
   Search
 } from 'lucide-react';
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const AlumniFeedbackDisplay = () => {
   const [feedbacks, setFeedbacks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +23,7 @@ const AlumniFeedbackDisplay = () => {
   const fetchFeedbacks = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:5000/api/requester-feedback');
+      const response = await axios.get('${API_BASE_URL}/api/requester-feedback');
       
       if (response.data.success) {
         setFeedbacks(response.data.feedbacks);

@@ -10,7 +10,7 @@ const InterviewResultsView = () => {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const API_BASE = 'http://localhost:5000/api'; // Adjust your API URL
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // Fetch all alumni with company count
   useEffect(() => {
@@ -22,7 +22,7 @@ const InterviewResultsView = () => {
       setLoading(true);
       
       // Fetch all mappings
-      const mappingsRes = await fetch(`${API_BASE}/company-mapping`);
+      const mappingsRes = await fetch(`${API_BASE_URL}/company-mapping`);
       const mappingsData = await mappingsRes.json();
       
       if (mappingsData.success) {
@@ -68,7 +68,7 @@ const InterviewResultsView = () => {
       setDetailsLoading(true);
       
       // First, fetch companies assigned to this alumni
-      const companiesRes = await fetch(`${API_BASE}/company-mapping/alumni/${alumni.id}`);
+      const companiesRes = await fetch(`${API_BASE_URL}/company-mapping/alumni/${alumni.id}`);
       const companiesData = await companiesRes.json();
       
       if (companiesData.success) {
@@ -76,7 +76,7 @@ const InterviewResultsView = () => {
       }
       
       // Then, fetch alumni details from members collection using email
-      const memberRes = await fetch(`${API_BASE}/members/email/${encodeURIComponent(alumni.email)}`);
+      const memberRes = await fetch(`${API_BASE_URL}/members/email/${encodeURIComponent(alumni.email)}`);
       const memberData = await memberRes.json();
       
       if (memberData.success && memberData.member) {
