@@ -10,9 +10,7 @@ const InterviewResultsView = () => {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Use environment variable for API base URL
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   // Fetch all alumni with company count
   useEffect(() => {
     fetchAlumniWithCounts();
@@ -24,12 +22,6 @@ const InterviewResultsView = () => {
       
       // Fetch all mappings
       const mappingsRes = await fetch(`${API_BASE_URL}/company-mapping`);
-      
-      // Check if response is OK
-      if (!mappingsRes.ok) {
-        throw new Error(`HTTP error! status: ${mappingsRes.status}`);
-      }
-      
       const mappingsData = await mappingsRes.json();
       
       if (mappingsData.success) {
@@ -76,11 +68,6 @@ const InterviewResultsView = () => {
       
       // First, fetch companies assigned to this alumni
       const companiesRes = await fetch(`${API_BASE_URL}/company-mapping/alumni/${alumni.id}`);
-      
-      if (!companiesRes.ok) {
-        throw new Error(`HTTP error! status: ${companiesRes.status}`);
-      }
-      
       const companiesData = await companiesRes.json();
       
       if (companiesData.success) {
@@ -88,21 +75,15 @@ const InterviewResultsView = () => {
       }
       
       // Then, fetch alumni details from members collection using email
-      // Note: Changed from /members/email to /company-mapping/members/email based on your backend route
-      const memberRes = await fetch(`${API_BASE_URL}/company-mapping/members/email/${encodeURIComponent(alumni.email)}`);
-      
-      if (!memberRes.ok) {
-        throw new Error(`HTTP error! status: ${memberRes.status}`);
-      }
-      
+      const memberRes = await fetch(`${API_BASE_URL}/members/email/${encodeURIComponent(alumni.email)}`);
       const memberData = await memberRes.json();
       
-      if (memberData.success && memberData.data) {
+      if (memberData.success && memberData.member) {
         setAlumniDetails({
-          name: memberData.data.basic?.name || alumni.name || 'N/A',
-          email: memberData.data.basic?.email_id || alumni.email || 'N/A',
-          phone: memberData.data.contact_details?.mobile || 'N/A',
-          batch: memberData.data.basic?.label || alumni.batch || 'N/A',
+          name: memberData.member.name || alumni.name || 'N/A',
+          email: memberData.member.email || alumni.email || 'N/A',
+          phone: memberData.member.mobile || 'N/A',
+          batch: memberData.member.batch || alumni.batch || 'N/A',
           skills: [] // You can add skills if available
         });
       } else {
@@ -171,9 +152,6 @@ const InterviewResultsView = () => {
             <p style={{ color: '#6b7280', fontSize: '1rem' }}>
               Track alumni company assignments and application status
             </p>
-            <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.5rem' }}>
-              API Base URL: {API_BASE_URL}
-            </div>
           </div>
 
           {/* Search Bar */}
