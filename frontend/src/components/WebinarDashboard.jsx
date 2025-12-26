@@ -10,7 +10,7 @@ import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, Align
 import { saveAs } from 'file-saver';
 
 // API Base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 import MentorshipDashboard from './MentorshipDashboard';
 import WebinarAlumniFeedbackForm from "./webinar/WebinarAlumniFeedbackForm";
 import WebinarCompletedDetailsForm from "./webinar/WebinarCompletedDetailsForm";

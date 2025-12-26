@@ -486,9 +486,11 @@ const handleInputBlur = (e) => {
   target.style.transform = 'translateY(0)';
 };
 
-export default function AlumniJobRequestForm() {
+
+  export default function AlumniJobRequestForm({ userEmail, onSubmitSuccess }) {
+  // Initialize formData with the email from props
   const [formData, setFormData] = useState({
-    email: '',
+    email: userEmail || '', // Use the email from placement portal
     location: '',
     skillset: [],
     company: '',
@@ -525,10 +527,57 @@ export default function AlumniJobRequestForm() {
   const skillAddButtonRef = useRef(null);
   const toasterCloseRef = useRef(null);
 
+  // Auto-fill user data when component mounts or email changes
   useEffect(() => {
-    // Initialize refs for skill tag remove buttons
-    skillTagRemoveRefs.current = skillTagRemoveRefs.current.slice(0, formData.skillset.length);
-  }, [formData.skillset.length]);
+    if (userEmail) {
+      setFormData(prev => ({
+        ...prev,
+        email: userEmail
+      }));
+      
+      // Automatically fetch user details
+      autoFillUserDetails(userEmail);
+    }
+  }, [userEmail]);
+
+  const autoFillUserDetails = async (email) => {
+    if (!email) return;
+    
+    setIsAutoFilling(true);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/members/email/${encodeURIComponent(email)}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+
+      if (data.success && data.member) {
+        setUserId(data.member._id);
+        
+        setDisplayData({
+          name: data.member.name || '',
+          contact: data.member.mobile || '',
+          batch: data.member.batch || ''
+        });
+        
+        showToaster("success", "✨ User details auto-filled successfully!");
+      } else {
+        showToaster("error", "❌ User not found in database. Please use registered email.");
+        setUserId(null);
+        setDisplayData({ name: '', contact: '', batch: '' });
+      }
+    } catch (err) {
+      console.error('Auto-fill error:', err);
+      showToaster("error", "Auto-fill not available. Please check your connection.");
+      setUserId(null);
+      setDisplayData({ name: '', contact: '', batch: '' });
+    } finally {
+      setIsAutoFilling(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value, type, checked, files } = e.target;
@@ -574,44 +623,10 @@ export default function AlumniJobRequestForm() {
     }, 3000);
   };
 
-  const handleEmailBlur = async () => {
-    const email = formData.email.trim();
-    if (!email) return;
-
-    setIsAutoFilling(true);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/members/email/${encodeURIComponent(email)}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-
-      if (data.success && data.member) {
-        setUserId(data.member._id);
-        
-        setDisplayData({
-          name: data.member.name || '',
-          contact: data.member.mobile || '',
-          batch: data.member.batch || ''
-        });
-        
-        showToaster("success", "✨ User details auto-filled successfully!");
-      } else {
-        showToaster("error", "❌ User not found in database. Please use registered email.");
-        setUserId(null);
-        setDisplayData({ name: '', contact: '', batch: '' });
-      }
-    } catch (err) {
-      console.error('Auto-fill error:', err);
-      showToaster("error", "Auto-fill not available. Please check your connection.");
-      setUserId(null);
-      setDisplayData({ name: '', contact: '', batch: '' });
-    } finally {
-      setIsAutoFilling(false);
-    }
+  // Remove handleEmailBlur since we auto-fill on mount
+  // Keep only manual refresh if needed
+  const handleManualEmailCheck = async () => {
+    await autoFillUserDetails(formData.email);
   };
 
   const handleSubmit = async (e) => {
@@ -684,9 +699,14 @@ export default function AlumniJobRequestForm() {
       if (response.ok && result.success) {
         showToaster('success', '🎉 Job request submitted successfully!');
         
+        // Call the success callback if provided
+        if (onSubmitSuccess) {
+          onSubmitSuccess();
+        }
+        
         setTimeout(() => {
           setFormData({
-            email: '',
+            email: userEmail || '', // Keep the email from props
             location: '',
             skillset: [],
             company: '',
@@ -812,11 +832,16 @@ export default function AlumniJobRequestForm() {
         {/* Form Card */}
         <form onSubmit={handleSubmit}>
           <div style={{ animation: 'fadeInUp 0.8s ease-out 0.2s both' }}>
-            {/* Email - First field for auto-fill */}
+            {/* Email - Auto-filled from placement portal */}
             <div style={{...styles.group, animation: 'slideIn 0.4s ease-out 0.3s both'}}>
               <label style={styles.label}>
                 <Mail size={18} style={{ color: '#8b5cf6' }} />
                 Personal Email ID <span style={styles.required}>*</span>
+                {userEmail && (
+                  <span style={{ marginLeft: '8px', fontSize: '12px', color: '#10b981', fontWeight: '500' }}>
+                    (Auto-filled from portal)
+                  </span>
+                )}
               </label>
               <div style={styles.inputWrapper}>
                 <input
@@ -824,11 +849,11 @@ export default function AlumniJobRequestForm() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
+                  onFocus={handleInputFocus}
                   onBlur={(e) => {
                     handleInputBlur(e);
-                    handleEmailBlur();
+                    handleManualEmailCheck();
                   }}
-                  onFocus={handleInputFocus}
                   style={{
                     ...styles.input,
                     ...(isSubmitting ? styles.inputDisabled : {}),
@@ -845,12 +870,20 @@ export default function AlumniJobRequestForm() {
                     animation: 'spin 1s linear infinite'
                   }} size={20} />
                 )}
+                {userEmail && !isAutoFilling && (
+                  <CheckCircle style={{
+                    ...styles.inputIcon,
+                    color: '#10b981'
+                  }} size={20} />
+                )}
               </div>
               <p style={{
                 ...styles.inputHint,
                 fontSize: isTabletOrLarger ? '13px' : '12px'
               }}>
-                {isAutoFilling ? "🔄 Fetching user details..." : "✨ Your details will auto-fill if you're in our database"}
+                {isAutoFilling ? "🔄 Fetching user details..." : 
+                 userEmail ? "✅ Email auto-filled from placement portal" : 
+                 "✨ Your details will auto-fill if you're in our database"}
               </p>
             </div>
 

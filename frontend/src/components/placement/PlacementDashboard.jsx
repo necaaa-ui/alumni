@@ -230,6 +230,7 @@ const PlacementDashboard = ({ onBackToHome }) => {
     return colors[status] || colors.pending;
   };
 
+
   const getAvailableActions = () => {
     if (userRole === 'admin') {
       return [
