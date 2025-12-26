@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import './Common.css';
 import './AdminDashboard.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const Adminpage = () => {
   const [activeView, setActiveView] = useState(null);
   const [showRemoveDomain, setShowRemoveDomain] = useState(false);
@@ -33,7 +35,7 @@ const Adminpage = () => {
   useEffect(() => {
     const fetchCurrentPhase = async () => {
       try {
-        const response = await fetch('/api/current-phase');
+        const response = await fetch(`${API_BASE_URL}/api/current-phase`);
         const data = await response.json();
         setCurrentPhase(data);
       } catch (error) {
@@ -52,7 +54,7 @@ const Adminpage = () => {
       const fetchWebinars = async () => {
         setWebinarsLoading(true);
         try {
-          const response = await fetch('/api/webinars');
+          const response = await fetch(`${API_BASE_URL}/api/webinars`);
           const webinarsData = await response.json();
 
           // Fetch phone numbers for each speaker
@@ -60,7 +62,7 @@ const Adminpage = () => {
             webinarsData.map(async (webinar) => {
               if (webinar.speaker?.email) {
                 try {
-                  const memberResponse = await fetch(`/api/coordinators/member-by-email?email=${webinar.speaker.email}`);
+                  const memberResponse = await fetch(`${API_BASE_URL}/api/coordinators/member-by-email?email=${webinar.speaker.email}`);
                   const memberData = await memberResponse.json();
                   return {
                     ...webinar,
@@ -101,7 +103,7 @@ const Adminpage = () => {
       const fetchFilterOptions = async () => {
         try {
           console.log('Fetching filter options...');
-          const response = await fetch('/api/filter-options');
+          const response = await fetch(`${API_BASE_URL}/api/filter-options`);
           console.log('Filter options response status:', response.status);
           const data = await response.json();
           console.log('Filter options data:', data);
@@ -113,7 +115,7 @@ const Adminpage = () => {
 
       const fetchSpeakers = async () => {
         try {
-          const response = await fetch('/api/speakers');
+          const response = await fetch(`${API_BASE_URL}/api/speakers`);
           const speakersData = await response.json();
           setSpeakers(speakersData);
         } catch (error) {
@@ -133,7 +135,7 @@ const Adminpage = () => {
       const fetchSpeakers = async () => {
         setSpeakersLoading(true);
         try {
-          const response = await fetch('/api/speakers');
+          const response = await fetch(`${API_BASE_URL}/api/speakers`);
           const speakersData = await response.json();
           setSpeakers(speakersData);
         } catch (error) {
@@ -179,7 +181,7 @@ const Adminpage = () => {
         domains: validDomains
       };
 
-      const response = await fetch('/api/webinar-phases', {
+      const response = await fetch(`${API_BASE_URL}/api/webinar-phases`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -215,7 +217,7 @@ const Adminpage = () => {
     }
 
     try {
-      const response = await fetch('/api/coordinators/add', {
+      const response = await fetch(`${API_BASE_URL}/api/coordinators/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -247,7 +249,7 @@ const Adminpage = () => {
 
     setDeptCoordinatorLoading(true);
     try {
-      const response = await fetch(`/api/coordinators/member-by-email?email=${encodeURIComponent(email.trim())}`);
+      const response = await fetch(`${API_BASE_URL}/api/coordinators/member-by-email?email=${encodeURIComponent(email.trim())}`);
       const data = await response.json();
 
       if (data.found) {
@@ -288,7 +290,7 @@ const Adminpage = () => {
     }
 
     try {
-      const response = await fetch('/api/coordinators/add', {
+      const response = await fetch(`${API_BASE_URL}/api/coordinators/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -323,7 +325,7 @@ const Adminpage = () => {
   const fetchCoordinators = async () => {
     setCoordinatorsLoading(true);
     try {
-      const response = await fetch('/api/coordinators');
+      const response = await fetch(`${API_BASE_URL}/api/coordinators`);
       const data = await response.json();
       setCoordinators(data);
     } catch (error) {

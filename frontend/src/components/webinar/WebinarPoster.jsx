@@ -4,6 +4,9 @@ import posterFooter from "../../assets/poster-footer.jpg";
 import founderLogo from "../../assets/rigth - Founder-Logo.png";
 import "./WebinarPoster.css";
 
+// Add API base URL - even though not used in this component
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
 export default function WebinarPoster({
   alumniPhoto,
   webinarTopic,

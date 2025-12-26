@@ -14,8 +14,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import Popup from './Popup';
 import './Common.css';
 
-// API Base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+// API Base URL from environment variable
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function StudentRequestForm() {
   const navigate = useNavigate();
@@ -144,7 +144,6 @@ export default function StudentRequestForm() {
 
     if (!formData.name) newErrors.name = 'Name is required';
     if (!formData.email) newErrors.email = 'Email is required';
-    // if (!formData.contact) newErrors.contact = 'Contact No is required';
     if (!formData.department) newErrors.department = 'Department is required';
     if (!formData.domain) newErrors.domain = 'Domain is required';
     if (!formData.topic) newErrors.topic = 'Topic is required';

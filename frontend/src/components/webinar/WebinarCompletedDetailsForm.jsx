@@ -13,6 +13,10 @@ import { useNavigate, useParams } from "react-router-dom";
 import * as XLSX from 'xlsx';
 import "./Common.css";
 import Popup from './Popup';
+
+// Add API base URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
 const WebinarCompletedDetailsForm = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -38,7 +42,7 @@ const WebinarCompletedDetailsForm = () => {
   useEffect(() => {
     const fetchWebinarDetails = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/webinars/${id}`);
+        const response = await fetch(`${API_BASE_URL}/api/webinars/${id}`);
         const webinar = await response.json();
 
         if (response.ok) {
@@ -70,7 +74,7 @@ const WebinarCompletedDetailsForm = () => {
 
       try {
         const res = await fetch(
-          `http://localhost:5000/api/member-by-email?email=${formData.prizeWinnerEmail}`
+          `${API_BASE_URL}/api/member-by-email?email=${formData.prizeWinnerEmail}`
         );
         const data = await res.json();
 
@@ -169,7 +173,7 @@ const WebinarCompletedDetailsForm = () => {
 
     if (Object.keys(newErrors).length === 0) {
       try {
-        const response = await fetch(`http://localhost:5000/api/webinars/${id}/complete`, {
+        const response = await fetch(`${API_BASE_URL}/api/webinars/${id}/complete`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -208,24 +212,17 @@ const WebinarCompletedDetailsForm = () => {
 
       <div className="form-wrapper">
         <div>
-          {/* <div className="form-header">
-            <h2 className="webinar-subtitle">
-              Document of the Completed Webinar are needed to be filled out
-              here.
-            </h2>
-          </div> */}
-
           <div className="form-card">
             <br></br>
-                        <h2 className="webinar-subtitle">
+            <h2 className="webinar-subtitle">
               Document of the Completed Webinar are needed to be filled out
               here.
             </h2>
             <br></br>
             <form onSubmit={handleSubmit} noValidate>
               <div className="form-fields">
-              <div className="form-group">
-                <label className="field-label">
+                <div className="form-group">
+                  <label className="field-label">
                     <Globe className="field-icon" /> Domain
                   </label>
                   <input
@@ -237,8 +234,8 @@ const WebinarCompletedDetailsForm = () => {
                   />
                 </div>
                 {/* Topic */}
-              <div className="form-group">
-                <label className="field-label">
+                <div className="form-group">
+                  <label className="field-label">
                     <FiBookOpen className="field-icon" /> Chosen Topic
                   </label>
                   <input
@@ -249,8 +246,8 @@ const WebinarCompletedDetailsForm = () => {
                     placeholder="Auto-filled from webinar details"
                   />
                 </div>
-              <div className="form-group">
-                <label className="field-label">
+                <div className="form-group">
+                  <label className="field-label">
                     <FiAward className="field-icon" /> Attended Count <span>*</span>
                   </label>
                   <input
@@ -268,8 +265,8 @@ const WebinarCompletedDetailsForm = () => {
                 </div>
 
                 {/* Attendance File Upload */}
-              <div className="form-group">
-                <label className="field-label">
+                <div className="form-group">
+                  <label className="field-label">
                     <FiUpload className="field-icon" /> Attendance Excel File <span>*</span>
                   </label>
                   <input
@@ -284,8 +281,8 @@ const WebinarCompletedDetailsForm = () => {
                   </small>
                 </div>
                 {/* Prize Winner Email */}
-              <div className="form-group">
-                <label className="field-label">
+                <div className="form-group">
+                  <label className="field-label">
                     <FiMail className="field-icon" /> Prize Winner Email{" "}
                     <span>*</span>
                   </label>
@@ -306,8 +303,8 @@ const WebinarCompletedDetailsForm = () => {
                 </div>
 
                 {/* Name */}
-              <div className="form-group">
-                <label className="field-label">
+                <div className="form-group">
+                  <label className="field-label">
                     <FiUser className="field-icon" /> Name
                   </label>
                   <input
@@ -320,8 +317,8 @@ const WebinarCompletedDetailsForm = () => {
                 </div>
 
                 {/* Department */}
-              <div className="form-group">
-                <label className="field-label">
+                <div className="form-group">
+                  <label className="field-label">
                     <FiBookOpen className="field-icon" /> Department
                   </label>
                   <input
@@ -334,8 +331,8 @@ const WebinarCompletedDetailsForm = () => {
                 </div>
 
                 {/* Batch */}
-              <div className="form-group">
-                <label className="field-label">
+                <div className="form-group">
+                  <label className="field-label">
                     <FiAward className="field-icon" /> Batch
                   </label>
                   <input
@@ -347,8 +344,8 @@ const WebinarCompletedDetailsForm = () => {
                   />
                 </div>
 
-              <div className="form-group">
-                <label className="field-label">
+                <div className="form-group">
+                  <label className="field-label">
                     <Phone className="field-icon" /> Contact No <span className="required">*</span>
                   </label>
                   <input
@@ -364,7 +361,6 @@ const WebinarCompletedDetailsForm = () => {
                     <div className="error-text">{errors.contact}</div>
                   )}
                 </div>
-
 
                 <button type="submit" className="submit-btn">
                   Submit

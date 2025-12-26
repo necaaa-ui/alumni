@@ -6,6 +6,9 @@ import Popup from './Popup';
 import './Common.css';
 import '../WebinarDashboard.css';
 
+// API Base URL from environment variable
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 export default function TopicApprovalForm() {
   const navigate = useNavigate();
   const [selectedPhase, setSelectedPhase] = useState('');
@@ -24,7 +27,7 @@ export default function TopicApprovalForm() {
     const fetchPhases = async () => {
       try {
         setPhasesLoading(true);
-        const response = await fetch('http://localhost:5000/api/phases');
+        const response = await fetch(`${API_BASE_URL}/api/phases`);
         const data = await response.json();
         const phasesArray = data.phases || (Array.isArray(data) ? data : []);
         if (Array.isArray(phasesArray) && phasesArray.length > 0) {
@@ -54,8 +57,8 @@ export default function TopicApprovalForm() {
     try {
       setLoading(true);
       const url = phase
-        ? `http://localhost:5000/api/topic-approvals?phase=${encodeURIComponent(phase)}`
-        : 'http://localhost:5000/api/topic-approvals';
+        ? `${API_BASE_URL}/api/topic-approvals?phase=${encodeURIComponent(phase)}`
+        : `${API_BASE_URL}/api/topic-approvals`;
       const response = await fetch(url);
       const data = await response.json();
       setTopics(data.map(item => ({
@@ -81,7 +84,7 @@ export default function TopicApprovalForm() {
     const newStatus = topic.status === "Approved" ? "On Hold" : "Approved";
 
     try {
-      const response = await fetch(`http://localhost:5000/api/topic-approvals/${topic._id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/topic-approvals/${topic._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -105,14 +108,14 @@ export default function TopicApprovalForm() {
 
   const handleView = async (topic) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/student-requests/${encodeURIComponent(topic.domain)}/${encodeURIComponent(topic.topic)}`);
+      const response = await fetch(`${API_BASE_URL}/api/student-requests/${encodeURIComponent(topic.domain)}/${encodeURIComponent(topic.topic)}`);
       const students = await response.json();
 
       // Fetch member details for each student email
       const studentsWithDetails = await Promise.all(
         students.map(async (student, index) => {
           try {
-            const memberResponse = await fetch(`http://localhost:5000/api/member-by-email?email=${encodeURIComponent(student.email)}`);
+            const memberResponse = await fetch(`${API_BASE_URL}/api/member-by-email?email=${encodeURIComponent(student.email)}`);
             const memberData = await memberResponse.json();
 
             return {

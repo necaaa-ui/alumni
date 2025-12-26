@@ -8,6 +8,7 @@ import './Home.css';
 import AlumniLogo from '../../assets/Nec-alumni-association.jpeg';
 import NECLogo from '../../assets/NEC-college Logo.png';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onOpenMentorshipDashboard }) => {
   const navigate = useNavigate();
@@ -63,9 +64,6 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
 
   const [currentPhase, setCurrentPhase] = useState('');
   const [phases, setPhases] = useState([]);
-
-  // API Base URL
-  const API_BASE_URL = 'http://localhost:5000';
 
   // Fetch phases and current phase
   useEffect(() => {
@@ -168,10 +166,10 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
     const fetchMentorshipData = async () => {
       try {
         const [mentorsRes, menteesRes, meetingsRes, assignmentsRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/dashboard/mentors'),
-          axios.get('http://localhost:5000/api/dashboard/mentees'),
-          axios.get('http://localhost:5000/api/dashboard/meetings'),
-          axios.get('http://localhost:5000/api/dashboard/assignments')
+          axios.get(`${API_BASE_URL}/api/dashboard/mentors`),
+          axios.get(`${API_BASE_URL}/api/dashboard/mentees`),
+          axios.get(`${API_BASE_URL}/api/dashboard/meetings`),
+          axios.get(`${API_BASE_URL}/api/dashboard/assignments`)
         ]);
 
         if (mentorsRes.data.success && menteesRes.data.success && 
@@ -211,9 +209,9 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
       try {
         const timestamp = Date.now();
         const [mappingsRes, companiesRes, placementRequestsRes] = await Promise.all([
-          axios.get(`http://localhost:5000/api/company-mapping?_t=${timestamp}`),
-          axios.get(`http://localhost:5000/api/company-mapping/available-companies?_t=${timestamp}`),
-          axios.get(`http://localhost:5000/api/job-requests?_t=${timestamp}`)
+          axios.get(`${API_BASE_URL}/api/company-mapping?_t=${timestamp}`),
+          axios.get(`${API_BASE_URL}/api/company-mapping/available-companies?_t=${timestamp}`),
+          axios.get(`${API_BASE_URL}/api/job-requests?_t=${timestamp}`)
         ]);
 
         if (mappingsRes.data.success && companiesRes.data.success) {
@@ -1059,5 +1057,5 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
     </div>
   );
 };
-
+  
 export default AlumniDashboard;

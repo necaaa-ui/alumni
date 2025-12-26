@@ -1,9 +1,11 @@
-
 import React, { useState, useEffect } from "react";
 import { GraduationCap, User, Mail, ArrowLeft } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Popup from './Popup';
 import "./Common.css";
+
+// Add API base URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 export default function WebinarStudentFeedbackForm() {
   const navigate = useNavigate();
@@ -30,7 +32,7 @@ export default function WebinarStudentFeedbackForm() {
 
       try {
         const res = await fetch(
-          `http://localhost:5000/api/member-by-email?email=${formData.email}`
+          `${API_BASE_URL}/api/member-by-email?email=${formData.email}`
         );
         const data = await res.json();
 
@@ -98,7 +100,7 @@ export default function WebinarStudentFeedbackForm() {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/submit-student-feedback', {
+      const response = await fetch(`${API_BASE_URL}/api/submit-student-feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

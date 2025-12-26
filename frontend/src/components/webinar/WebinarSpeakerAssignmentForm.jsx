@@ -4,6 +4,9 @@ import React, { useState, useEffect } from "react";
 import './Common.css';
 import Popup from './Popup';
 
+// Add API base URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
 const typeOptions = [
   { value: "Full Stack Development", label: "FULL STACK DEVELOPMENT" },
   { value: "Cloud Computing", label: "CLOUD COMPUTING" },
@@ -43,7 +46,7 @@ export default function WebinarSpeakerAssignmentForm() {
         return;
       }
       try {
-        const response = await fetch(`http://localhost:5000/api/topic-approvals`);
+        const response = await fetch(`${API_BASE_URL}/api/topic-approvals`);
         const data = await response.json();
         console.log('Fetched topic approvals:', data);
         console.log('formData.domain:', formData.domain);
@@ -67,7 +70,7 @@ export default function WebinarSpeakerAssignmentForm() {
   useEffect(() => {
     const fetchCurrentPhase = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/current-phase');
+        const response = await fetch(`${API_BASE_URL}/api/current-phase`);
         const data = await response.json();
         if (data.found) {
           setCurrentPhase(data);
@@ -119,7 +122,7 @@ export default function WebinarSpeakerAssignmentForm() {
     if (!email) return;
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/member-by-email?email=${encodeURIComponent(email)}`);
+      const response = await fetch(`${API_BASE_URL}/api/member-by-email?email=${encodeURIComponent(email)}`);
       const data = await response.json();
       if (data.found) {
         setFormData(prev => ({
@@ -162,7 +165,7 @@ export default function WebinarSpeakerAssignmentForm() {
       formDataToSend.append('phaseId', formData.phaseId);
       formDataToSend.append('slots', JSON.stringify(slots));
 
-      const response = await fetch('http://localhost:5000/api/assign-speaker', {
+      const response = await fetch(`${API_BASE_URL}/api/assign-speaker`, {
         method: 'POST',
         body: formDataToSend
       });

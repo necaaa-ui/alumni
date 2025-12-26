@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import "./Common.css";
 import Popup from './Popup';
 
+// Add API base URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
 const WebinarAlumniFeedbackForm = () => {
   const navigate = useNavigate();
   const { email: encodedEmail } = useParams();
@@ -45,7 +48,7 @@ const WebinarAlumniFeedbackForm = () => {
       setWebinarsLoading(true);
       setWebinarsError(null);
       try {
-        const res = await fetch('http://localhost:5000/api/topic-approvals');
+        const res = await fetch(`${API_BASE_URL}/api/topic-approvals`);
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }
@@ -71,7 +74,7 @@ const WebinarAlumniFeedbackForm = () => {
 
       try {
         const res = await fetch(
-          `http://localhost:5000/api/member-by-email?email=${formData.email}`
+          `${API_BASE_URL}/api/member-by-email?email=${formData.email}`
         );
         const data = await res.json();
 
@@ -129,7 +132,7 @@ const WebinarAlumniFeedbackForm = () => {
           feedback: formData.feedback,
         };
 
-        const response = await fetch('http://localhost:5000/api/alumni-feedback', {
+        const response = await fetch(`${API_BASE_URL}/api/alumni-feedback`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

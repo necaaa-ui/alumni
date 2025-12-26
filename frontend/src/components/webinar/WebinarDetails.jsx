@@ -7,6 +7,9 @@ import WebinarCompletedDetailsForm from './WebinarCompletedDetailsForm';
 import ConfirmationDialog from './ConfirmationDialog';
 import Popup from './Popup';
 
+// Add API base URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
 export default function WebinarDetails() {
   const { id, encodedUserEmail } = useParams();
   const navigate = useNavigate();
@@ -23,7 +26,7 @@ export default function WebinarDetails() {
 
   const handleDeleteWebinar = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/webinars/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/webinars/${id}`, {
         method: 'DELETE',
       });
       if (response.ok) {
@@ -54,14 +57,10 @@ export default function WebinarDetails() {
                 <table style={{ width: "810px", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ backgroundColor: "#eee", paddingTop: "15px", paddingBottom: "15px" }}>
-                    {/* <th style={{  width: "177px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Phase ID</th> */}
-                    {/* <th style={{  width: "350px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Domain</th> */}
-                    {/* <th style={{  width: "400px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Webinar Topic</th> */}
                     <th style={{  width: "250px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Name</th>
                     <th style={{  width: "250px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Email</th>
                     <th style={{  width: "180px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student  Department </th>
                     <th style={{  width: "180px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Batch</th>
-                    {/* <th style={{  width: "300px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>City</th> */}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200 py-12">
@@ -158,7 +157,7 @@ export default function WebinarDetails() {
       const fetchData = async () => {
         try {
           // Fetch webinar details
-          const webinarResponse = await fetch(`http://localhost:5000/api/webinars/${id}`);
+          const webinarResponse = await fetch(`${API_BASE_URL}/api/webinars/${id}`);
           if (!webinarResponse.ok) {
             throw new Error('Failed to fetch webinar details');
           }
@@ -180,7 +179,7 @@ export default function WebinarDetails() {
     // Fetch registrations with member details
     const fetchRegistrations = async () => {
       try {
-        const registrationsResponse = await fetch(`http://localhost:5000/api/registrations/webinar/${id}/details`);
+        const registrationsResponse = await fetch(`${API_BASE_URL}/api/registrations/webinar/${id}/details`);
         if (!registrationsResponse.ok) {
           throw new Error('Failed to fetch registrations');
         }
@@ -199,7 +198,7 @@ export default function WebinarDetails() {
         // First get webinar details to get the topic
         let webinarTopic = webinar?.topic;
         if (!webinarTopic) {
-          const webinarResponse = await fetch(`http://localhost:5000/api/webinars/${id}`);
+          const webinarResponse = await fetch(`${API_BASE_URL}/api/webinars/${id}`);
           if (webinarResponse.ok) {
             const webinarData = await webinarResponse.json();
             webinarTopic = webinarData.topic;
@@ -207,7 +206,7 @@ export default function WebinarDetails() {
         }
 
         // Fetch student feedback by webinar topic
-        const studentFeedbackResponse = await fetch(`http://localhost:5000/api/student-feedback/webinar/${encodeURIComponent(webinarTopic)}`);
+        const studentFeedbackResponse = await fetch(`${API_BASE_URL}/api/student-feedback/webinar/${encodeURIComponent(webinarTopic)}`);
         let studentFeedbackData = [];
         if (studentFeedbackResponse.ok) {
           studentFeedbackData = await studentFeedbackResponse.json();

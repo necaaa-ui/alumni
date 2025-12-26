@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Mail } from 'lucide-react';
 import './Common.css'; // Importing common.css for styling
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 const LoginPage = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');

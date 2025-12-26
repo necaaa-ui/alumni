@@ -10,6 +10,9 @@ import WebinarCircular from './WebinarCircular';
 import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, AlignmentType, WidthType } from 'docx';
 import { saveAs } from 'file-saver';
 
+// Add API base URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+
 export default function WebinarEvents() {
   const navigate = useNavigate();
   const posterContainerRef = useRef(null);
@@ -126,6 +129,7 @@ export default function WebinarEvents() {
     // Return time slot format
     return `${startHour12}.${minutes}${startAmpm} - ${endHour12}.${minutes}${endAmpm}`;
   };
+  
   const getDepartmentFromDomain = (domain) => {
     const domainMappings = {
       'Full Stack Development (IT department)': 'IT',
@@ -188,255 +192,252 @@ export default function WebinarEvents() {
 
   const downloadCircular = async () => {
     try {
-// Create document
-const doc = new Document({
-  sections: [{
-    properties: {
-      page: {
-        size: {
-          width: 12040,
-          height: 15840
-        },
-        margin: { top: 720, bottom: 720, left: 720, right: 720 }
-      }
-    },
+      // Create document
+      const doc = new Document({
+        sections: [{
+          properties: {
+            page: {
+              size: {
+                width: 12040,
+                height: 15840
+              },
+              margin: { top: 720, bottom: 720, left: 720, right: 720 }
+            }
+          },
 
-    children: [
+          children: [
 
-      // ===========================
-      // HEADER
-      // ===========================
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "NATIONAL ENGINEERING COLLEGE",
-            bold: true,
-            size: 36, // 18pt (matches image)
-            font: "Times New Roman"
-          })
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 80 }
-      }),
-
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "(An Autonomous Institution, Affiliated to Anna University - Chennai)",
-            size: 22,
-            font: "Times New Roman"
-          })
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 60 }
-      }),
-
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "K.R. NAGAR, KOVILPATTI – 628 503",
-            size: 22,
-            font: "Times New Roman"
-          })
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 60 }
-      }),
-
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: "NEC ALUMNI ASSOCIATION",
-            bold: true,
-            size: 24,
-            underline: {},
-            font: "Times New Roman"
-          })
-        ],
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 200 }
-      }),
-
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `Date :  ${new Date().getDate().toString().padStart(2, '0')}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}-${new Date().getFullYear()}`,
-            size: 24,
-            bold: true,
-            font: "Times New Roman"
-          })
-        ],
-        alignment: AlignmentType.RIGHT,
-        spacing: { after: 200 }
-      }),
-
-      // ===========================
-      // DESCRIPTION
-      // ===========================
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: `In association with the coordination of webinar series the following speakers are identified for the month of ${circularMonth}.`,
-            size: 22,
-            font: "Times New Roman"
-          })
-        ],
-        alignment: AlignmentType.JUSTIFIED,
-        spacing: { before: 200, after: 200 }
-      }),
-
-      // ===========================
-      // MAIN TABLE (Matches UI Exactly)
-      // ===========================
-      new Table({
-        width: {
-          size: 100,
-          type: WidthType.PERCENTAGE
-        },
-        borders: {
-          top: { style: "single", size: 7, color: "000000" },
-          bottom: { style: "single", size: 7, color: "000000" },
-          left: { style: "single", size: 7, color: "000000" },
-          right: { style: "single", size: 7, color: "000000" },
-          insideHorizontal: { style: "single", size: 7, color: "000000" },
-          insideVertical: { style: "single", size: 7, color: "000000" }
-        },
-
-        rows: [
-
-          // ===========================
-          // HEADER ROW
-          // ===========================
-          new TableRow({
-            height: { value: 400 },
-            children: [
-              cellHeader("Branch", 15),
-              cellHeader("Date", 15),
-              cellHeader("Timing", 15),
-              cellHeader("Topic", 20),
-              cellHeader("Speaker", 20),
-              cellHeader("Designation", 15)
-            ],
-          }),
-
-          // ===========================
-          // DATA ROWS
-          // ===========================
-          ...circularData.map(row =>
-            new TableRow({
-              height: { value: 1200 }, // SAME HEIGHT AS IN IMAGE
+            // ===========================
+            // HEADER
+            // ===========================
+            new Paragraph({
               children: [
-                cellText(row.branch),
-                cellText(row.date),
-                cellText(row.time),
-                cellText(row.topic),
-                cellMultiline(row.speaker),
-                cellText(row.designation)
+                new TextRun({
+                  text: "NATIONAL ENGINEERING COLLEGE",
+                  bold: true,
+                  size: 36, // 18pt (matches image)
+                  font: "Times New Roman"
+                })
               ],
-               alignment: AlignmentType.CENTER 
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 80 }
+            }),
+
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "(An Autonomous Institution, Affiliated to Anna University - Chennai)",
+                  size: 22,
+                  font: "Times New Roman"
+                })
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 60 }
+            }),
+
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "K.R. NAGAR, KOVILPATTI – 628 503",
+                  size: 22,
+                  font: "Times New Roman"
+                })
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 60 }
+            }),
+
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: "NEC ALUMNI ASSOCIATION",
+                  bold: true,
+                  size: 24,
+                  underline: {},
+                  font: "Times New Roman"
+                })
+              ],
+              alignment: AlignmentType.CENTER,
+              spacing: { after: 200 }
+            }),
+
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `Date :  ${new Date().getDate().toString().padStart(2, '0')}-${(new Date().getMonth() + 1).toString().padStart(2, '0')}-${new Date().getFullYear()}`,
+                  size: 24,
+                  bold: true,
+                  font: "Times New Roman"
+                })
+              ],
+              alignment: AlignmentType.RIGHT,
+              spacing: { after: 200 }
+            }),
+
+            // ===========================
+            // DESCRIPTION
+            // ===========================
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `In association with the coordination of webinar series the following speakers are identified for the month of ${circularMonth}.`,
+                  size: 22,
+                  font: "Times New Roman"
+                })
+              ],
+              alignment: AlignmentType.JUSTIFIED,
+              spacing: { before: 200, after: 200 }
+            }),
+
+            // ===========================
+            // MAIN TABLE (Matches UI Exactly)
+            // ===========================
+            new Table({
+              width: {
+                size: 100,
+                type: WidthType.PERCENTAGE
+              },
+              borders: {
+                top: { style: "single", size: 7, color: "000000" },
+                bottom: { style: "single", size: 7, color: "000000" },
+                left: { style: "single", size: 7, color: "000000" },
+                right: { style: "single", size: 7, color: "000000" },
+                insideHorizontal: { style: "single", size: 7, color: "000000" },
+                insideVertical: { style: "single", size: 7, color: "000000" }
+              },
+
+              rows: [
+
+                // ===========================
+                // HEADER ROW
+                // ===========================
+                new TableRow({
+                  height: { value: 400 },
+                  children: [
+                    cellHeader("Branch", 15),
+                    cellHeader("Date", 15),
+                    cellHeader("Timing", 15),
+                    cellHeader("Topic", 20),
+                    cellHeader("Speaker", 20),
+                    cellHeader("Designation", 15)
+                  ],
+                }),
+
+                // ===========================
+                // DATA ROWS
+                // ===========================
+                ...circularData.map(row =>
+                  new TableRow({
+                    height: { value: 1200 }, // SAME HEIGHT AS IN IMAGE
+                    children: [
+                      cellText(row.branch),
+                      cellText(row.date),
+                      cellText(row.time),
+                      cellText(row.topic),
+                      cellMultiline(row.speaker),
+                      cellText(row.designation)
+                    ],
+                    alignment: AlignmentType.CENTER 
+                  })
+                )
+              ]
+            }),
+
+            // ===========================
+            // FOOTER SIGNATURE ROW
+            // ===========================
+            new Paragraph({ text: "", spacing: { after: 1000 } }),
+
+            // ===========================
+            // FOOTER SIGNATURE TABLE
+            // ===========================
+            new Table({
+              width: {
+                size: 100,
+                type: WidthType.PERCENTAGE
+              },
+              borders: {
+                top: { style: "none" },
+                bottom: { style: "none" },
+                left: { style: "none" },
+                right: { style: "none" },
+                insideHorizontal: { style: "none" },
+                insideVertical: { style: "none" }
+              },
+              rows: [
+                new TableRow({
+                  height: { value: 500 },
+                  children: [
+                    signatureCell("PROGRAM COORDINATOR", 25),
+                    signatureCell("ASSOCIATE ALUMNI COORDINATOR", 20),
+                    signatureCell("ALUMNI COORDINATOR", 20),
+                    signatureCell("PRINCIPAL", 35)
+                  ]
+                })
+              ]
+            })
+          ]
+        }]
+      });
+
+      // ===============================
+      // CELL HELPERS
+      // ===============================
+      function cellHeader(text, widthPercent) {
+        return new TableCell({
+          width: { size: widthPercent, type: WidthType.PERCENTAGE },
+          verticalAlign: "center",
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({ text, bold: true, size: 24, font: "Times New Roman" })
+              ]
+            })
+          ]
+        });
+      }
+
+      function cellText(text) {
+        return new TableCell({
+          verticalAlign: "top",
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({ text, size: 24, font: "Times New Roman" })
+              ]
+            })
+          ]
+        });
+      }
+
+      function cellMultiline(text) {
+        return new TableCell({
+          verticalAlign: "top",
+          children: text.split("\n").map(line =>
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({ text: line, size: 24, font: "Times New Roman" })
+              ]
             })
           )
-        ]
-      }),
+        });
+      }
 
-      // ===========================
-      // FOOTER SIGNATURE ROW
-      // ===========================
-new Paragraph({ text: "", spacing: { after: 1000 } }),
-
-// ===========================
-// FOOTER SIGNATURE TABLE
-// ===========================
-new Table({
-  width: {
-    size: 100,
-    type: WidthType.PERCENTAGE
-  },
-  borders: {
-    top: { style: "none" },
-    bottom: { style: "none" },
-    left: { style: "none" },
-    right: { style: "none" },
-    insideHorizontal: { style: "none" },
-    insideVertical: { style: "none" }
-  },
-  rows: [
-    new TableRow({
-      height: { value: 500 },
-      children: [
-        signatureCell("PROGRAM COORDINATOR", 25),
-        signatureCell("ASSOCIATE ALUMNI COORDINATOR", 20),
-        signatureCell("ALUMNI COORDINATOR", 20),
-        signatureCell("PRINCIPAL", 35)
-      ]
-    })
-  ]
-      })
-    ]
-  }]
-});
-
-
-
-// ===============================
-// CELL HELPERS
-// ===============================
-function cellHeader(text, widthPercent) {
-  return new TableCell({
-    width: { size: widthPercent, type: WidthType.PERCENTAGE },
-    verticalAlign: "center",
-    children: [
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        children: [
-          new TextRun({ text, bold: true, size: 24, font: "Times New Roman" })
-        ]
-      })
-    ]
-  });
-}
-
-function cellText(text) {
-  return new TableCell({
-    verticalAlign: "top",
-    children: [
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        children: [
-          new TextRun({ text, size: 24, font: "Times New Roman" })
-        ]
-      })
-    ]
-  });
-}
-
-function cellMultiline(text) {
-  return new TableCell({
-    verticalAlign: "top",
-    children: text.split("\n").map(line =>
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        children: [
-          new TextRun({ text: line, size: 24, font: "Times New Roman" })
-        ]
-      })
-    )
-  });
-}
-
-function signatureCell(title) {
-  return new TableCell({
-    children: [
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        children: [
-          new TextRun({ text: title, bold: true, size: 24, font: "Times New Roman" })
-        ]
-      })
-    ]
-  });
-}
-
+      function signatureCell(title) {
+        return new TableCell({
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [
+                new TextRun({ text: title, bold: true, size: 24, font: "Times New Roman" })
+              ]
+            })
+          ]
+        });
+      }
 
       // Generate and download the document
       const blob = await Packer.toBlob(doc);
@@ -464,7 +465,7 @@ function signatureCell(title) {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/register', {
+      const response = await fetch(`${API_BASE_URL}/api/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -509,7 +510,7 @@ function signatureCell(title) {
 
     try {
       // First check eligibility
-      const eligibilityResponse = await fetch(`http://localhost:5000/api/check-certificate-eligibility?email=${encodeURIComponent(certificateEmail)}&webinarId=${selectedWebinarForCertificate._id}`);
+      const eligibilityResponse = await fetch(`${API_BASE_URL}/api/check-certificate-eligibility?email=${encodeURIComponent(certificateEmail)}&webinarId=${selectedWebinarForCertificate._id}`);
       const eligibilityData = await eligibilityResponse.json();
 
       if (!eligibilityData.eligible) {
@@ -518,11 +519,11 @@ function signatureCell(title) {
       }
 
       // Get webinar details
-      const webinarResponse = await fetch(`http://localhost:5000/api/webinars/${selectedWebinarForCertificate._id}`);
+      const webinarResponse = await fetch(`${API_BASE_URL}/api/webinars/${selectedWebinarForCertificate._id}`);
       const webinarData = await webinarResponse.json();
 
       // Get user name from members API
-      const membersResponse = await fetch('http://localhost:5000/api/names');
+      const membersResponse = await fetch(`${API_BASE_URL}/api/names`);
       const members = await membersResponse.json();
       const member = members.find(m => m.email === certificateEmail);
       const userName = member?.name || certificateEmail; // Use name if found, fallback to email
@@ -554,7 +555,7 @@ function signatureCell(title) {
   const fetchCurrentPhase = async () => {
     try {
       setPhaseLoading(true);
-      const response = await fetch('http://localhost:5000/api/current-phase');
+      const response = await fetch(`${API_BASE_URL}/api/current-phase`);
       if (!response.ok) {
         throw new Error('Failed to fetch current phase');
       }
@@ -571,7 +572,7 @@ function signatureCell(title) {
   const fetchWebinars = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/webinars');
+      const response = await fetch(`${API_BASE_URL}/api/webinars`);
       if (!response.ok) {
         throw new Error('Failed to fetch webinars');
       }
@@ -605,7 +606,7 @@ function signatureCell(title) {
             designation: webinar.speaker?.designation || 'TBD',
             passoutYear: webinar.speaker?.batch || 'TBD',
             department: webinar.speaker?.department || 'TBD',
-          photo: webinar.speaker?.speakerPhoto ? `http://localhost:5000/uploads/${webinar.speaker.speakerPhoto}` : null,
+            photo: webinar.speaker?.speakerPhoto ? `${API_BASE_URL}/uploads/${webinar.speaker.speakerPhoto}` : null,
             companyName: webinar.speaker?.companyName || 'TBD',
             email: webinar.speaker?.email || null
           },
@@ -655,7 +656,7 @@ function signatureCell(title) {
 
     const fetchCoordinators = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/coordinators');
+        const response = await fetch(`${API_BASE_URL}/api/coordinators`);
         if (response.ok) {
           const coordinatorsData = await response.json();
           setCoordinators(coordinatorsData);
@@ -676,74 +677,7 @@ function signatureCell(title) {
     }
   }, [userEmail]);
 
-  // const webinarsData = {
-  //   january: [
-  //     {
-  //       title: "AI in Healthcare",
-  //       slot: "10 Jan 2025, 3:00 PM",
-  //       registered: 45,
-  //       domain: "Artificial Intelligence",
-  //       speaker: {
-  //         name: "[Alumni Name]",
-  //         designation: "[Job Title]",
-  //         passoutYear: "[Year]",
-  //         department: "[Department]"
-  //       }
-  //     },
-  //     {
-  //       title: "Data Science Career Roadmap",
-  //       slot: "15 Jan 2025, 5:00 PM",
-  //       registered: 38,
-  //       domain: "Data Science",
-  //       speaker: {
-  //         name: "[Alumni Name]",
-  //         designation: "[Job Title]",
-  //         passoutYear: "[Year]",
-  //         department: "[Department]"
-  //       }
-  //     },
-  //     {
-  //       title: "Cybersecurity Trends 2025",
-  //       slot: "20 Jan 2025, 4:00 PM",
-  //       registered: 52,
-  //       domain: "Cybersecurity",
-  //       speaker: {
-  //         name: "[Alumni Name]",
-  //         designation: "[Job Title]",
-  //         passoutYear: "[Year]",
-  //         department: "[Department]"
-  //       }
-  //     }
-  //   ],
-  //   february: [
-  //     {
-  //       title: "Full Stack Development",
-  //       slot: "05 Feb 2025, 2:00 PM",
-  //       registered: 60,
-  //       domain: "Web Development",
-  //       speaker: {
-  //         name: "[Alumni Name]",
-  //         designation: "[Job Title]",
-  //         passoutYear: "[Year]",
-  //         department: "[Department]"
-  //       }
-  //     },
-  //     {
-  //       title: "Cloud Computing Basics",
-  //       slot: "12 Feb 2025, 4:00 PM",
-  //       registered: 50,
-  //       domain: "Cloud Computing",
-  //       speaker: {
-  //         name: "[Alumni Name]",
-  //         designation: "[Job Title]",
-  //         passoutYear: "[Year]",
-  //         department: "[Department]"
-  //       }
-  //     }
-  //   ]
-  // };
-  // /** ------------------ Webinar Card ------------------ */
-/** ------------------ Webinar Card ------------------ */
+  /** ------------------ Webinar Card ------------------ */
   const WebinarCard = ({ webinar, posterScale, posterContainerRef }) => {
     const isRegistered = registeredWebinars.has(webinar._id);
     const isDeadlinePassed = webinar.deadline && new Date() > new Date(webinar.deadline);
@@ -759,13 +693,13 @@ function signatureCell(title) {
       <div className="webinar1-card">
         {/* Upload Button - Only visible to coordinators and admins */}
         {canUpload && (
-                  <button
-          onClick={() => navigate(`/webinar-details/${webinar._id}/${encodeURIComponent(userEmail)}`, { state: { webinar } })}
-          className="view-details-button"
-          title="View Webinar Details"
-        >
-          <FiEye size={20} />
-        </button>
+          <button
+            onClick={() => navigate(`/webinar-details/${webinar._id}/${encodeURIComponent(userEmail)}`, { state: { webinar } })}
+            className="view-details-button"
+            title="View Webinar Details"
+          >
+            <FiEye size={20} />
+          </button>
         )}
 
         {/* Card Content - Horizontal Layout */}
@@ -803,9 +737,6 @@ function signatureCell(title) {
             {/* Title and Badge */}
             <div className="mb-2">
               <h3 className="text-3xl font-bold text-purple-900 mb-2 pr-8">{webinar.title}</h3>
-              {/* <span className="inline-block bg-purple-100 text-purple-700 text-xl font-medium px-3 py-1 rounded-full">
-                webinars
-              </span> */}
             </div>
 
             {/* Info Section */}
@@ -840,60 +771,50 @@ function signatureCell(title) {
             </div>
 
             <div className="flex gap-2">
-            <button
-              onClick={() => !isRegistered && !isDeadlinePassed && isWithinOneWeek && setSelectedWebinar(webinar)}
-              className={`submit-btn text-sm py-3 px-4 flex-1 ${
-                isRegistered || isDeadlinePassed || !isWithinOneWeek
-                  ? 'opacity-50 cursor-not-allowed bg-gray-400'
-                  : ''
-              }`}
-              disabled={isRegistered || isDeadlinePassed || !isWithinOneWeek}
-            >
-              {isRegistered
-                ? 'Registered'
-                : isDeadlinePassed
-                ? 'Deadline Passed'
-                : !isWithinOneWeek
-                ? 'Registration Soon'
-                : 'Register'}
-            </button>
+              <button
+                onClick={() => !isRegistered && !isDeadlinePassed && isWithinOneWeek && setSelectedWebinar(webinar)}
+                className={`submit-btn text-sm py-3 px-4 flex-1 ${
+                  isRegistered || isDeadlinePassed || !isWithinOneWeek
+                    ? 'opacity-50 cursor-not-allowed bg-gray-400'
+                    : ''
+                }`}
+                disabled={isRegistered || isDeadlinePassed || !isWithinOneWeek}
+              >
+                {isRegistered
+                  ? 'Registered'
+                  : isDeadlinePassed
+                  ? 'Deadline Passed'
+                  : !isWithinOneWeek
+                  ? 'Registration Soon'
+                  : 'Register'}
+              </button>
 
-            <button
-              onClick={() => {
-                if (!currentPhase || !currentPhase.phaseId) {
-                  setPopup({
-                    show: true,
-                    message: 'Current phase is not set. Please try again later.',
-                    type: 'error'
-                  });
-                  return;
-                }
-                navigate(
-                  `/student-feedback?webinarId=${webinar._id}&topic=${encodeURIComponent(
-                    webinar.title
-                  )}&speaker=${encodeURIComponent(
-                    webinar.speaker.name
-                  )}&phaseId=${currentPhase.phaseId}&email=${encodeURIComponent(userEmail)}`
-                );
-              }}
-              className={`submit-btn text-sm py-3 px-4 flex-1 ${
-                !isFeedbackEnabled ? 'opacity-50 cursor-not-allowed bg-gray-400' : ''
-              }`}
-              disabled={!isFeedbackEnabled}
-            >
-              {isFeedbackEnabled ? 'Feedback' : 'Feedback Open Soon'}
-            </button>
-
-            {/* <button
-              onClick={() => handleCertificateDownload(webinar)}
-              className={`submit-btn text-sm py-3 px-4 flex-1 ${
-                !isCertificateEnabled ? 'opacity-50 cursor-not-allowed bg-gray-400' : ''
-              }`}
-              disabled={!isCertificateEnabled}
-            >
-              {isCertificateEnabled ? 'Certificate' : 'Certificate Not Available'}
-            </button> */}
-          </div>
+              <button
+                onClick={() => {
+                  if (!currentPhase || !currentPhase.phaseId) {
+                    setPopup({
+                      show: true,
+                      message: 'Current phase is not set. Please try again later.',
+                      type: 'error'
+                    });
+                    return;
+                  }
+                  navigate(
+                    `/student-feedback?webinarId=${webinar._id}&topic=${encodeURIComponent(
+                      webinar.title
+                    )}&speaker=${encodeURIComponent(
+                      webinar.speaker.name
+                    )}&phaseId=${currentPhase.phaseId}&email=${encodeURIComponent(userEmail)}`
+                  );
+                }}
+                className={`submit-btn text-sm py-3 px-4 flex-1 ${
+                  !isFeedbackEnabled ? 'opacity-50 cursor-not-allowed bg-gray-400' : ''
+                }`}
+                disabled={!isFeedbackEnabled}
+              >
+                {isFeedbackEnabled ? 'Feedback' : 'Feedback Open Soon'}
+              </button>
+            </div>
           </div>
         </div>
         <div className="mt-1">
@@ -912,7 +833,7 @@ function signatureCell(title) {
   };
 
   /** ------------------ Webinar Detail Modal ------------------ */
-   const WebinarDetail = ({ webinar, onClose }) => {
+  const WebinarDetail = ({ webinar, onClose }) => {
     const isRegistered = registeredWebinars.has(webinar._id);
     const isDeadlinePassed = webinar.deadline && new Date() > new Date(webinar.deadline);
 
@@ -1008,8 +929,6 @@ function signatureCell(title) {
                 </div>
               </div>
 
-
-
               <div className="flex gap-4">
                 <button
                   onClick={handleRegistration}
@@ -1028,8 +947,7 @@ function signatureCell(title) {
     );
   };
 
- 
-return (
+  return (
     <div className="student-form-page">
 
       {/* Background Animated Orbs */}
@@ -1100,8 +1018,6 @@ return (
       {selectedWebinar && (
         <WebinarDetail webinar={selectedWebinar} onClose={() => setSelectedWebinar(null)} />
       )}
-
-
 
       {/* Certificate Download Modal */}
       {selectedWebinarForCertificate && (
@@ -1193,35 +1109,19 @@ return (
               <div className="icon-wrapper">
                 <FiAward className="header-icon" />
               </div>
-              {/* <h1 className="form-title">Your Webinar Certificate</h1> */}
               <p className="form-title flex justify-center mb-6">
                 Congratulations on completing the webinar!
               </p>
-                          <div className="form-card">
-              <div className="flex justify-center mb-6">
-                <WebinarCertificate
-                  name={certificateData.name}
-                  programTitle={certificateData.programTitle}
-                  date={certificateData.date}
-                  autoDownload={false}
-                />
+              <div className="form-card">
+                <div className="flex justify-center mb-6">
+                  <WebinarCertificate
+                    name={certificateData.name}
+                    programTitle={certificateData.programTitle}
+                    date={certificateData.date}
+                    autoDownload={false}
+                  />
+                </div>
               </div>
-            </div>
-
-
-              {/* <div className="flex justify-center">
-                <button
-                  onClick={() => {
-                    downloadCertificatePDF(certificateData.name, certificateData.programTitle, certificateData.date);
-                    setShowCertificatePreview(false);
-                    setCertificateData(null);
-                    navigate('/webinar-events');
-                  }}
-                  className="submit-btn"
-                >
-                  Download Certificate
-                </button>
-              </div> */}
             </div>
 
             <p className="form-footer">Designed with 💜 for Alumni Network</p>
@@ -1279,5 +1179,3 @@ return (
     </div>
   );
 }
-//
-
