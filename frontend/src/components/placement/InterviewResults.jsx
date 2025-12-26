@@ -28,8 +28,8 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const fetchAlumniWithCounts = async () => {
     try {
       setLoading(true);
-      
       const mappingsRes = await fetch(`${API_BASE_URL}/company-mapping`);
+      
       const mappingsData = await mappingsRes.json();
       
       if (mappingsData.success) {

@@ -35,8 +35,9 @@ const PlacementFeedbackForm = () => {
   const fetchPlacementRequestEmails = async () => {
     try {
       setLoadingEmails(true);
-      const res = await axios.get("${API_BASE_URL}/api/placement-requests");
-      
+
+      const res = await axios.get(`${API_BASE_URL}/api/placement-requests`);
+
       if (res.data.success && res.data.data) {
         // Extract unique emails from placement requests
         const uniqueEmails = [...new Set(res.data.data

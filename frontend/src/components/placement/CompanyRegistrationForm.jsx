@@ -542,7 +542,7 @@ const CompanyRegistrationForm = () => {
       console.log('Sending form data:', Object.fromEntries(formDataToSend));
 
       const response = await axios.post(
-        '${API_BASE_URL}/api/company/register',
+      `${API_BASE_URL}/api/company/register`,
         formDataToSend,
         {
           headers: {

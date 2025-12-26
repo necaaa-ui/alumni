@@ -18,8 +18,7 @@ const AlumniJobRequestsDisplay = ({ onBackToDashboard }) => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await axios.get('${API_BASE_URL}/api/job-requests');
+     const response = await axios.get(`${API_BASE_URL}/api/job-requests`);
       
       if (response.data.success) {
         setJobRequests(response.data.data);
@@ -1161,7 +1160,7 @@ const AlumniJobRequestsDisplay = ({ onBackToDashboard }) => {
                         fontWeight: '600'
                       }}>
                         <a
-                          href={`http://localhost:5000/uploads/${selectedRequest.attachment}`}
+                        href={`${API_BASE_URL}/uploads/${selectedRequest.attachment}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{

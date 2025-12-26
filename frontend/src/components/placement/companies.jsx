@@ -18,7 +18,7 @@ const Companies = () => {
 const fetchCompanies = async () => {
   try {
     setLoading(true);
-    const response = await axios.get('${API_BASE_URL}/api/company-mapping/available-companies');
+   const response = await axios.get(`${API_BASE_URL}/api/company-mapping/available-companies`);
     
     if (response.data.success) {
       setCompanies(response.data.data);
@@ -445,7 +445,7 @@ const fetchCompanies = async () => {
               <div style={styles.modalDetail}>
                 <div style={styles.modalLabel}>Job Poster</div>
                 <img 
-                  src={`data:image/png;base64,${selectedCompany.poster}`} 
+                src={`${API_BASE_URL}/uploads/${selectedCompany.poster}`}
                   alt="Job Poster" 
                   style={styles.posterImage}
                 />

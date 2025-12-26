@@ -23,7 +23,7 @@ const AlumniFeedbackDisplay = () => {
   const fetchFeedbacks = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('${API_BASE_URL}/api/requester-feedback');
+     const response = await axios.get(`${API_BASE_URL}/api/requester-feedback`);
       
       if (response.data.success) {
         setFeedbacks(response.data.feedbacks);
