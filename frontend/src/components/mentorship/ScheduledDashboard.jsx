@@ -7,9 +7,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import './ScheduledDashboard.css';
 
-// Add this import at the top
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-
 export default function ScheduledDashboard() {
   const [meetings, setMeetings] = useState([]);
   const [submittedMentees, setSubmittedMentees] = useState({});
@@ -88,7 +85,7 @@ export default function ScheduledDashboard() {
   const fetchAllMeetingsForMentor = async (mentorEmail) => {
     try {
       // Get mentor details including their ID
-      const mentorRes = await axios.get(`${API_BASE_URL}/api/meetings/mentor-details?email=${encodeURIComponent(mentorEmail)}`);
+      const mentorRes = await axios.get(`http://localhost:5000/api/meetings/mentor-details?email=${encodeURIComponent(mentorEmail)}`);
       
       if (!mentorRes.data.mentor?._id) {
         console.log("No mentor ID found");
@@ -98,7 +95,7 @@ export default function ScheduledDashboard() {
       const mentorId = mentorRes.data.mentor._id;
       
       // Fetch all meetings for this mentor
-      const meetingsRes = await axios.get(`${API_BASE_URL}/api/meetings/scheduled/${encodeURIComponent(mentorEmail)}`);
+      const meetingsRes = await axios.get(`http://localhost:5000/api/meetings/scheduled/${encodeURIComponent(mentorEmail)}`);
       
       if (meetingsRes.data?.meetings?.length > 0) {
         // Flatten the meetings array to get individual date entries
@@ -154,7 +151,7 @@ export default function ScheduledDashboard() {
   const fetchScheduledData = async (userEmail) => {
     try {
       const res = await axios.get(
-        `${API_BASE_URL}/api/meetings/scheduled/${encodeURIComponent(userEmail)}`
+        `http://localhost:5000/api/meetings/scheduled/${encodeURIComponent(userEmail)}`
       );
       const data = res.data;
 
@@ -207,7 +204,7 @@ export default function ScheduledDashboard() {
 
   const preloadStatuses = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/meeting-status/all`);
+      const res = await axios.get("http://localhost:5000/api/meeting-status/all");
       const statuses = res.data.statuses || [];
 
       const map = {};
@@ -226,7 +223,7 @@ export default function ScheduledDashboard() {
 
   const preloadApprovalStatuses = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/meeting-status/all`);
+      const res = await axios.get("http://localhost:5000/api/meeting-status/all");
       const statuses = res.data.statuses || [];
 
       const map = {};
@@ -352,7 +349,7 @@ export default function ScheduledDashboard() {
         meeting_time: editFormData.meeting_time
       };
       
-      await axios.put(`${API_BASE_URL}/api/meetings/meeting/${meetingId}`, updateData);
+      await axios.put(`http://localhost:5000/api/meetings/meeting/${meetingId}`, updateData);
       
       alert('Meeting date/time updated successfully!');
       setEditModalOpen(false);
@@ -394,7 +391,7 @@ export default function ScheduledDashboard() {
   const handleMinutesAction = async (statusId, action) => {
     try {
       setActionLoadingId(statusId);
-      await axios.post(`${API_BASE_URL}/api/meeting-status/approve-reject`, {
+      await axios.post("http://localhost:5000/api/meeting-status/approve-reject", {
         statusId,
         action
       });
@@ -613,7 +610,7 @@ export default function ScheduledDashboard() {
 
               let approvalBadge = null;
               
-              // ✅ UPDATED LOGIC: Check approval status first, then check if status is Postponed with Approved approval
+              // ✅ UPDATED LOGIC: Check approval status first
               const pendingStatus = meetingStatuses.find((s) => s.statusApproval === "Pending");
               const approvedStatus = meetingStatuses.find((s) => s.statusApproval === "Approved");
               const rejectedStatus = meetingStatuses.find((s) => s.statusApproval === "Rejected");
@@ -621,24 +618,28 @@ export default function ScheduledDashboard() {
               // Check meeting statuses
               const hasPostponedStatus = meetingStatuses.some(s => s.status === "Postponed");
               const hasCancelledStatus = meetingStatuses.some(s => s.status === "Cancelled");
-              const hasCompletedAndApproved = meetingStatuses.some(s => 
-                s.status === "Completed" && s.statusApproval === "Approved"
-              );
+              const hasCompletedStatus = meetingStatuses.some(s => s.status === "Completed");
 
-              if (hasCompletedAndApproved) {
-                // If meeting is completed and approved, show "Approved"
-                approvalBadge = "Approved";
-              } else if (hasPostponedStatus && approvedStatus) {
-                // If status is Postponed AND approval is Approved, show "Postponed"
+              // Show "Rejected" if approval status is rejected (highest priority)
+              if (rejectedStatus) {
+                approvalBadge = "Rejected";
+              }
+              // Show "Postponed" only if status is Postponed AND approval is Approved
+              else if (hasPostponedStatus && approvedStatus) {
                 approvalBadge = "Postponed";
-              } else if (hasCancelledStatus) {
-                // If status is Cancelled, show "Cancelled"
+              }
+              // Show "Cancelled" if status is Cancelled
+              else if (hasCancelledStatus) {
                 approvalBadge = "Cancelled";
-              } else {
-                // Otherwise, show the approval status (Pending/Approved/Rejected)
+              }
+              // Show "Approved" if meeting is completed and approved
+              else if (hasCompletedStatus && approvedStatus) {
+                approvalBadge = "Approved";
+              }
+              // Otherwise, show the approval status
+              else {
                 if (pendingStatus) approvalBadge = pendingStatus.statusApproval;
                 if (approvedStatus) approvalBadge = approvedStatus.statusApproval;
-                if (rejectedStatus) approvalBadge = rejectedStatus.statusApproval;
               }
 
               // Find the mentee that matches the logged-in user (if not mentor)

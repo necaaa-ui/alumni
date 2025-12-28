@@ -11,6 +11,7 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: #2c3e50;
   overflow-x: hidden;
+  width: 100%;
 }
 
 /* @Keyframes for Animation */
@@ -73,6 +74,7 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* Floating orb elements */
@@ -143,6 +145,10 @@ body {
   font-family: 'Inter', sans-serif;
   z-index: 1000;
   letter-spacing: 0.3px;
+  max-width: calc(100vw - 56px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dashboard-btn:hover {
@@ -162,6 +168,9 @@ body {
 .form-container {
   width: 100%;
   max-width: 680px;
+  margin: 0 auto;
+  padding: 0 15px;
+  box-sizing: border-box;
 }
 
 /* Form Header */
@@ -169,6 +178,7 @@ body {
   text-align: center;
   margin-bottom: 40px;
   animation: fadeInUp 0.8s ease;
+  padding: 0 10px;
 }
 
 .logo {
@@ -209,6 +219,9 @@ body {
   margin-bottom: 10px;
   letter-spacing: -0.5px;
   text-align: center;
+  line-height: 1.2;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .form-subtitle {
@@ -216,6 +229,9 @@ body {
   font-size: 1.05em;
   font-weight: 400;
   text-align: center;
+  line-height: 1.4;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Form Card - Glass Morphism */
@@ -232,6 +248,8 @@ body {
   position: relative;
   z-index: 1;
   animation: fadeInUp 0.8s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Success Message */
@@ -266,18 +284,23 @@ body {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
+  width: 100%;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .label {
@@ -285,6 +308,8 @@ body {
   font-weight: 600;
   color: #2c3e50;
   letter-spacing: 0.3px;
+  line-height: 1.2;
+  word-break: break-word;
 }
 
 /* Form Inputs */
@@ -302,6 +327,7 @@ body {
   background: rgba(255, 255, 255, 0.9);
   color: #2c3e50;
   font-weight: 500;
+  box-sizing: border-box;
 }
 
 .input:focus,
@@ -343,6 +369,9 @@ body {
   background: rgba(139, 92, 246, 0.05);
   border-radius: 8px;
   border-left: 3px solid #8b5cf6;
+  line-height: 1.4;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 /* Select Styling */
@@ -378,6 +407,8 @@ body {
   font-weight: 500;
   margin-top: 4px;
   animation: shake 0.4s ease;
+  line-height: 1.2;
+  word-break: break-word;
 }
 
 /* Selected Mentees */
@@ -386,6 +417,7 @@ body {
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 8px;
+  width: 100%;
 }
 
 .selected-mentee {
@@ -401,6 +433,7 @@ body {
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
+  max-width: 100%;
 }
 
 .selected-mentee::before {
@@ -419,6 +452,13 @@ body {
   box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
 }
 
+.selected-mentee span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
 .cross-symbol {
   margin-left: 8px;
   cursor: pointer;
@@ -428,6 +468,7 @@ body {
   transition: all 0.2s ease;
   position: relative;
   z-index: 2;
+  flex-shrink: 0;
 }
 
 .cross-symbol:hover {
@@ -441,6 +482,7 @@ body {
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 12px;
   margin-top: 8px;
+  width: 100%;
 }
 
 .date-badge {
@@ -454,6 +496,8 @@ body {
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .date-badge::before {
@@ -490,6 +534,7 @@ body {
   box-shadow: 0 10px 30px rgba(139, 92, 246, 0.3);
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .submit-btn::before {
@@ -521,129 +566,6 @@ body {
   box-shadow: none;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .form-wrapper {
-    padding: 40px 20px;
-    background: linear-gradient(135deg, #f5f7ff 0%, #f0f2ff 100%);
-  }
-
-  .dashboard-btn {
-    top: 20px;
-    left: 20px;
-    padding: 10px 20px;
-    font-size: 0.85em;
-  }
-
-  .form-card {
-    padding: 40px 30px;
-    border-radius: 20px;
-  }
-
-  .form-title {
-    font-size: 2em;
-  }
-
-  .form-subtitle {
-    font-size: 0.95em;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  .input,
-  .select,
-  .textarea {
-    padding: 12px 16px;
-  }
-
-  .dates-grid {
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  }
-
-  .orb {
-    opacity: 0.3;
-  }
-}
-
-@media (max-width: 480px) {
-  .form-wrapper {
-    padding: 30px 16px;
-  }
-
-  .dashboard-btn {
-    top: 16px;
-    left: 16px;
-    padding: 8px 16px;
-    font-size: 0.8em;
-  }
-
-  .form-card {
-    padding: 32px 24px;
-    border-radius: 16px;
-  }
-
-  .logo {
-    width: 60px;
-    height: 60px;
-    margin-bottom: 20px;
-  }
-
-  .logo-svg {
-    width: 30px;
-    height: 30px;
-  }
-
-  .form-title {
-    font-size: 1.8em;
-  }
-
-  .form-subtitle {
-    font-size: 0.9em;
-  }
-
-  .input,
-  .select,
-  .textarea {
-    padding: 12px 14px;
-    font-size: 14px;
-  }
-
-  .textarea {
-    min-height: 100px;
-  }
-
-  .submit-btn {
-    padding: 14px 24px;
-    font-size: 15px;
-  }
-
-  .success-message {
-    font-size: 0.95em;
-    padding: 14px;
-  }
-
-  .date-badge {
-    padding: 10px 12px;
-    font-size: 0.9em;
-  }
-
-  .selected-mentee {
-    padding: 6px 12px;
-    font-size: 0.85em;
-  }
-
-  .no-mentees-text {
-    font-size: 0.85em;
-    padding: 8px;
-  }
-
-  .orb {
-    display: none;
-  }
-}
 /* Force background to work */
 .form-wrapper {
   background: linear-gradient(135deg, #f5f7ff 0%, #f0f2ff 25%, #e6e9ff 50%, #dbe4ff 75%, #c7d2fe 100%) !important;
@@ -651,24 +573,12 @@ body {
   animation: gradientShift 15s ease infinite !important;
 }
 
-@media (max-width: 768px) {
-  .form-wrapper {
-    background: linear-gradient(135deg, #f5f7ff 0%, #f0f2ff 25%, #e6e9ff 50%, #dbe4ff 75%, #c7d2fe 100%) !important;
-    background-size: 300% 300% !important;
-  }
-}
-
-@media (max-width: 480px) {
-  .form-wrapper {
-    background: linear-gradient(135deg, #f5f7ff 0%, #f0f2ff 25%, #e6e9ff 50%, #dbe4ff 75%, #c7d2fe 100%) !important;
-    background-size: 300% 300% !important;
-  }
-}
 /* Phase specific styles */
 .loading-phase {
   padding: 8px 0;
   color: #666;
   font-style: italic;
+  word-break: break-word;
 }
 
 .input-warning {
@@ -681,4 +591,503 @@ body {
   background-color: #f9fafb;
   color: #6b7280;
   cursor: not-allowed;
+}
+
+/* =================== RESPONSIVE DESIGN =================== */
+
+/* Small Mobile Screens (360px and below) */
+@media (max-width: 360px) {
+  .form-wrapper {
+    padding: 20px 12px;
+    min-height: 100vh;
+  }
+  
+  .dashboard-btn {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    padding: 8px 16px;
+    font-size: 0.85em;
+    max-width: calc(100vw - 24px);
+    backdrop-filter: blur(16px);
+    z-index: 1000;
+  }
+  
+  .form-container {
+    padding: 0 8px;
+    margin-top: 50px;
+  }
+  
+  .form-header {
+    margin-bottom: 30px;
+  }
+  
+  .logo {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 20px;
+  }
+  
+  .logo-svg {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .form-title {
+    font-size: 1.8em;
+    margin-bottom: 8px;
+  }
+  
+  .form-subtitle {
+    font-size: 0.9em;
+    line-height: 1.3;
+  }
+  
+  .form-card {
+    padding: 28px 20px;
+    border-radius: 20px;
+    backdrop-filter: blur(20px);
+  }
+  
+  .form-content {
+    gap: 20px;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .input,
+  .select,
+  .textarea {
+    padding: 12px 14px;
+    font-size: 14px;
+    border-radius: 8px;
+  }
+  
+  .textarea {
+    min-height: 120px;
+  }
+  
+  .select {
+    background-position: right 14px center;
+    padding-right: 40px;
+  }
+  
+  .dates-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  .date-badge {
+    padding: 10px 14px;
+    font-size: 0.95em;
+  }
+  
+  .selected-mentee {
+    padding: 6px 12px;
+    font-size: 0.85em;
+    max-width: 100%;
+  }
+  
+  .selected-mentee span {
+    max-width: 150px;
+  }
+  
+  .submit-btn {
+    padding: 14px 24px;
+    font-size: 15px;
+    border-radius: 10px;
+  }
+  
+  .success-message {
+    padding: 14px 18px;
+    font-size: 0.95em;
+    margin-bottom: 24px;
+  }
+  
+  .no-mentees-text {
+    font-size: 0.85em;
+    padding: 8px;
+  }
+  
+  .orb {
+    opacity: 0.2;
+  }
+}
+
+/* Mobile Screens (480px and below) */
+@media (max-width: 480px) {
+  .form-wrapper {
+    padding: 30px 16px;
+    align-items: flex-start;
+  }
+  
+  .dashboard-btn {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    padding: 10px 18px;
+    font-size: 0.9em;
+    max-width: calc(100vw - 32px);
+    backdrop-filter: blur(16px);
+    z-index: 1000;
+  }
+  
+  .form-container {
+    margin-top: 60px;
+    padding: 0 10px;
+  }
+  
+  .form-card {
+    padding: 32px 24px;
+    border-radius: 20px;
+    backdrop-filter: blur(20px);
+  }
+  
+  .form-title {
+    font-size: 2em;
+  }
+  
+  .form-subtitle {
+    font-size: 0.95em;
+    line-height: 1.3;
+  }
+  
+  .logo {
+    width: 70px;
+    height: 70px;
+    margin-bottom: 24px;
+  }
+  
+  .logo-svg {
+    width: 35px;
+    height: 35px;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .input,
+  .select,
+  .textarea {
+    padding: 13px 16px;
+    font-size: 15px;
+  }
+  
+  .textarea {
+    min-height: 130px;
+  }
+  
+  .dates-grid {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 10px;
+  }
+  
+  .selected-mentee span {
+    max-width: 180px;
+  }
+  
+  .submit-btn {
+    padding: 15px 28px;
+  }
+  
+  .orb {
+    opacity: 0.3;
+  }
+  
+  .success-message {
+    flex-direction: column;
+    text-align: center;
+    padding: 14px 20px;
+  }
+}
+
+/* Tablet Screens (768px and below) */
+@media (max-width: 768px) {
+  .form-wrapper {
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #f5f7ff 0%, #f0f2ff 25%, #e6e9ff 50%, #dbe4ff 75%, #c7d2fe 100%) !important;
+    background-size: 300% 300% !important;
+  }
+
+  .dashboard-btn {
+    top: 20px;
+    left: 20px;
+    padding: 10px 20px;
+    font-size: 0.9em;
+    backdrop-filter: blur(20px);
+    z-index: 1000;
+  }
+
+  .form-card {
+    padding: 40px 30px;
+    border-radius: 20px;
+    backdrop-filter: blur(25px);
+  }
+
+  .form-title {
+    font-size: 2.2em;
+  }
+
+  .form-subtitle {
+    font-size: 1em;
+  }
+
+  .form-row {
+    gap: 20px;
+  }
+
+  .input,
+  .select,
+  .textarea {
+    padding: 13px 16px;
+  }
+
+  .dates-grid {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
+  }
+
+  .orb {
+    opacity: 0.3;
+  }
+}
+
+/* Large Mobile Screens (481px to 767px) */
+@media (min-width: 481px) and (max-width: 767px) {
+  .form-wrapper {
+    padding: 40px 24px;
+  }
+  
+  .dashboard-btn {
+    top: 24px;
+    left: 24px;
+  }
+  
+  .form-card {
+    padding: 36px 28px;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  
+  .dates-grid {
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  }
+  
+  .selected-mentee span {
+    max-width: 200px;
+  }
+}
+
+/* Tablet Landscape (769px to 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .form-wrapper {
+    padding: 50px 30px;
+  }
+  
+  .form-card {
+    padding: 44px 40px;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  
+  .orb-1 {
+    width: 350px;
+    height: 350px;
+    top: -100px;
+    left: -100px;
+  }
+  
+  .orb-2 {
+    width: 250px;
+    height: 250px;
+    right: -80px;
+  }
+  
+  .orb-3 {
+    width: 200px;
+    height: 200px;
+    left: 25%;
+  }
+}
+
+/* Landscape Mode for Mobile */
+@media (max-height: 600px) and (orientation: landscape) {
+  .form-wrapper {
+    padding: 20px 16px;
+    align-items: flex-start;
+    min-height: auto;
+  }
+  
+  .dashboard-btn {
+    top: 16px;
+    left: 16px;
+    padding: 8px 16px;
+  }
+  
+  .form-container {
+    margin-top: 60px;
+    margin-bottom: 30px;
+  }
+  
+  .form-header {
+    margin-bottom: 20px;
+  }
+  
+  .logo {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 15px;
+  }
+  
+  .logo-svg {
+    width: 25px;
+    height: 25px;
+  }
+  
+  .form-title {
+    font-size: 1.8em;
+    margin-bottom: 5px;
+  }
+  
+  .form-subtitle {
+    font-size: 0.9em;
+    margin-bottom: 15px;
+  }
+  
+  .form-card {
+    padding: 24px 28px;
+  }
+  
+  .form-content {
+    gap: 18px;
+  }
+  
+  .textarea {
+    min-height: 80px;
+  }
+  
+  .dates-grid {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 8px;
+  }
+  
+  .selected-mentee {
+    padding: 6px 12px;
+  }
+  
+  .success-message {
+    padding: 12px 16px;
+    margin-bottom: 20px;
+  }
+}
+
+/* Fix for iOS input zoom */
+@media screen and (max-width: 768px) {
+  .input,
+  .select,
+  .textarea {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+}
+
+/* Ensure no horizontal overflow */
+.form-container,
+.form-card,
+.form-content,
+.form-row,
+.form-group,
+.input,
+.select,
+.textarea,
+.dates-grid,
+.selected-mentees,
+.selected-mentee,
+.date-badge,
+.submit-btn {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Text wrapping improvements */
+.form-title,
+.form-subtitle,
+.label,
+.no-mentees-text,
+.error-text,
+.loading-phase,
+.date-badge,
+.selected-mentee span {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Custom scrollbar styling */
+.form-wrapper::-webkit-scrollbar {
+  width: 6px;
+}
+
+.form-wrapper::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
+}
+
+.form-wrapper::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border-radius: 3px;
+}
+
+.form-wrapper::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+}
+
+/* High-DPI screens */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .dashboard-btn,
+  .form-card {
+    border-width: 0.5px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .dashboard-btn,
+  .orb,
+  .success-message::before,
+  .selected-mentee::before,
+  .date-badge::before,
+  .submit-btn::before {
+    display: none;
+  }
+  
+  .form-wrapper {
+    background: white !important;
+    animation: none !important;
+  }
+  
+  .form-card {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    background: white;
+  }
+  
+  .submit-btn {
+    box-shadow: none;
+    border: 1px solid #333;
+    background: #333 !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }

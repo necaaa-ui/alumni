@@ -41,6 +41,12 @@
   }
 }
 
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* 🌀 Enhanced Form Wrapper - Purple Animated Gradient Background */
 .form-wrapper {
   min-height: 100vh;
@@ -97,6 +103,8 @@
 .form-container {
   width: 100%;
   max-width: 640px;
+  margin: 0 auto;
+  padding: 0 15px;
 }
 
 /* Form Header */
@@ -104,6 +112,7 @@
   text-align: center;
   margin-bottom: 40px;
   animation: fadeInUp 0.8s ease;
+  padding: 0 10px;
 }
 
 .logo {
@@ -141,12 +150,19 @@
   color: #2c3e50;
   margin-bottom: 10px;
   letter-spacing: -0.5px;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 .form-subtitle {
   color: #6b7280;
   font-size: 1.05em;
   font-weight: 400;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  hyphens: auto;
 }
 
 /* Form Card - Glass Morphism */
@@ -160,20 +176,57 @@
   position: relative;
   z-index: 1;
   animation: fadeInUp 0.8s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* Success Message */
+/* Success Message Container */
+.success-message-container {
+  margin-bottom: 2rem;
+}
+
 .success-message {
-  background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+  background: linear-gradient(135deg, #10b981, #059669);
   color: white;
-  padding: 16px 24px;
+  padding: 1.5rem;
   border-radius: 12px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+  animation: slideDown 0.5s ease-out;
+  border: 1px solid #059669;
+}
+
+.success-icon {
+  font-size: 2rem;
+  font-weight: bold;
+  background: white;
+  color: #10b981;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.success-content {
+  flex: 1;
+}
+
+.success-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
   font-weight: 600;
-  font-size: 1em;
-  margin-bottom: 32px;
-  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.25);
-  animation: slideDown 0.6s ease;
+}
+
+.success-text {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 /* Form Content */
@@ -187,6 +240,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
+  width: 100%;
 }
 
 .form-group {
@@ -200,6 +254,15 @@
   font-weight: 600;
   color: #2c3e50;
   letter-spacing: 0.3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Required star */
+.required {
+  color: #ef4444;
+  margin-left: 2px;
 }
 
 /* Form Inputs */
@@ -217,6 +280,7 @@
   background: white;
   color: #2c3e50;
   font-weight: 500;
+  box-sizing: border-box;
 }
 
 .input:focus,
@@ -245,6 +309,14 @@
   border-color: rgba(139, 92, 246, 0.1);
 }
 
+/* Info text */
+.info-text {
+  font-size: 0.8em;
+  color: #6b7280;
+  margin-top: 4px;
+  display: block;
+}
+
 /* Select Styling */
 .select {
   cursor: pointer;
@@ -258,6 +330,7 @@
 .textarea {
   min-height: 140px;
   resize: vertical;
+  line-height: 1.5;
 }
 
 /* Error States */
@@ -275,6 +348,7 @@
   color: #ef4444;
   font-weight: 500;
   margin-top: 4px;
+  display: block;
 }
 
 /* Loading Text */
@@ -283,6 +357,15 @@
   color: #8b5cf6;
   font-style: italic;
   margin-top: 4px;
+  display: block;
+}
+
+/* Success checkmark for email validation */
+.form-group:first-child small[style*="color: #8b5cf6"] {
+  font-size: 0.85em;
+  font-weight: 600;
+  margin-top: 4px;
+  display: block;
 }
 
 /* Submit Button */
@@ -299,6 +382,10 @@
   transition: all 0.2s ease;
   font-family: 'Inter', sans-serif;
   margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .submit-btn:hover:not(:disabled) {
@@ -319,6 +406,19 @@
   box-shadow: none;
 }
 
+/* Loading spinner */
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
 /* Form Footer */
 .form-footer {
   text-align: center;
@@ -328,7 +428,9 @@
   font-weight: 500;
 }
 
-/* Responsive Design */
+/* =================== RESPONSIVE DESIGN =================== */
+
+/* Tablet Screens */
 @media (max-width: 768px) {
   .form-wrapper {
     padding: 40px 20px;
@@ -339,6 +441,10 @@
     left: 20px;
     padding: 10px 20px;
     font-size: 0.85em;
+  }
+
+  .form-container {
+    padding: 0 10px;
   }
 
   .form-card {
@@ -364,8 +470,32 @@
   .textarea {
     padding: 12px 16px;
   }
+
+  /* Success Message for Tablet */
+  .success-message {
+    flex-direction: column;
+    text-align: center;
+    padding: 1.25rem;
+    gap: 0.75rem;
+  }
+
+  .success-icon {
+    width: 45px;
+    height: 45px;
+    font-size: 1.75rem;
+  }
+
+  .success-title {
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .success-text {
+    font-size: 0.9rem;
+  }
 }
 
+/* Mobile Screens */
 @media (max-width: 480px) {
   .form-wrapper {
     padding: 30px 16px;
@@ -376,6 +506,10 @@
     left: 16px;
     padding: 8px 16px;
     font-size: 0.8em;
+  }
+
+  .form-container {
+    padding: 0 8px;
   }
 
   .form-card {
@@ -409,91 +543,228 @@
     font-size: 14px;
   }
 
+  .textarea {
+    min-height: 120px;
+  }
+
   .submit-btn {
     padding: 14px 24px;
     font-size: 15px;
   }
-}
-/* Add these styles to your existing CSS */
 
-.success-message-container {
-  margin-bottom: 2rem;
-}
-
-.success-message {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
-  animation: slideDown 0.5s ease-out;
-  border: 1px solid #059669;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
+  /* Success Message for Mobile */
+  .success-message {
+    padding: 1rem;
+    gap: 0.5rem;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+
+  .success-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.5rem;
+  }
+
+  .success-title {
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .success-text {
+    font-size: 0.85rem;
+    line-height: 1.4;
   }
 }
 
-.success-icon {
-  font-size: 2rem;
-  font-weight: bold;
-  background: white;
-  color: #10b981;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+/* Small Mobile Screens */
+@media (max-width: 360px) {
+  .form-wrapper {
+    padding: 20px 12px;
+  }
+
+  .dashboard-btn {
+    top: 12px;
+    left: 12px;
+    padding: 7px 14px;
+    font-size: 0.75em;
+    border-radius: 10px;
+  }
+
+  .form-container {
+    padding: 0 6px;
+  }
+
+  .form-card {
+    padding: 24px 18px;
+    border-radius: 16px;
+  }
+
+  .logo {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 16px;
+  }
+
+  .logo svg {
+    width: 25px;
+    height: 25px;
+  }
+
+  .form-title {
+    font-size: 1.6em;
+  }
+
+  .form-subtitle {
+    font-size: 0.85em;
+  }
+
+  .form-content {
+    gap: 20px;
+  }
+
+  .form-row {
+    gap: 16px;
+  }
+
+  .input,
+  .select,
+  .textarea {
+    padding: 11px 12px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+
+  .textarea {
+    min-height: 100px;
+  }
+
+  .select {
+    background-position: right 12px center;
+    padding-right: 40px;
+  }
+
+  .submit-btn {
+    padding: 13px 20px;
+    font-size: 14px;
+    border-radius: 8px;
+  }
+
+  .error-text,
+  .loading-text,
+  .info-text {
+    font-size: 0.8em;
+  }
 }
 
-.success-content {
-  flex: 1;
+/* Landscape Mode for Mobile */
+@media (max-height: 600px) and (orientation: landscape) {
+  .form-wrapper {
+    padding: 20px;
+    align-items: flex-start;
+    min-height: auto;
+  }
+
+  .form-container {
+    margin-top: 60px;
+    margin-bottom: 30px;
+  }
+
+  .form-card {
+    padding: 25px 30px;
+  }
+
+  .form-title {
+    font-size: 1.8em;
+    margin-bottom: 5px;
+  }
+
+  .form-subtitle {
+    font-size: 0.9em;
+    margin-bottom: 15px;
+  }
+
+  .logo {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 15px;
+  }
+
+  .logo svg {
+    width: 25px;
+    height: 25px;
+  }
+
+  .form-content {
+    gap: 15px;
+  }
+
+  .textarea {
+    min-height: 80px;
+  }
+
+  .success-message {
+    padding: 1rem;
+    margin-bottom: 20px;
+  }
 }
 
-.success-title {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.25rem;
-  font-weight: 600;
+/* Fix for iOS input zoom */
+@media screen and (max-width: 768px) {
+  .input,
+  .select,
+  .textarea {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
 }
 
-.success-text {
+/* Fix for Firefox number input */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
   margin: 0;
-  opacity: 0.9;
-  font-size: 0.95rem;
 }
 
-/* Form button states */
-.submit-btn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
+/* Ensure form doesn't overflow on small screens */
+.form-group,
+.form-row,
+.input,
+.select,
+.textarea {
+  max-width: 100%;
 }
 
-.loading-spinner {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 50%;
-  border-top-color: white;
-  animation: spin 1s ease-in-out infinite;
-  margin-right: 8px;
-  vertical-align: middle;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+  .form-card {
+    background: rgba(30, 30, 40, 0.92);
+    border-color: rgba(139, 92, 246, 0.2);
+  }
+  
+  .input,
+  .select,
+  .textarea {
+    background: #1e1e2e;
+    border-color: #3f3f4e;
+    color: #e2e8f0;
+  }
+  
+  .disabled-input {
+    background: #2d2d3d;
+    color: #a0aec0;
+  }
+  
+  .label {
+    color: #e2e8f0;
+  }
+  
+  .form-title {
+    color: #f7fafc;
+  }
+  
+  .form-subtitle {
+    color: #cbd5e0;
   }
 }

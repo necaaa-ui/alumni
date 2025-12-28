@@ -27,9 +27,17 @@ export default function MeetingStatusUpdateForm() {
 
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false); // Added for button state
   const [menteeId, setMenteeId] = useState('');
   const [phases, setPhases] = useState([]); // ✅ Added phases state
   const [loadingPhase, setLoadingPhase] = useState(false); // ✅ Added loading state
+
+  // Auto-scroll to top when submitted
+  useEffect(() => {
+    if (submitted) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [submitted]);
 
   // ================================
   // FETCH PHASES AND CURRENT ACTIVE PHASE
@@ -150,6 +158,8 @@ export default function MeetingStatusUpdateForm() {
       return;
     }
 
+    setSubmitting(true);
+
     try {
       // ✅ Updated to include phaseId in the request
       await axios.post(`${API_BASE_URL}/api/meeting-status/update`, {
@@ -163,10 +173,23 @@ export default function MeetingStatusUpdateForm() {
       });
 
       setSubmitted(true);
-      setTimeout(() => navigate('/dashboard'), 1200);
+      // Reset form after showing success message
+      setTimeout(() => {
+        setFormData(prev => ({
+          ...prev,
+          meetingStatus: '',
+          meetingMinutes: '',
+          postponedReason: ''
+        }));
+        setErrors({});
+        setSubmitted(false);
+        setSubmitting(false);
+        navigate('/dashboard');
+      }, 2500);
     } catch (err) {
       console.error("❌ Update failed:", err);
       alert(err.response?.data?.message || "Failed to update status");
+      setSubmitting(false);
     }
   };
 
@@ -178,7 +201,22 @@ export default function MeetingStatusUpdateForm() {
 
       <div className="form-container">
         <h1>Update Meeting Status</h1>
-        {submitted && <div className="success-message">✓ Updated Successfully</div>}
+        
+        {/* Enhanced Success Message */}
+        {submitted && (
+          <div className="success-message-container">
+            <div className="success-message">
+              <div className="success-icon">✓</div>
+              <div className="success-content">
+                <h3 className="success-title">Meeting Status Updated Successfully!</h3>
+                <p className="success-text">
+                  Meeting status has been updated to <strong>{formData.meetingStatus}</strong>. 
+                  You will be redirected to dashboard shortly.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ✅ Added Phase Information Display */}
         <div className="form-group">
@@ -232,13 +270,12 @@ export default function MeetingStatusUpdateForm() {
             value={formData.meetingStatus}
             onChange={handleChange}
             className="select"
-            disabled={!formData.phaseId} // ✅ Disable if no active phase
+            disabled={!formData.phaseId || submitting || submitted} // Added disabling states
           >
             <option value="">-- Select --</option>
             <option value="Completed">Completed</option>
             <option value="Postponed">Postponed</option>
             <option value="Cancelled">Cancelled</option>
-            
           </select>
           {errors.meetingStatus && <p className="error-text">{errors.meetingStatus}</p>}
         </div>
@@ -251,7 +288,7 @@ export default function MeetingStatusUpdateForm() {
               value={formData.meetingMinutes}
               onChange={handleChange}
               className="textarea"
-              disabled={!formData.phaseId}
+              disabled={!formData.phaseId || submitting || submitted}
             />
             {errors.meetingMinutes && <p className="error-text">{errors.meetingMinutes}</p>}
           </div>
@@ -265,7 +302,7 @@ export default function MeetingStatusUpdateForm() {
               value={formData.postponedReason}
               onChange={handleChange}
               className="textarea"
-              disabled={!formData.phaseId}
+              disabled={!formData.phaseId || submitting || submitted}
             />
             {errors.postponedReason && <p className="error-text">{errors.postponedReason}</p>}
           </div>
@@ -274,9 +311,20 @@ export default function MeetingStatusUpdateForm() {
         <button 
           onClick={handleSubmit} 
           className="submit-btn" 
-          disabled={!formData.meetingStatus || !formData.phaseId}
+          disabled={!formData.meetingStatus || !formData.phaseId || submitting || submitted}
         >
-          {!formData.phaseId ? "No Active Phase" : "Update Status"}
+          {submitting ? (
+            <>
+              <span className="loading-spinner"></span>
+              Updating...
+            </>
+          ) : submitted ? (
+            "Updated!"
+          ) : !formData.phaseId ? (
+            "No Active Phase"
+          ) : (
+            "Update Status"
+          )}
         </button>
       </div>
     </div>

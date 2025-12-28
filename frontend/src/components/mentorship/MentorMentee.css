@@ -44,6 +44,12 @@ body {
   }
 }
 
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
 /* 🌀 Enhanced Form Wrapper - Animated Gradient Background */
 .form-wrapper {
   min-height: 100vh;
@@ -82,6 +88,10 @@ body {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   margin-bottom: 24px;
+  position: absolute;
+  top: 28px;
+  left: 28px;
+  z-index: 100;
 }
 
 .dashboard-btn:hover {
@@ -109,6 +119,8 @@ body {
 .form-container {
   max-width: 700px;
   margin: 0 auto;
+  width: 100%;
+  padding: 0 15px;
 }
 
 /* Form Header */
@@ -116,6 +128,7 @@ body {
   text-align: center;
   margin-bottom: 40px;
   animation: fadeInUp 0.8s ease;
+  padding: 0 10px;
 }
 
 .logo {
@@ -163,6 +176,8 @@ body {
   background-clip: text;
   animation: gradientShift 6s ease infinite;
   letter-spacing: -1px;
+  line-height: 1.2;
+  overflow-wrap: break-word;
 }
 
 .form-subtitle {
@@ -170,6 +185,9 @@ body {
   font-size: 1.05em;
   margin: 0;
   font-weight: 500;
+  line-height: 1.4;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }
 
 /* Form Card */
@@ -189,6 +207,8 @@ body {
   background-origin: border-box;
   background-clip: padding-box, border-box;
   animation: fadeInUp 0.8s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Success Message */
@@ -279,6 +299,8 @@ body {
   background: linear-gradient(white, white) padding-box,
               linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3)) border-box;
   box-shadow: 0 2px 8px rgba(102, 126, 234, 0.08);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .input:focus,
@@ -345,6 +367,8 @@ body {
   margin: 8px 0;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
   transition: all 0.3s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .mentee-section:hover {
@@ -397,6 +421,8 @@ body {
   margin: 8px 0;
   box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
   transition: all 0.3s ease;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .info-box:hover {
@@ -417,6 +443,7 @@ body {
   color: #78350f;
   line-height: 1.6;
   font-weight: 500;
+  overflow-wrap: break-word;
 }
 
 /* Submit Button */
@@ -455,44 +482,114 @@ body {
   transform: translateY(-1px);
 }
 
-/* Responsive Styles */
+/* =================== RESPONSIVE DESIGN =================== */
+
+/* Large Tablet Screens (1024px and below) */
+@media (max-width: 1024px) {
+  .form-wrapper {
+    padding: 50px 30px;
+  }
+  
+  .form-card {
+    padding: 40px 45px;
+  }
+  
+  .form-title {
+    font-size: 2.2em;
+  }
+  
+  .dashboard-btn {
+    top: 24px;
+    left: 24px;
+  }
+}
+
+/* Tablet Screens (768px and below) */
 @media (max-width: 768px) {
   .form-wrapper {
-    padding: 30px 16px;
+    padding: 40px 20px;
+    align-items: flex-start;
   }
 
   .dashboard-btn {
-    padding: 12px 24px;
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    padding: 12px 22px;
     font-size: 0.9em;
-    margin-bottom: 20px;
+    margin-bottom: 0;
+    backdrop-filter: blur(20px);
+    z-index: 1000;
+  }
+
+  .form-container {
+    margin-top: 70px;
+    padding: 0 10px;
   }
 
   .form-card {
     padding: 36px 30px;
     border-radius: 20px;
+    backdrop-filter: blur(20px);
   }
 
   .form-title {
     font-size: 2em;
+    margin-bottom: 8px;
+  }
+
+  .form-subtitle {
+    font-size: 1em;
+    line-height: 1.3;
+  }
+
+  .logo {
+    width: 75px;
+    height: 75px;
+    margin-bottom: 22px;
+  }
+
+  .logo svg {
+    width: 35px;
+    height: 35px;
   }
 
   .mentee-section {
-    padding: 16px 18px;
+    padding: 18px 20px;
+    border-left-width: 5px;
   }
 
   .info-box {
-    padding: 14px 16px;
+    padding: 14px 18px;
+    flex-direction: row;
+    align-items: flex-start;
   }
 
   .info-text {
     font-size: 0.88em;
+    line-height: 1.5;
   }
 
   .input, .select {
-    padding: 14px 18px;
+    padding: 15px 18px;
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+
+  .form-content {
+    gap: 22px;
+  }
+
+  .success-message {
+    padding: 16px 20px;
+    font-size: 1em;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
 }
 
+/* Mobile Screens (480px and below) */
 @media (max-width: 480px) {
   .form-wrapper {
     padding: 24px 12px;
@@ -503,28 +600,42 @@ body {
   }
 
   .logo {
-    width: 70px;
-    height: 70px;
-    margin-bottom: 24px;
+    width: 65px;
+    height: 65px;
+    margin-bottom: 20px;
   }
 
   .logo svg {
-    width: 35px;
-    height: 35px;
+    width: 30px;
+    height: 30px;
   }
 
   .dashboard-btn {
-    padding: 10px 20px;
+    top: 16px;
+    left: 16px;
+    padding: 10px 18px;
     font-size: 0.85em;
+    border-radius: 10px;
+  }
+
+  .form-container {
+    margin-top: 65px;
+    padding: 0 8px;
   }
 
   .form-card {
-    padding: 28px 20px;
-    border-radius: 16px;
+    padding: 28px 22px;
+    border-radius: 18px;
   }
 
   .form-title {
-    font-size: 1.75em;
+    font-size: 1.8em;
+    margin-bottom: 6px;
+  }
+
+  .form-subtitle {
+    font-size: 0.95em;
+    line-height: 1.3;
   }
 
   .form-content {
@@ -533,10 +644,17 @@ body {
 
   .label {
     font-size: 0.9em;
+    padding-left: 12px;
+  }
+
+  .label::before {
+    width: 3px;
+    height: 14px;
   }
 
   .mentee-section {
-    padding: 14px 16px;
+    padding: 16px 18px;
+    border-left-width: 4px;
   }
 
   .mentee-label {
@@ -548,21 +666,226 @@ body {
   }
 
   .info-box {
-    padding: 12px;
-    gap: 10px;
+    padding: 14px 16px;
+    gap: 12px;
+    flex-direction: row;
   }
 
   .info-icon {
     width: 20px;
     height: 20px;
+    margin-top: 1px;
   }
 
   .info-text {
     font-size: 0.85em;
+    line-height: 1.5;
+  }
+
+  .input, .select {
+    padding: 14px 16px;
+    font-size: 16px;
+    border-radius: 10px;
+  }
+
+  .select {
+    background-position: right 16px center;
+    padding-right: 48px;
   }
 
   .submit-btn {
-    padding: 14px 28px;
+    padding: 16px 28px;
     font-size: 1em;
+    border-radius: 16px;
+    letter-spacing: 1px;
   }
+
+  .success-message {
+    padding: 14px 18px;
+    flex-direction: row;
+    text-align: left;
+    font-size: 0.95em;
+    gap: 12px;
+  }
+}
+
+/* Small Mobile Screens (360px and below) */
+@media (max-width: 360px) {
+  .form-wrapper {
+    padding: 20px 10px;
+  }
+
+  .dashboard-btn {
+    top: 12px;
+    left: 12px;
+    padding: 8px 16px;
+    font-size: 0.8em;
+  }
+
+  .form-container {
+    margin-top: 60px;
+    padding: 0 6px;
+  }
+
+  .form-card {
+    padding: 24px 18px;
+    border-radius: 16px;
+  }
+
+  .form-title {
+    font-size: 1.6em;
+  }
+
+  .form-subtitle {
+    font-size: 0.9em;
+  }
+
+  .logo {
+    width: 55px;
+    height: 55px;
+    margin-bottom: 18px;
+  }
+
+  .logo svg {
+    width: 25px;
+    height: 25px;
+  }
+
+  .form-content {
+    gap: 18px;
+  }
+
+  .input, .select {
+    padding: 12px 14px;
+    font-size: 16px;
+    border-radius: 9px;
+  }
+
+  .select {
+    background-position: right 14px center;
+    padding-right: 42px;
+  }
+
+  .mentee-section {
+    padding: 14px 16px;
+  }
+
+  .info-box {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .info-text {
+    font-size: 0.8em;
+  }
+
+  .submit-btn {
+    padding: 14px 24px;
+    font-size: 0.95em;
+    border-radius: 14px;
+  }
+
+  .success-message {
+    padding: 12px 16px;
+    font-size: 0.9em;
+    gap: 10px;
+  }
+}
+
+/* Landscape Mode for Mobile */
+@media (max-height: 600px) and (orientation: landscape) {
+  .form-wrapper {
+    padding: 20px 15px;
+    align-items: flex-start;
+    min-height: auto;
+    overflow-y: auto;
+  }
+
+  .form-container {
+    margin-top: 60px;
+    margin-bottom: 30px;
+  }
+
+  .form-card {
+    padding: 25px 30px;
+  }
+
+  .form-title {
+    font-size: 1.8em;
+    margin-bottom: 5px;
+  }
+
+  .form-subtitle {
+    font-size: 0.9em;
+    margin-bottom: 15px;
+  }
+
+  .logo {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 15px;
+  }
+
+  .logo svg {
+    width: 25px;
+    height: 25px;
+  }
+
+  .form-content {
+    gap: 18px;
+  }
+
+  .mentee-section {
+    padding: 15px 18px;
+  }
+
+  .info-box {
+    padding: 12px 16px;
+  }
+
+  .input, .select {
+    padding: 14px 16px;
+  }
+
+  .textarea {
+    min-height: 80px;
+  }
+
+  .success-message {
+    padding: 14px 18px;
+    margin-bottom: 20px;
+  }
+}
+
+/* Prevent iOS input zoom */
+@media screen and (max-width: 768px) {
+  .input,
+  .select,
+  .textarea {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+}
+
+/* Ensure no horizontal overflow */
+.form-group,
+.form-content,
+.mentee-section,
+.info-box,
+.input,
+.select,
+.submit-btn {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Fix text wrapping for long content */
+.form-title,
+.form-subtitle,
+.info-text,
+.success-message,
+.label,
+.mentee-label {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
 }

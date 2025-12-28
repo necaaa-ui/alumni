@@ -1,6 +1,7 @@
 /* -----------------------------------------------------------
    SCHEDULED DASHBOARD - THEMED VERSION
    Fixed Approval Badge Overlap Issue
+   RESPONSIVE ENHANCEMENTS ADDED
 ----------------------------------------------------------- */
 
 * {
@@ -298,6 +299,16 @@ body {
   box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
 }
 
+.approval-badge.postponed {
+  background: linear-gradient(135deg, #ff9800, #ff5722);
+  color: white;
+}
+
+.approval-badge.cancelled {
+  background: linear-gradient(135deg, #757575, #424242);
+  color: white;
+}
+
 /* Mentor Header */
 .mentor-header {
   display: flex;
@@ -541,77 +552,6 @@ body {
   background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
 }
 
-/* Responsive Design */
-@media (max-width: 1200px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  }
-}
-
-@media (max-width: 768px) {
-  .dashboard-container {
-    padding: 30px;
-  }
-  
-  .dashboard-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .filters {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 15px;
-  }
-  
-  .filters select {
-    width: 100%;
-  }
-  
-  .mentor-header {
-    flex-direction: column;
-    text-align: center;
-    gap: 15px;
-  }
-  
-  .mentor-info {
-    padding-right: 0;
-    width: 100%;
-  }
-  
-  .approval-badge {
-    position: relative;
-    top: 0;
-    right: 0;
-    margin-top: 10px;
-    align-self: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .dashboard-container {
-    padding: 20px;
-  }
-  
-  .dashboard-container h1 {
-    font-size: 2em;
-  }
-  
-  .mentor-card {
-    padding: 20px;
-  }
-  
-  .action-buttons {
-    flex-direction: column;
-  }
-  
-  .mentor-info h2 {
-    font-size: 1.2em;
-  }
-  
-  .mentor-info p {
-    font-size: 0.85em;
-  }
-}
 /* Edit Meeting Button (for mentors) */
 .edit-meeting-button {
   position: fixed;
@@ -798,8 +738,722 @@ body {
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
-/* Responsive adjustments */
+/* -----------------------------------------------------------
+   RESPONSIVE ENHANCEMENTS
+   Comprehensive breakpoints for all devices
+----------------------------------------------------------- */
+
+/* Extra large screens (≥1600px) */
+@media (min-width: 1600px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+    gap: 35px;
+  }
+  
+  .dashboard-container {
+    max-width: 1600px;
+  }
+}
+
+/* Tablets and small laptops (768px - 1199px) */
+@media (max-width: 1199px) and (min-width: 768px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 25px;
+  }
+  
+  .dashboard-container {
+    padding: 35px 40px;
+  }
+  
+  .main-header {
+    padding: 35px 40px;
+  }
+  
+  .header-content {
+    max-width: 100%;
+  }
+  
+  .logo {
+    width: 70px;
+    height: 70px;
+    font-size: 1.8em;
+  }
+  
+  .header-text h1 {
+    font-size: 2.2em;
+  }
+  
+  .mentor-card {
+    padding: 25px;
+  }
+  
+  .mentor-avatar {
+    width: 65px;
+    height: 65px;
+    font-size: 1.6em;
+  }
+  
+  .mentor-info h2 {
+    font-size: 1.3em;
+  }
+  
+  /* Adjust edit meeting button for tablet */
+  .edit-meeting-button {
+    top: 90px;
+    right: 40px;
+  }
+}
+
+/* Small tablets and large phones (576px - 767px) */
+@media (max-width: 767px) and (min-width: 576px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .dashboard-container {
+    padding: 25px 30px;
+  }
+  
+  .main-header {
+    padding: 30px 25px;
+  }
+  
+  .logo-section {
+    gap: 15px;
+  }
+  
+  .logo {
+    width: 60px;
+    height: 60px;
+    font-size: 1.6em;
+    border-radius: 15px;
+  }
+  
+  .header-text h1 {
+    font-size: 1.8em;
+  }
+  
+  .header-text p {
+    font-size: 1em;
+  }
+  
+  .dashboard-container h1 {
+    font-size: 2em;
+    margin-bottom: 30px;
+  }
+  
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+    padding: 18px;
+    margin-bottom: 30px;
+  }
+  
+  .filters label {
+    font-size: 0.9em;
+  }
+  
+  .filters select {
+    padding: 10px 16px;
+    font-size: 0.9em;
+  }
+  
+  .mentor-card {
+    padding: 22px;
+  }
+  
+  .mentor-header {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .mentor-avatar {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5em;
+    border-radius: 15px;
+  }
+  
+  .mentor-info {
+    padding-right: 80px; /* Keep space for badge */
+    min-width: 0;
+  }
+  
+  .mentor-info h2 {
+    font-size: 1.2em;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+  
+  .mentor-info p {
+    font-size: 0.9em;
+    white-space: normal;
+  }
+  
+  .approval-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    max-width: 100px;
+    font-size: 0.7em;
+    padding: 5px 12px;
+  }
+  
+  .mentees-container {
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .mentees-container h4 {
+    font-size: 0.9em;
+  }
+  
+  .mentees-container p {
+    padding: 8px 12px;
+    font-size: 0.9em;
+  }
+  
+  .meeting-block p {
+    font-size: 0.9em;
+    flex-wrap: wrap;
+  }
+  
+  .meeting-block strong {
+    min-width: 70px;
+    font-size: 0.9em;
+  }
+  
+  .update-meeting-btn {
+    padding: 14px;
+    font-size: 0.95em;
+  }
+  
+  .meeting-minutes-section {
+    margin-top: 20px;
+    padding-top: 20px;
+  }
+  
+  .minutes-card {
+    padding: 15px;
+  }
+  
+  .minutes-card p {
+    font-size: 0.9em;
+  }
+  
+  .action-buttons {
+    gap: 8px;
+  }
+  
+  .approve-btn, .reject-btn {
+    padding: 9px 16px;
+    font-size: 0.85em;
+  }
+  
+  /* Edit meeting button adjustments */
+  .edit-meeting-button {
+    top: 80px;
+    right: 30px;
+    padding: 10px 15px;
+  }
+  
+  .edit-text {
+    font-size: 13px;
+  }
+  
+  /* Modal adjustments */
+  .modal-content {
+    width: 95%;
+    max-height: 85vh;
+  }
+  
+  .modal-header {
+    padding: 18px 20px;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.3rem;
+  }
+  
+  .modal-body {
+    padding: 20px;
+  }
+  
+  .form-group label {
+    font-size: 0.9em;
+  }
+  
+  .meeting-select,
+  .edit-input {
+    padding: 10px;
+    font-size: 13px;
+  }
+  
+  .modal-actions {
+    padding-top: 18px;
+  }
+  
+  .cancel-btn, .save-btn {
+    padding: 9px 18px;
+    font-size: 0.9em;
+  }
+}
+
+/* Mobile phones (≤575px) */
+@media (max-width: 575px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  
+  .dashboard-container {
+    padding: 20px 15px;
+  }
+  
+  .main-header {
+    padding: 25px 20px;
+  }
+  
+  .logo-section {
+    flex-direction: column;
+    text-align: center;
+    gap: 15px;
+  }
+  
+  .logo {
+    width: 70px;
+    height: 70px;
+    font-size: 1.8em;
+    margin: 0 auto;
+  }
+  
+  .header-text {
+    text-align: center;
+  }
+  
+  .header-text h1 {
+    font-size: 1.8em;
+    line-height: 1.2;
+  }
+  
+  .header-text p {
+    font-size: 0.95em;
+    line-height: 1.4;
+  }
+  
+  /* Home button adjustments */
+  .home-button {
+    top: 15px;
+    left: 15px;
+    padding: 10px 16px;
+    font-size: 0.9em;
+  }
+  
+  .dashboard-container h1 {
+    font-size: 1.8em;
+    margin-bottom: 25px;
+    padding: 0 10px;
+  }
+  
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 15px;
+    margin-bottom: 25px;
+    border-radius: 15px;
+  }
+  
+  .filters label {
+    font-size: 0.85em;
+  }
+  
+  .filters select {
+    padding: 10px 14px;
+    font-size: 0.85em;
+    border-radius: 10px;
+  }
+  
+  .mentor-card {
+    padding: 20px;
+    border-radius: 20px;
+  }
+  
+  .mentor-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .mentor-avatar {
+    width: 70px;
+    height: 70px;
+    font-size: 1.7em;
+    margin: 0 auto;
+  }
+  
+  .mentor-info {
+    padding-right: 0;
+    width: 100%;
+  }
+  
+  .mentor-info h2 {
+    font-size: 1.3em;
+    white-space: normal;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  
+  .mentor-info p {
+    font-size: 0.9em;
+    text-align: center;
+    white-space: normal;
+  }
+  
+  .approval-badge {
+    position: relative;
+    top: 0;
+    right: 0;
+    margin: 10px auto 0;
+    align-self: center;
+    max-width: 90%;
+    font-size: 0.75em;
+  }
+  
+  .mentees-container {
+    padding: 15px;
+    margin-bottom: 18px;
+    border-radius: 15px;
+  }
+  
+  .mentees-container h4 {
+    font-size: 0.85em;
+    text-align: center;
+  }
+  
+  .mentees-container p {
+    padding: 10px;
+    font-size: 0.9em;
+    text-align: center;
+  }
+  
+  .meeting-block {
+    margin-top: 20px;
+  }
+  
+  .meeting-block p {
+    font-size: 0.9em;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    margin-bottom: 15px;
+  }
+  
+  .meeting-block strong {
+    min-width: auto;
+    font-size: 0.9em;
+    margin-bottom: 2px;
+  }
+  
+  .update-meeting-btn {
+    padding: 14px;
+    font-size: 0.95em;
+    border-radius: 12px;
+    margin-top: 15px;
+  }
+  
+  .meeting-minutes-section {
+    margin-top: 20px;
+    padding-top: 20px;
+  }
+  
+  .minutes-card {
+    padding: 15px;
+    border-radius: 15px;
+  }
+  
+  .minutes-card p {
+    font-size: 0.9em;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .approve-btn, .reject-btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 0.9em;
+  }
+  
+  /* Edit meeting button mobile */
+  .edit-meeting-button {
+    top: 70px;
+    right: 15px;
+    padding: 10px;
+    border-radius: 12px;
+  }
+  
+  .edit-text {
+    display: none;
+  }
+  
+  .edit-meeting-button .edit-icon {
+    font-size: 20px;
+  }
+  
+  /* Modal mobile adjustments */
+  .modal-content {
+    width: 95%;
+    margin: 10px;
+    max-height: 90vh;
+    border-radius: 12px;
+  }
+  
+  .modal-header {
+    padding: 16px 18px;
+    border-radius: 12px 12px 0 0;
+  }
+  
+  .modal-header h2 {
+    font-size: 1.2rem;
+  }
+  
+  .modal-close {
+    width: 28px;
+    height: 28px;
+    font-size: 20px;
+  }
+  
+  .modal-body {
+    padding: 18px;
+  }
+  
+  .form-group {
+    margin-bottom: 16px;
+  }
+  
+  .form-group label {
+    font-size: 0.85em;
+    margin-bottom: 6px;
+  }
+  
+  .meeting-select,
+  .edit-input {
+    padding: 10px;
+    font-size: 0.9em;
+    border-radius: 8px;
+  }
+  
+  .modal-actions {
+    flex-direction: column-reverse;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 18px;
+  }
+  
+  .cancel-btn, .save-btn {
+    width: 100%;
+    padding: 12px;
+  }
+  
+  /* Animated background adjustments for mobile */
+  .gradient-orb {
+    filter: blur(60px);
+  }
+  
+  .orb-1 {
+    width: 300px;
+    height: 300px;
+    top: -150px;
+    left: -150px;
+  }
+  
+  .orb-2 {
+    width: 250px;
+    height: 250px;
+    right: -125px;
+  }
+  
+  .orb-3 {
+    width: 200px;
+    height: 200px;
+    left: 20%;
+  }
+}
+
+/* Very small phones (≤375px) */
+@media (max-width: 375px) {
+  .dashboard-container {
+    padding: 15px 10px;
+  }
+  
+  .main-header {
+    padding: 20px 15px;
+  }
+  
+  .logo {
+    width: 60px;
+    height: 60px;
+    font-size: 1.5em;
+  }
+  
+  .header-text h1 {
+    font-size: 1.6em;
+  }
+  
+  .header-text p {
+    font-size: 0.85em;
+  }
+  
+  .home-button {
+    padding: 8px 12px;
+    font-size: 0.8em;
+    top: 12px;
+    left: 12px;
+  }
+  
+  .dashboard-container h1 {
+    font-size: 1.5em;
+  }
+  
+  .mentor-card {
+    padding: 18px;
+  }
+  
+  .mentor-info h2 {
+    font-size: 1.2em;
+  }
+  
+  .mentor-info p {
+    font-size: 0.85em;
+  }
+  
+  .edit-meeting-button {
+    top: 65px;
+    right: 10px;
+    padding: 8px;
+  }
+  
+  .edit-meeting-button .edit-icon {
+    font-size: 18px;
+  }
+}
+
+/* Landscape mode for mobile */
+@media (max-height: 600px) and (orientation: landscape) {
+  .dashboard-container {
+    padding: 20px 15px;
+  }
+  
+  .main-header {
+    padding: 20px 25px;
+  }
+  
+  .logo-section {
+    flex-direction: row;
+    text-align: left;
+  }
+  
+  .header-text {
+    text-align: left;
+  }
+  
+  .dashboard-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+  }
+  
+  .mentor-header {
+    flex-direction: row;
+    text-align: left;
+    gap: 15px;
+  }
+  
+  .mentor-avatar {
+    margin: 0;
+  }
+  
+  .mentor-info {
+    text-align: left;
+  }
+  
+  .mentor-info h2,
+  .mentor-info p {
+    text-align: left;
+  }
+  
+  .approval-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    margin: 0;
+  }
+  
+  .mentees-container h4,
+  .mentees-container p {
+    text-align: left;
+  }
+  
+  /* Modal adjustments for landscape */
+  .modal-content {
+    max-height: 95vh;
+  }
+}
+
+/* Existing responsive breakpoints (kept for compatibility) */
+@media (max-width: 1200px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
+  .dashboard-container {
+    padding: 30px;
+  }
+  
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 15px;
+  }
+  
+  .filters select {
+    width: 100%;
+  }
+  
+  .mentor-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 15px;
+  }
+  
+  .mentor-info {
+    padding-right: 0;
+    width: 100%;
+  }
+  
+  .approval-badge {
+    position: relative;
+    top: 0;
+    right: 0;
+    margin-top: 10px;
+    align-self: center;
+  }
+  
+  /* Edit meeting button responsive adjustments */
   .edit-meeting-button {
     top: 80px;
     right: 10px;
@@ -819,11 +1473,29 @@ body {
     margin: 10px;
   }
 }
-.approval-badge.postponed {
-  background: linear-gradient(135deg, #ff9800, #ff5722);
-  color: white;
-}
-.approval-badge.cancelled {
-  background: linear-gradient(135deg, #757575, #424242);
-  color: white;
+
+@media (max-width: 480px) {
+  .dashboard-container {
+    padding: 20px;
+  }
+  
+  .dashboard-container h1 {
+    font-size: 2em;
+  }
+  
+  .mentor-card {
+    padding: 20px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .mentor-info h2 {
+    font-size: 1.2em;
+  }
+  
+  .mentor-info p {
+    font-size: 0.85em;
+  }
 }
