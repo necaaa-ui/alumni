@@ -19,6 +19,15 @@ export default function MenteeMentorAssignment() {
   const [mentors, setMentors] = useState([]);
   const [mentees, setMentees] = useState([]);
   const [loadingPhase, setLoadingPhase] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Auto-scroll to top when submitted
+  useEffect(() => {
+    if (submitted) {
+      // Scroll to the top of the form to show the success message
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [submitted]);
 
   useEffect(() => {
     fetchMentors();
@@ -38,9 +47,31 @@ export default function MenteeMentorAssignment() {
   const fetchMentees = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/mentor-mentee/mentees`);
-      setMentees(res.data || []);
+      
+      // Handle the response - it might be a string that needs parsing
+      let menteesData = res.data;
+      
+      // If the response is a string, parse it as JSON
+      if (typeof menteesData === 'string') {
+        try {
+          // Remove surrounding quotes if present
+          if (menteesData.startsWith('"') && menteesData.endsWith('"')) {
+            menteesData = menteesData.substring(1, menteesData.length - 1);
+          }
+          // Parse the JSON string
+          menteesData = JSON.parse(menteesData);
+        } catch (parseError) {
+          console.error("Error parsing mentees data:", parseError);
+          menteesData = [];
+        }
+      }
+      
+      // Ensure we always set an array
+      setMentees(Array.isArray(menteesData) ? menteesData : []);
+      
     } catch (err) {
       console.error("Error fetching mentees:", err);
+      setMentees([]);
     }
   };
 
@@ -93,6 +124,8 @@ export default function MenteeMentorAssignment() {
       return;
     }
 
+    setSubmitting(true);
+
     try {
       const menteeIds = [formData.mentee1, formData.mentee2, formData.mentee3].filter(Boolean);
 
@@ -112,11 +145,14 @@ export default function MenteeMentorAssignment() {
           mentee2: "",
           mentee3: ""
         });
+        setErrors({});
         setSubmitted(false);
       }, 2500);
     } catch (err) {
       console.error(err);
       alert("Error assigning mentor. Please try again.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -133,7 +169,20 @@ export default function MenteeMentorAssignment() {
         </div>
 
         <div className="form-card">
-          {submitted && <div className="success-message">✓ Assignment submitted successfully!</div>}
+          {/* Enhanced Success Message */}
+          {submitted && (
+            <div className="success-message-container">
+              <div className="success-message">
+                <div className="success-icon">✓</div>
+                <div className="success-content">
+                  <h3 className="success-title">Assignment Submitted Successfully!</h3>
+                  <p className="success-text">
+                    The mentees have been successfully assigned to the mentor.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="form-content">
 
@@ -145,6 +194,7 @@ export default function MenteeMentorAssignment() {
                 value={formData.mentorName}
                 onChange={handleChange}
                 className={`select ${errors.mentorName ? "input-error" : ""}`}
+                disabled={submitting || submitted}
               >
                 <option value="">-- Select Mentor --</option>
                 {mentors.map((mentor) => (
@@ -179,6 +229,7 @@ export default function MenteeMentorAssignment() {
                   value={formData[`mentee${i}`]}
                   onChange={handleChange}
                   className={`select ${i === 1 && errors.mentee1 ? "input-error" : ""}`}
+                  disabled={submitting || submitted}
                 >
                   <option value="">-- Select Mentee --</option>
                   {mentees.map((mentee) => (
@@ -194,9 +245,18 @@ export default function MenteeMentorAssignment() {
             <button
               onClick={handleSubmit}
               className="submit-btn"
-              disabled={submitted || loadingPhase}
+              disabled={submitting || loadingPhase || submitted}
             >
-              {submitted ? "Submitted!" : "Assign Mentor"}
+              {submitting ? (
+                <>
+                  <span className="loading-spinner"></span>
+                  Submitting...
+                </>
+              ) : submitted ? (
+                "Submitted!"
+              ) : (
+                "Assign Mentor"
+              )}
             </button>
           </div>
         </div>

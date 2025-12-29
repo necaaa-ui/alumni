@@ -672,7 +672,7 @@ export default function MentorshipDashboard() {
       <div className="md-dashboard-header">
         <button className="md-back-button" onClick={handleBackToHome}>
           <ArrowBackIcon />
-          <span>Back to Home</span>
+          <span className="md-back-text">Back to Home</span>
         </button>
         
         <div className="md-header-title">
@@ -688,7 +688,7 @@ export default function MentorshipDashboard() {
         </div>
       </div>
 
-      {/* Top Navigation Bar - RESPONSIVE */}
+      {/* Top Navigation Bar - IMPROVED RESPONSIVE */}
       <div className={`md-top-navigation ${mobileMenuOpen ? 'md-mobile-open' : ''}`}>
         <div className="md-top-nav-menu">
           <button 
@@ -715,6 +715,7 @@ export default function MentorshipDashboard() {
           >
             <AssignmentIcon />
             <span className="md-nav-text">Assignments</span>
+            <span className="md-count-badge">{assignments.length}</span>
           </button>
           
           <button 
@@ -732,6 +733,7 @@ export default function MentorshipDashboard() {
           >
             <FeedbackIcon />
             <span className="md-nav-text">Feedback</span>
+            <span className="md-count-badge">{feedbacks.length}</span>
           </button>
         </div>
       </div>
@@ -762,6 +764,7 @@ export default function MentorshipDashboard() {
                           placeholder="Search by name or email..."
                           value={mentorFilters.search}
                           onChange={handleMentorFilterChange}
+                          className="md-filter-input"
                         />
                       </div>
                       
@@ -771,6 +774,7 @@ export default function MentorshipDashboard() {
                           name="phase"
                           value={mentorFilters.phase}
                           onChange={handleMentorFilterChange}
+                          className="md-filter-select"
                         >
                           <option value="all">All Phases</option>
                           {getUniquePhases(mentors).map(phase => (
@@ -785,6 +789,7 @@ export default function MentorshipDashboard() {
                           name="sortBy"
                           value={mentorFilters.sortBy}
                           onChange={handleMentorFilterChange}
+                          className="md-filter-select"
                         >
                           <option value="name">Name</option>
                           <option value="email">Email</option>
@@ -799,6 +804,7 @@ export default function MentorshipDashboard() {
                           name="sortOrder"
                           value={mentorFilters.sortOrder}
                           onChange={handleMentorFilterChange}
+                          className="md-filter-select"
                         >
                           <option value="asc">Ascending</option>
                           <option value="desc">Descending</option>
@@ -810,13 +816,13 @@ export default function MentorshipDashboard() {
                           className="md-apply-btn"
                           onClick={() => applyMentorFilters(mentors, mentorFilters)}
                         >
-                          <FilterIcon /> Apply
+                          <FilterIcon /> <span className="md-btn-text">Apply</span>
                         </button>
                         <button 
                           className="md-reset-btn"
                           onClick={resetMentorFilters}
                         >
-                          Reset
+                          <span className="md-btn-text">Reset</span>
                         </button>
                       </div>
                     </div>
@@ -828,60 +834,62 @@ export default function MentorshipDashboard() {
                     <p>No mentors found with current filters</p>
                   </div>
                 ) : (
-                  <div className="md-data-table md-glass-card">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>ID</th>
-                          <th>Name</th>
-                          <th>Email</th>
-                          <th>Phase</th>
-                          <th>Joined</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredMentors.map((mentor) => {
-                          // Handle missing data
-                          const displayName = mentor.name && mentor.name !== 'N/A' 
-                            ? mentor.name 
-                            : mentor.email && mentor.email !== 'N/A'
-                              ? getNameFromEmail(mentor.email)
-                              : 'Unknown Mentor';
-                          
-                          const displayEmail = mentor.email && mentor.email !== 'N/A' 
-                            ? mentor.email 
-                            : 'No email';
-                          
-                          const displayPhase = mentor.phaseId && mentor.phaseId !== 'N/A'
-                            ? `Phase ${mentor.phaseId}`
-                            : 'N/A';
+                  <div className="md-data-table-container">
+                    <div className="md-data-table md-glass-card">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th className="md-table-th">ID</th>
+                            <th className="md-table-th">Name</th>
+                            <th className="md-table-th">Email</th>
+                            <th className="md-table-th">Phase</th>
+                            <th className="md-table-th">Joined</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredMentors.map((mentor) => {
+                            // Handle missing data
+                            const displayName = mentor.name && mentor.name !== 'N/A' 
+                              ? mentor.name 
+                              : mentor.email && mentor.email !== 'N/A'
+                                ? getNameFromEmail(mentor.email)
+                                : 'Unknown Mentor';
+                            
+                            const displayEmail = mentor.email && mentor.email !== 'N/A' 
+                              ? mentor.email 
+                              : 'No email';
+                            
+                            const displayPhase = mentor.phaseId && mentor.phaseId !== 'N/A'
+                              ? `Phase ${mentor.phaseId}`
+                              : 'N/A';
 
-                          return (
-                            <tr key={mentor._id}>
-                              <td className="md-id-cell">
-                                M{(mentor._id?.toString() || '').slice(-6)}
-                              </td>
-                              <td>
-                                <div className="md-user-cell">
-                                  <div className="md-avatar-small md-mentor-avatar">👨‍🏫</div>
-                                  <span>{displayName}</span>
-                                </div>
-                              </td>
-                              <td>
-                                <div className="md-email-cell">
-                                  <EmailIcon />
-                                  <span title={displayEmail}>{displayEmail}</span>
-                                </div>
-                              </td>
-                              <td>
-                                <span className="md-phase-badge">{displayPhase}</span>
-                              </td>
-                              <td>{formatDate(mentor.createdAt)}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                            return (
+                              <tr key={mentor._id}>
+                                <td className="md-id-cell">
+                                  M{(mentor._id?.toString() || '').slice(-6)}
+                                </td>
+                                <td>
+                                  <div className="md-user-cell">
+                                    <div className="md-avatar-small md-mentor-avatar">👨‍🏫</div>
+                                    <span className="md-user-name">{displayName}</span>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div className="md-email-cell">
+                                    <EmailIcon />
+                                    <span className="md-email-text" title={displayEmail}>{displayEmail}</span>
+                                  </div>
+                                </td>
+                                <td>
+                                  <span className="md-phase-badge">{displayPhase}</span>
+                                </td>
+                                <td className="md-date-cell">{formatDate(mentor.createdAt)}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
@@ -904,6 +912,7 @@ export default function MentorshipDashboard() {
                           placeholder="Search by email..."
                           value={menteeFilters.search}
                           onChange={handleMenteeFilterChange}
+                          className="md-filter-input"
                         />
                       </div>
                       
@@ -913,6 +922,7 @@ export default function MentorshipDashboard() {
                           name="phase"
                           value={menteeFilters.phase}
                           onChange={handleMenteeFilterChange}
+                          className="md-filter-select"
                         >
                           <option value="all">All Phases</option>
                           {getUniquePhases(mentees).map(phase => (
@@ -927,6 +937,7 @@ export default function MentorshipDashboard() {
                           name="sortBy"
                           value={menteeFilters.sortBy}
                           onChange={handleMenteeFilterChange}
+                          className="md-filter-select"
                         >
                           <option value="email">Email</option>
                           <option value="phase">Phase</option>
@@ -940,6 +951,7 @@ export default function MentorshipDashboard() {
                           name="sortOrder"
                           value={menteeFilters.sortOrder}
                           onChange={handleMenteeFilterChange}
+                          className="md-filter-select"
                         >
                           <option value="desc">Newest First</option>
                           <option value="asc">Oldest First</option>
@@ -951,13 +963,13 @@ export default function MentorshipDashboard() {
                           className="md-apply-btn"
                           onClick={() => applyMenteeFilters(mentees, menteeFilters)}
                         >
-                          <FilterIcon /> Apply
+                          <FilterIcon /> <span className="md-btn-text">Apply</span>
                         </button>
                         <button 
                           className="md-reset-btn"
                           onClick={resetMenteeFilters}
                         >
-                          Reset
+                          <span className="md-btn-text">Reset</span>
                         </button>
                       </div>
                     </div>
@@ -969,46 +981,48 @@ export default function MentorshipDashboard() {
                     <p>No mentees found with current filters</p>
                   </div>
                 ) : (
-                  <div className="md-data-table md-glass-card">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>ID</th>
-                          <th>Email</th>
-                          <th>Phase</th>
-                          <th>Requested</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredMentees.map((mentee) => {
-                          const displayEmail = mentee.email && mentee.email !== 'N/A' 
-                            ? mentee.email 
-                            : 'No email';
-                          
-                          const displayPhase = mentee.phaseId && mentee.phaseId !== 'N/A'
-                            ? `Phase ${mentee.phaseId}`
-                            : 'N/A';
+                  <div className="md-data-table-container">
+                    <div className="md-data-table md-glass-card">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th className="md-table-th">ID</th>
+                            <th className="md-table-th">Email</th>
+                            <th className="md-table-th">Phase</th>
+                            <th className="md-table-th">Requested</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredMentees.map((mentee) => {
+                            const displayEmail = mentee.email && mentee.email !== 'N/A' 
+                              ? mentee.email 
+                              : 'No email';
+                            
+                            const displayPhase = mentee.phaseId && mentee.phaseId !== 'N/A'
+                              ? `Phase ${mentee.phaseId}`
+                              : 'N/A';
 
-                          return (
-                            <tr key={mentee._id}>
-                              <td className="md-id-cell">
-                                MT{(mentee._id?.toString() || '').slice(-6)}
-                              </td>
-                              <td>
-                                <div className="md-email-cell">
-                                  <EmailIcon />
-                                  <span title={displayEmail}>{displayEmail}</span>
-                                </div>
-                              </td>
-                              <td>
-                                <span className="md-phase-badge">{displayPhase}</span>
-                              </td>
-                              <td>{formatDate(mentee.createdAt)}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
+                            return (
+                              <tr key={mentee._id}>
+                                <td className="md-id-cell">
+                                  MT{(mentee._id?.toString() || '').slice(-6)}
+                                </td>
+                                <td>
+                                  <div className="md-email-cell">
+                                    <EmailIcon />
+                                    <span className="md-email-text" title={displayEmail}>{displayEmail}</span>
+                                  </div>
+                                </td>
+                                <td>
+                                  <span className="md-phase-badge">{displayPhase}</span>
+                                </td>
+                                <td className="md-date-cell">{formatDate(mentee.createdAt)}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1031,6 +1045,7 @@ export default function MentorshipDashboard() {
                           placeholder="Filter by mentor email..."
                           value={assignmentFilters.mentorEmail}
                           onChange={handleAssignmentFilterChange}
+                          className="md-filter-input"
                           list="mentorEmailSuggestions"
                         />
                         <datalist id="mentorEmailSuggestions">
@@ -1048,27 +1063,37 @@ export default function MentorshipDashboard() {
                           placeholder="Filter by mentee email..."
                           value={assignmentFilters.menteeEmail}
                           onChange={handleAssignmentFilterChange}
+                          className="md-filter-input"
                         />
                       </div>
                       
-                    
-                      
-                     
-                      
-                    
+                      <div className="md-filter-group">
+                        <label>Phase</label>
+                        <select
+                          name="phase"
+                          value={assignmentFilters.phase}
+                          onChange={handleAssignmentFilterChange}
+                          className="md-filter-select"
+                        >
+                          <option value="all">All Phases</option>
+                          {getUniquePhases(assignments).map(phase => (
+                            <option key={phase} value={phase}>Phase {phase}</option>
+                          ))}
+                        </select>
+                      </div>
                       
                       <div className="md-filter-actions">
                         <button 
                           className="md-apply-btn"
                           onClick={() => applyAssignmentFilters(assignments, assignmentFilters)}
                         >
-                          <FilterIcon /> Apply
+                          <FilterIcon /> <span className="md-btn-text">Apply</span>
                         </button>
                         <button 
                           className="md-reset-btn"
                           onClick={resetAssignmentFilters}
                         >
-                          Reset
+                          <span className="md-btn-text">Reset</span>
                         </button>
                       </div>
                     </div>
@@ -1086,25 +1111,25 @@ export default function MentorshipDashboard() {
                         <div className="md-assignment-header">
                           <div className="md-mentor-info">
                             <div className="md-avatar md-mentor-avatar">👨‍🏫</div>
-                            <div>
-                              <h4>{assignment.mentorDetails?.name || 'Mentor'}</h4>
-                              <p className="md-email">{assignment.mentorDetails?.email || 'No email'}</p>
+                            <div className="md-mentor-details">
+                              <h4 className="md-mentor-name">{assignment.mentorDetails?.name || 'Mentor'}</h4>
+                              <p className="md-email md-mentor-email">{assignment.mentorDetails?.email || 'No email'}</p>
                             </div>
                           </div>
                           <div className="md-mentee-count">
-                            <span>{assignment.mentees?.length || 0}</span>
-                            <small>mentees</small>
+                            <span className="md-count-number">{assignment.mentees?.length || 0}</span>
+                            <small className="md-count-label">mentees</small>
                           </div>
                         </div>
                         
                         <div className="md-assignment-mentees">
-                          <h5>Assigned Mentees:</h5>
+                          <h5 className="md-mentees-title">Assigned Mentees:</h5>
                           {assignment.mentees && assignment.mentees.length > 0 ? (
                             <div className="md-mentee-tags">
                               {assignment.mentees.map((mentee, idx) => (
                                 <span key={idx} className="md-mentee-tag">
                                   <div className="md-avatar-small md-mentee-avatar">👨‍🎓</div>
-                                  <span>{mentee.name || 'Mentee'} {mentee.email ? `(${mentee.email})` : ''}</span>
+                                  <span className="md-mentee-name">{mentee.name || 'Mentee'} {mentee.email ? `(${mentee.email})` : ''}</span>
                                 </span>
                               ))}
                             </div>
@@ -1114,7 +1139,7 @@ export default function MentorshipDashboard() {
                         </div>
                         
                         <div className="md-assignment-footer">
-                          <span>Assigned: {formatDate(assignment.createdAt)}</span>
+                          <span className="md-assigned-date">Assigned: {formatDate(assignment.createdAt)}</span>
                           {assignment.phaseId && (
                             <span className="md-phase-tag">Phase {assignment.phaseId}</span>
                           )}
@@ -1138,7 +1163,7 @@ export default function MentorshipDashboard() {
                       <div className="md-meeting-stat-card md-glass-card md-total">
                         <div className="md-stat-header">
                           <CalendarIcon />
-                          <h4>Total Meetings</h4>
+                          <h4 className="md-stat-title">Total Meetings</h4>
                         </div>
                         <div className="md-stat-value">{meetingStats.total}</div>
                       </div>
@@ -1146,7 +1171,7 @@ export default function MentorshipDashboard() {
                       <div className="md-meeting-stat-card md-glass-card md-completed">
                         <div className="md-stat-header">
                           <CheckIcon />
-                          <h4>Completed</h4>
+                          <h4 className="md-stat-title">Completed</h4>
                         </div>
                         <div className="md-stat-value">{meetingStats.completed}</div>
                       </div>
@@ -1163,6 +1188,7 @@ export default function MentorshipDashboard() {
                           name="dateFrom"
                           value={meetingFilters.dateFrom}
                           onChange={handleFilterChange}
+                          className="md-filter-input"
                         />
                       </div>
                       
@@ -1173,6 +1199,7 @@ export default function MentorshipDashboard() {
                           name="dateTo"
                           value={meetingFilters.dateTo}
                           onChange={handleFilterChange}
+                          className="md-filter-input"
                         />
                       </div>
                       
@@ -1182,6 +1209,7 @@ export default function MentorshipDashboard() {
                           name="status"
                           value={meetingFilters.status}
                           onChange={handleFilterChange}
+                          className="md-filter-select"
                         >
                           <option value="all">All Status</option>
                           <option value="scheduled">Scheduled</option>
@@ -1195,13 +1223,13 @@ export default function MentorshipDashboard() {
                           className="md-apply-btn"
                           onClick={applyMeetingFilters}
                         >
-                          <FilterIcon /> Apply
+                          <FilterIcon /> <span className="md-btn-text">Apply</span>
                         </button>
                         <button 
                           className="md-reset-btn"
                           onClick={resetMeetingFilters}
                         >
-                          Reset
+                          <span className="md-btn-text">Reset</span>
                         </button>
                       </div>
                     </div>
@@ -1220,9 +1248,9 @@ export default function MentorshipDashboard() {
                         <div className="md-meeting-header">
                           <div className="md-meeting-mentor">
                             <div className="md-avatar md-mentor-avatar">👨‍🏫</div>
-                            <div>
-                              <h4>{meeting.mentorDetails?.name || 'Mentor'}</h4>
-                              <p className="md-email">{meeting.mentorDetails?.email || 'No email'}</p>
+                            <div className="md-mentor-details">
+                              <h4 className="md-mentor-name">{meeting.mentorDetails?.name || 'Mentor'}</h4>
+                              <p className="md-email md-mentor-email">{meeting.mentorDetails?.email || 'No email'}</p>
                             </div>
                           </div>
                           <div className="md-meeting-status-simple">
@@ -1236,24 +1264,24 @@ export default function MentorshipDashboard() {
                             <div className="md-detail-item">
                               <ClockIcon />
                               <div>
-                                <label>Time</label>
-                                <span>{formatTime(meeting.meeting_time)}</span>
+                                <label className="md-detail-label">Time</label>
+                                <span className="md-detail-value">{formatTime(meeting.meeting_time)}</span>
                               </div>
                             </div>
                             
                             <div className="md-detail-item">
                               <span className="md-icon">⏱️</span>
                               <div>
-                                <label>Duration</label>
-                                <span>{meeting.duration_minutes || 30} mins</span>
+                                <label className="md-detail-label">Duration</label>
+                                <span className="md-detail-value">{meeting.duration_minutes || 30} mins</span>
                               </div>
                             </div>
 
                             <div className="md-detail-item">
                               <span className="md-icon">📋</span>
                               <div>
-                                <label>Total Sessions</label>
-                                <span>{meeting.meeting_dates?.length || 0}</span>
+                                <label className="md-detail-label">Total Sessions</label>
+                                <span className="md-detail-value">{meeting.meeting_dates?.length || 0}</span>
                               </div>
                             </div>
                           </div>
@@ -1262,7 +1290,7 @@ export default function MentorshipDashboard() {
                           <div className="md-all-dates-section">
                             <div className="md-section-label">
                               <DateRangeIcon />
-                              <span>Meeting Sessions ({meeting.meeting_dates?.length || 0})</span>
+                              <span className="md-section-label-text">Meeting Sessions ({meeting.meeting_dates?.length || 0})</span>
                             </div>
                             
                             <div className="md-dates-grid">
@@ -1315,14 +1343,14 @@ export default function MentorshipDashboard() {
                           <div className="md-mentees-section">
                             <div className="md-section-label">
                               <SchoolIcon />
-                              <span>Mentees ({meeting.mentees?.length || 0})</span>
+                              <span className="md-section-label-text">Mentees ({meeting.mentees?.length || 0})</span>
                             </div>
                             <div className="md-mentee-list">
                               {meeting.mentees && meeting.mentees.length > 0 ? (
                                 meeting.mentees.slice(0, 3).map((mentee, idx) => (
                                   <span key={idx} className="md-mentee-item">
                                     <div className="md-avatar-small md-mentee-avatar">👨‍🎓</div>
-                                    {mentee.name || 'Mentee'}
+                                    <span className="md-mentee-name">{mentee.name || 'Mentee'}</span>
                                   </span>
                                 ))
                               ) : (
@@ -1338,7 +1366,7 @@ export default function MentorshipDashboard() {
                             <div className="md-agenda-section">
                               <div className="md-section-label">
                                 <span className="md-icon">📝</span>
-                                <span>Agenda</span>
+                                <span className="md-section-label-text">Agenda</span>
                               </div>
                               <p className="md-agenda-text">{meeting.agenda}</p>
                             </div>
@@ -1348,7 +1376,7 @@ export default function MentorshipDashboard() {
                             <div className="md-platform-section">
                               <div className="md-section-label">
                                 <span className="md-icon">💻</span>
-                                <span>Platform</span>
+                                <span className="md-section-label-text">Platform</span>
                               </div>
                               <span className="md-platform-tag">{meeting.platform}</span>
                             </div>
@@ -1380,12 +1408,12 @@ export default function MentorshipDashboard() {
                                feedback.role?.charAt(0) || 
                                'U'}
                             </div>
-                            <div>
-                              <h4>{feedback.userDetails?.name || 'Anonymous User'}</h4>
-                              <p className="md-role">{feedback.role || 'Not specified'}</p>
+                            <div className="md-user-details">
+                              <h4 className="md-user-name">{feedback.userDetails?.name || 'Anonymous User'}</h4>
+                              <p className="md-role md-user-role">{feedback.role || 'Not specified'}</p>
                             </div>
                           </div>
-                          <span className="md-date">{formatDate(feedback.createdAt)}</span>
+                          <span className="md-date md-feedback-date">{formatDate(feedback.createdAt)}</span>
                         </div>
                         
                         {/* ALL RATING FIELDS */}
@@ -1393,7 +1421,7 @@ export default function MentorshipDashboard() {
                           <div className="md-rating-item">
                             <div className="md-rating-label">
                               <StarIcon />
-                              <span>Overall Satisfaction</span>
+                              <span className="md-rating-label-text">Overall Satisfaction</span>
                             </div>
                             <div className="md-rating-display">
                               <span className="md-rating-stars">
@@ -1411,7 +1439,7 @@ export default function MentorshipDashboard() {
                           <div className="md-rating-item">
                             <div className="md-rating-label">
                               <OrganizationIcon />
-                              <span>Program Organization</span>
+                              <span className="md-rating-label-text">Program Organization</span>
                             </div>
                             <div className="md-rating-display">
                               <span className="md-rating-stars">
@@ -1429,7 +1457,7 @@ export default function MentorshipDashboard() {
                           <div className="md-rating-item">
                             <div className="md-rating-label">
                               <ProcessIcon />
-                              <span>Matching Process</span>
+                              <span className="md-rating-label-text">Matching Process</span>
                             </div>
                             <div className="md-rating-display">
                               <span className="md-rating-stars">
@@ -1447,7 +1475,7 @@ export default function MentorshipDashboard() {
                           <div className="md-rating-item">
                             <div className="md-rating-label">
                               <SupportIcon />
-                              <span>Support Provided</span>
+                              <span className="md-rating-label-text">Support Provided</span>
                             </div>
                             <div className="md-rating-display">
                               <span className="md-rating-stars">
@@ -1468,7 +1496,7 @@ export default function MentorshipDashboard() {
                             <div className="md-feedback-section">
                               <div className="md-section-label">
                                 <span className="md-icon">💬</span>
-                                <span>General Feedback</span>
+                                <span className="md-section-label-text">General Feedback</span>
                               </div>
                               <p className="md-feedback-text">{feedback.generalFeedback}</p>
                             </div>
@@ -1478,7 +1506,7 @@ export default function MentorshipDashboard() {
                             <div className="md-feedback-section">
                               <div className="md-section-label">
                                 <span className="md-icon">💡</span>
-                                <span>Suggestions for Improvement</span>
+                                <span className="md-section-label-text">Suggestions for Improvement</span>
                               </div>
                               <p className="md-feedback-text">{feedback.suggestions}</p>
                             </div>
