@@ -209,7 +209,7 @@ const RequesterFeedbackForm = ({ userEmail }) => {
       <div className="feedback-wrapper">
         <div className="feedback-header">
           <div className="feedback-icon">💼</div>
-          <h2 className="feedback-title">Akumni Feedback</h2>
+          <h2 className="feedback-title">Alumni Feedback</h2>
           <p className="feedback-subtitle">
             Share your feedback on the job request process
           </p>
