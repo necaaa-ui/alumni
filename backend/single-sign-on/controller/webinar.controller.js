@@ -23,6 +23,6 @@ exports.handleWebinarSSO = async (req, res) => {
   // Redirect to React UI WITH encrypted email
   return res.redirect(
     302,
-    `http://localhost:5173/webinar-dashboard?email=${encodeURIComponent(encryptedEmail)}`
+    `https://necalumni.nec.edu.in/alumnimain/webinar-dashboard?email=${encodeURIComponent(encryptedEmail)}`
   );
 };
