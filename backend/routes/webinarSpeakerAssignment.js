@@ -107,9 +107,17 @@ router.get('/member-by-email', async (req, res) => {
       member.education_details?.[0]?.end_year ||
       "";
 
+    const contact_no = member.contact_details?.mobile ||
+                      member.contact_details?.phone ||
+                      member.mobile ||
+                      member.phone ||
+                      member.contact ||
+                      '';
+                      
     res.json({
       found: true,
       name: member.basic?.name || "",
+      contact_no: contact_no,
       department: department || "",
       batch: batch
     });

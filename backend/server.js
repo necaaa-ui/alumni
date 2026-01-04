@@ -8,14 +8,14 @@ const dotenv = require('dotenv');
 const app = express();
 const PORT = process.env.PORT || 5000;
 app.use(express.json());
-app.use(cors());
+// app.use(cors());
 //SSO ROUTES
 const webinarSSORoutes = require('./single-sign-on/routes/webinar');
-app.use('/webinar', webinarSSORoutes);
+app.use('/api/webinar', webinarSSORoutes);
 const placementSSORoutes = require('./single-sign-on/routes/placement');
-app.use('/placement', placementSSORoutes);
+app.use('/api/placement', placementSSORoutes);
 const mentorshipSSORoutes = require('./single-sign-on/routes/mentorShip');
-app.use('/mentorship', mentorshipSSORoutes);
+app.use('/api/mentorship', mentorshipSSORoutes);
 
 
 
@@ -73,8 +73,10 @@ const jobRequestRoutes = require('./routes/jobRequests');
 const companyMappingRoutes = require('./routes/companyMapping');
 
 
-// Middleware
-app.use(cors({ origin: ["http://localhost:5173", "http://localhost:5174"], credentials: true }));
+// Middleware 
+
+//Cors For Producion
+app.use(cors({ origin: ["https://necalumni.nec.edu.in", "https://necalumni.nec.edu.in/alumnimain"], credentials: true }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
@@ -206,6 +208,10 @@ app.get('/api/emails', async (req, res) => {
     console.error('Error fetching emails:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+app.get('/api/hello', (req, res) => {
+  res.send('Hello World!');
 });
 
 // Get names with email
@@ -414,7 +420,7 @@ app.post('/api/download-certificate', async (req, res) => {
     // Pipe the PDF to the response
     doc.pipe(res);
     // Add background image
-    const backgroundPath = path.resolve(process.cwd(), 'frontend/src/assets/webinarcertificategreen.jpg');
+    const backgroundPath = path.resolve(process.cwd(), 'assets/webinarcertificategreen.jpg');
     console.log('Background image path:', backgroundPath);
     try {
       doc.image(backgroundPath, 0, 0, {
@@ -440,8 +446,8 @@ app.post('/api/download-certificate', async (req, res) => {
     doc.moveDown(2);
     doc.fontSize(14).text('NEC Alumni Network', { align: 'center' });
     // Add signatures
-    const alumniPresidentSignaturePath = path.join(process.cwd(), 'frontend/src/assets/Alumni-President-removebg-preview.png');
-    const principalSignaturePath = path.join(process.cwd(), 'frontend/src/assets/principal-removebg-preview.png');
+    const alumniPresidentSignaturePath = path.join(process.cwd(), 'assets/Alumni-President-removebg-preview.png');
+    const principalSignaturePath = path.join(process.cwd(), 'assets/principal-removebg-preview.png');
     console.log('Alumni President signature path:', alumniPresidentSignaturePath);
     console.log('Principal signature path:', principalSignaturePath);
     // Alumni President signature (left side)
@@ -1083,7 +1089,7 @@ function getDepartmentFromMember(member) {
 }
 
 // Test endpoint
-app.get("/", (req, res) => {
+app.get("/api", (req, res) => {
   res.json({ message: "Backend running 🚀 - Webinar & Placement modules integrated" });
 });
 

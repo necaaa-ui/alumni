@@ -11,6 +11,7 @@ const AlumniJobRequestsAdmin = ({ onBackToDashboard }) => {
   const [error, setError] = useState(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignedCompanies, setAssignedCompanies] = useState([]);
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // Fetch job requests and companies from API
   useEffect(() => {
@@ -1156,7 +1157,7 @@ const response = await axios.get(`${API_BASE_URL}/api/job-requests`);
                         fontWeight: '600'
                       }}>
                         <a
-                          href={`http://localhost:5000/uploads/${selectedRequest.attachment}`}
+                          href={`${API_BASE_URL}/uploads/${selectedRequest.attachment}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{
