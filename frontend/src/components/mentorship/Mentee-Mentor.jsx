@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import "./MentorMentee.css";
+import { useNavigate } from "react-router-dom";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -20,6 +21,8 @@ export default function MenteeMentorAssignment() {
   const [mentees, setMentees] = useState([]);
   const [loadingPhase, setLoadingPhase] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const navigate = useNavigate();
 
   // Auto-scroll to top when submitted
   useEffect(() => {
@@ -156,9 +159,13 @@ export default function MenteeMentorAssignment() {
     }
   };
 
+ const handleBackClick = () => {
+    navigate("/dashboard");
+  };
+
   return (
     <div className="form-wrapper">
-      <button className="dashboard-btn" onClick={() => (window.location.href = "/dashboard")}>
+      <button className="dashboard-btn" onClick={handleBackClick}>
         ← Go to Dashboard
       </button>
 

@@ -20,6 +20,7 @@ export default function ScheduledDashboard() {
   const [editFormData, setEditFormData] = useState({}); // Form data for editing
   const [mentorMeetings, setMentorMeetings] = useState([]); // All meetings for mentor dropdown
   const [uniqueUserDates, setUniqueUserDates] = useState([]); // Store unique dates for the logged-in user
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const navigate = useNavigate();
   const { email } = useParams();
@@ -85,7 +86,7 @@ export default function ScheduledDashboard() {
   const fetchAllMeetingsForMentor = async (mentorEmail) => {
     try {
       // Get mentor details including their ID
-      const mentorRes = await axios.get(`http://localhost:5000/api/meetings/mentor-details?email=${encodeURIComponent(mentorEmail)}`);
+      const mentorRes = await axios.get(`${API_BASE_URL}/api/meetings/mentor-details?email=${encodeURIComponent(mentorEmail)}`);
       
       if (!mentorRes.data.mentor?._id) {
         console.log("No mentor ID found");
@@ -95,7 +96,7 @@ export default function ScheduledDashboard() {
       const mentorId = mentorRes.data.mentor._id;
       
       // Fetch all meetings for this mentor
-      const meetingsRes = await axios.get(`http://localhost:5000/api/meetings/scheduled/${encodeURIComponent(mentorEmail)}`);
+      const meetingsRes = await axios.get(`${API_BASE_URL}/api/meetings/scheduled/${encodeURIComponent(mentorEmail)}`);
       
       if (meetingsRes.data?.meetings?.length > 0) {
         // Flatten the meetings array to get individual date entries
@@ -151,7 +152,7 @@ export default function ScheduledDashboard() {
   const fetchScheduledData = async (userEmail) => {
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/meetings/scheduled/${encodeURIComponent(userEmail)}`
+        `${API_BASE_URL}/api/meetings/scheduled/${encodeURIComponent(userEmail)}`
       );
       const data = res.data;
 
@@ -204,7 +205,7 @@ export default function ScheduledDashboard() {
 
   const preloadStatuses = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/meeting-status/all");
+      const res = await axios.get(`${API_BASE_URL}/api/meeting-status/all`);
       const statuses = res.data.statuses || [];
 
       const map = {};
@@ -223,7 +224,7 @@ export default function ScheduledDashboard() {
 
   const preloadApprovalStatuses = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/meeting-status/all");
+      const res = await axios.get(`${API_BASE_URL}/api/meeting-status/all`);
       const statuses = res.data.statuses || [];
 
       const map = {};
@@ -348,8 +349,8 @@ export default function ScheduledDashboard() {
         meeting_date: editFormData.meeting_date,
         meeting_time: editFormData.meeting_time
       };
-      
-      await axios.put(`http://localhost:5000/api/meetings/meeting/${meetingId}`, updateData);
+
+      await axios.put(`${API_BASE_URL}/api/meetings/meeting/${meetingId}`, updateData);
       
       alert('Meeting date/time updated successfully!');
       setEditModalOpen(false);
@@ -391,7 +392,7 @@ export default function ScheduledDashboard() {
   const handleMinutesAction = async (statusId, action) => {
     try {
       setActionLoadingId(statusId);
-      await axios.post("http://localhost:5000/api/meeting-status/approve-reject", {
+      await axios.post(`${API_BASE_URL}/api/meeting-status/approve-reject`, {
         statusId,
         action
       });

@@ -33,7 +33,7 @@ import AdminDashboard from './components/mentorship/AdminDashboard';
 import MentorshipDashboard from './components/mentorship/MentorshipDashboard';
 function App() {
   return (
-    <Router basename="/">
+    <Router basename="/alumnimain">
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/placement-dashboard" element={<PlacementDashboard />} />
