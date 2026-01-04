@@ -27,7 +27,7 @@ exports.handleMentorSSO = async (req, res) => {
     // Redirect to your React frontend Mentor Dashboard
     return res.redirect(
       302,
-      `http://localhost:5173/login1?email=${encodeURIComponent(encodedEmail)}`
+      `https://necalumni.nec.edu.in/alumnimain/login1?email=${encodeURIComponent(encodedEmail)}`
     );
   } catch (err) {
     console.error("Error redirecting with email:", err);
