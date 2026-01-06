@@ -8,7 +8,7 @@ const dotenv = require('dotenv');
 const app = express();
 const PORT = process.env.PORT || 5000;
 app.use(express.json());
-// app.use(cors());
+app.use(cors());
 //SSO ROUTES
 const webinarSSORoutes = require('./single-sign-on/routes/webinar');
 app.use('/api/webinar', webinarSSORoutes);
@@ -76,7 +76,7 @@ const companyMappingRoutes = require('./routes/companyMapping');
 // Middleware 
 
 //Cors For Producion
-app.use(cors({ origin: ["https://necalumni.nec.edu.in", "https://necalumni.nec.edu.in/alumnimain"], credentials: true }));
+// app.use(cors({ origin: ["https://necalumni.nec.edu.in", "https://necalumni.nec.edu.in/alumnimain"], credentials: true }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
@@ -1103,4 +1103,19 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`✅ Webinar & Placement &MentorShip modules integrated`);
+});
+
+// Delete a webinar by ID
+app.delete('/api/webinars/:id', async (req, res) => {
+  try {
+    const webinar = await WebinarWebinar.findByIdAndDelete(req.params.id);
+    if (!webinar) {
+      return res.status(404).json({ error: 'Webinar not found' });
+    }
+    res.json({ message: 'Webinar deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting webinar:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+  
 });
