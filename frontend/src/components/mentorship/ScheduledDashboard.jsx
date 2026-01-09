@@ -3,7 +3,7 @@
 // Updated to match the provided theme design system
 // -----------------------------------------------------------
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom'; // CHANGED: useLocation instead of useParams
 import axios from 'axios';
 import './ScheduledDashboard.css';
 
@@ -20,27 +20,56 @@ export default function ScheduledDashboard() {
   const [editFormData, setEditFormData] = useState({}); // Form data for editing
   const [mentorMeetings, setMentorMeetings] = useState([]); // All meetings for mentor dropdown
   const [uniqueUserDates, setUniqueUserDates] = useState([]); // Store unique dates for the logged-in user
+  const [userEmail, setUserEmail] = useState(''); // Store user email
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const navigate = useNavigate();
-  const { email } = useParams();
+  const location = useLocation(); // CHANGED: useLocation to get query params
 
   useEffect(() => {
-    // Get user role from localStorage
-    const storedRole = localStorage.getItem('userRole') || '';
-    setUserRole(storedRole);
+    // Get email from query parameters
+    const urlParams = new URLSearchParams(location.search);
+    const emailFromUrl = urlParams.get('email');
     
-    if (email) {
-      fetchScheduledData(email);
+    if (emailFromUrl) {
+      // Email is already decrypted from previous page
+      const decodedEmail = decodeURIComponent(emailFromUrl);
+      setUserEmail(decodedEmail);
+      localStorage.setItem('userEmail', decodedEmail);
+      
+      // Get user role from localStorage
+      const storedRole = localStorage.getItem('userRole') || '';
+      setUserRole(storedRole);
+      
+      fetchScheduledData(decodedEmail);
       preloadStatuses();
       preloadApprovalStatuses();
       
       // If user is mentor, fetch all their meetings for the dropdown
       if (storedRole.toLowerCase() === 'mentor') {
-        fetchAllMeetingsForMentor(email);
+        fetchAllMeetingsForMentor(decodedEmail);
+      }
+    } else {
+      // Fallback to localStorage
+      const storedEmail = localStorage.getItem('userEmail') || '';
+      if (storedEmail) {
+        setUserEmail(storedEmail);
+        const storedRole = localStorage.getItem('userRole') || '';
+        setUserRole(storedRole);
+        
+        fetchScheduledData(storedEmail);
+        preloadStatuses();
+        preloadApprovalStatuses();
+        
+        if (storedRole.toLowerCase() === 'mentor') {
+          fetchAllMeetingsForMentor(storedEmail);
+        }
+      } else {
+        // No email found, redirect to dashboard
+        navigate('/dashboard');
       }
     }
-  }, [email]);
+  }, [location.search, navigate]);
 
   // Function to extract unique dates for the logged-in user
   const extractUserDates = (meetingsData) => {
@@ -127,7 +156,7 @@ export default function ScheduledDashboard() {
       // Fallback: Try to get meetings from the current meetings state
       if (meetings.length > 0) {
         const mentorUserMeetings = meetings.filter(m => 
-          m.mentor.email.toLowerCase() === email.toLowerCase()
+          m.mentor.email.toLowerCase() === mentorEmail.toLowerCase()
         );
         
         const flattened = mentorUserMeetings.map(m => ({
@@ -281,8 +310,8 @@ export default function ScheduledDashboard() {
   // Handle Edit button click
   const handleEditButtonClick = () => {
     // First try to fetch meetings if array is empty
-    if (mentorMeetings.length === 0 && email && isMentor()) {
-      fetchAllMeetingsForMentor(email);
+    if (mentorMeetings.length === 0 && userEmail && isMentor()) {
+      fetchAllMeetingsForMentor(userEmail);
     }
     
     setEditModalOpen(true);
@@ -356,9 +385,9 @@ export default function ScheduledDashboard() {
       setEditModalOpen(false);
       
       // Refresh data
-      if (email) {
-        fetchScheduledData(email);
-        fetchAllMeetingsForMentor(email);
+      if (userEmail) {
+        fetchScheduledData(userEmail);
+        fetchAllMeetingsForMentor(userEmail);
       }
     } catch (error) {
       console.error('Failed to update meeting:', error);
@@ -410,9 +439,9 @@ export default function ScheduledDashboard() {
 
   const filteredMeetings = meetings.filter((m) => {
     // Check if this meeting is relevant to the logged-in user
-    const isMentorUser = email?.toLowerCase() === m.mentor?.email?.toLowerCase();
+    const isMentorUser = userEmail?.toLowerCase() === m.mentor?.email?.toLowerCase();
     const isMenteeInMeeting = m.mentees?.some(mentee => 
-      mentee.email?.toLowerCase() === email?.toLowerCase()
+      mentee.email?.toLowerCase() === userEmail?.toLowerCase()
     );
     
     // Skip meetings that don't involve the current user
@@ -563,7 +592,7 @@ export default function ScheduledDashboard() {
       {/* Main Content */}
       <div className="dashboard-container">
         <h1>Scheduled Mentorship Dashboard</h1>
-        <p className="user-info-text">Viewing meetings for: {email}</p>
+        <p className="user-info-text">Viewing meetings for: {userEmail}</p>
 
         {/* Filters */}
         <div className="filters">
@@ -593,7 +622,7 @@ export default function ScheduledDashboard() {
 
         {filteredMeetings.length === 0 ? (
           <div className="glass-card" style={{textAlign: 'center', padding: '40px'}}>
-            <p>No scheduled meetings found for {email}</p>
+            <p>No scheduled meetings found for {userEmail}</p>
             {dateFilter !== 'All' && (
               <p className="no-meetings-hint">
                 No meetings on {formatDateForFilter(dateFilter)}. Try selecting "All Dates" or check other dates.
@@ -605,7 +634,7 @@ export default function ScheduledDashboard() {
             {filteredMeetings.map((m) => {
               const { dateFormatted, timeFormatted } = parseDateTime(m.date, m.time);
               const mentorEmail = m.mentor.email;
-              const isMentorUser = email?.toLowerCase() === mentorEmail?.toLowerCase();
+              const isMentorUser = userEmail?.toLowerCase() === mentorEmail?.toLowerCase();
 
               const meetingStatuses = statusesMap[m.meetingId] || [];
 
@@ -645,7 +674,7 @@ export default function ScheduledDashboard() {
 
               // Find the mentee that matches the logged-in user (if not mentor)
               const targetMentee = !isMentorUser
-                ? m.mentees.find((mt) => mt.email?.toLowerCase() === email?.toLowerCase())
+                ? m.mentees.find((mt) => mt.email?.toLowerCase() === userEmail?.toLowerCase())
                 : m.mentees[0]; // For mentors, show first mentee
 
               const isSubmitted =
@@ -686,7 +715,7 @@ export default function ScheduledDashboard() {
                   <div className="mentees-container">
                     <h4>Mentees:</h4>
                     {m.mentees.map((mt) => {
-                      const isCurrentUser = mt.email?.toLowerCase() === email?.toLowerCase();
+                      const isCurrentUser = mt.email?.toLowerCase() === userEmail?.toLowerCase();
                       return (
                         <p 
                           key={mt._id || mt.email}

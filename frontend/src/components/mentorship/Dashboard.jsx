@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom'; // ADDED useLocation
 import axios from 'axios';
 import { 
   Users, 
@@ -41,8 +41,29 @@ const REFRESH_INTERVALS = {
   ASSIGNMENTS: 120000
 };
 
+// ADDED: Encryption/Decryption functions
+const encryptEmail = (email) => {
+  try {
+    return btoa(encodeURIComponent(email));
+  } catch (error) {
+    console.error('Error encrypting email:', error);
+    return email;
+  }
+};
+
+const decryptEmail = (encryptedEmail) => {
+  try {
+    return decodeURIComponent(atob(encryptedEmail));
+  } catch (error) {
+    console.error('Error decrypting email:', error);
+    return encryptedEmail;
+  }
+};
+
 export default function RealTimeDashboard() {
   const navigate = useNavigate();
+  const location = useLocation(); // ADDED: to read URL params
+  
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchMentor, setSearchMentor] = useState('');
   const [activePhase, setActivePhase] = useState('');
@@ -50,12 +71,13 @@ export default function RealTimeDashboard() {
   const [currentMentorIndex, setCurrentMentorIndex] = useState(0);
   const [currentPhaseGraphIndex, setCurrentPhaseGraphIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
-  const [userRole, setUserRole] = useState('member'); // Changed from 'mentee' to 'member'
+  const [userRole, setUserRole] = useState(''); // Start empty
   const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshIntervals, setRefreshIntervals] = useState(REFRESH_INTERVALS);
+  const [authLoading, setAuthLoading] = useState(true); // ADDED: auth loading state
   
   // Real-time data states
   const [dashboardStats, setDashboardStats] = useState({
@@ -85,11 +107,21 @@ export default function RealTimeDashboard() {
 
   const [timers, setTimers] = useState({});
 
-  // Function to check user's actual role using existing endpoint
+  // UPDATED: Function to check user's actual role with hardcoded emails
   const checkUserRole = useCallback(async (email) => {
     try {
+      const cleanEmail = email.toLowerCase().trim();
+      
+      // Check hardcoded emails first
+      if (cleanEmail === "rampriya@gmail.com") {
+        return 'coordinator';
+      }
+      if (cleanEmail === "admin@gmail.com") {
+        return 'admin';
+      }
+      
       // Use the same login endpoint to get user's actual role
-      const res = await axios.post(`${API_BASE_URL}/api/auth/login`, { email });
+      const res = await axios.post(`${API_BASE_URL}/api/auth/login`, { email: cleanEmail });
       
       if (res.data.success) {
         // The existing endpoint returns role: "mentor", "mentee", or "new_user"
@@ -102,6 +134,54 @@ export default function RealTimeDashboard() {
     }
   }, []);
 
+  // ADDED: Get email from URL on component mount
+  useEffect(() => {
+    const getEmailAndAuthenticate = async () => {
+      setAuthLoading(true);
+      
+      // Check URL parameters for encrypted email
+      const urlParams = new URLSearchParams(location.search);
+      const encryptedEmailFromUrl = urlParams.get('email');
+      
+      let email = '';
+      
+      if (encryptedEmailFromUrl) {
+        try {
+          // Decrypt the email from URL
+          const decryptedEmail = decryptEmail(decodeURIComponent(encryptedEmailFromUrl));
+          if (decryptedEmail && decryptedEmail.includes('@')) {
+            email = decryptedEmail;
+            localStorage.setItem('userEmail', email);
+            console.log('User email decrypted from URL in dashboard:', email);
+          }
+        } catch (error) {
+          console.error('Error decrypting email from URL:', error);
+        }
+      } else {
+        // Get email from localStorage (fallback)
+        email = localStorage.getItem('userEmail') || '';
+      }
+      
+      if (email) {
+        const role = await checkUserRole(email);
+        setUserEmail(email);
+        setUserRole(role);
+        localStorage.setItem('userRole', role);
+        console.log('User authenticated in dashboard:', { email, role });
+        
+        // Clean URL after successful authentication
+        window.history.replaceState({}, '', window.location.pathname);
+      } else {
+        // No email found, redirect to home
+        navigate('/home');
+      }
+      
+      setAuthLoading(false);
+    };
+
+    getEmailAndAuthenticate();
+  }, [location.search, navigate, checkUserRole]);
+
   // Check screen size
   useEffect(() => {
     const checkScreenSize = () => {
@@ -111,28 +191,6 @@ export default function RealTimeDashboard() {
     window.addEventListener('resize', checkScreenSize);
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
-
-  // Get user info from localStorage and check actual role
-  useEffect(() => {
-    const storedRole = localStorage.getItem('userRole') || 'member';
-    const storedEmail = localStorage.getItem('userEmail') || '';
-    
-    setUserRole(storedRole);
-    setUserEmail(storedEmail);
-    
-    // If user is not coordinator/admin, check their actual role
-    if (storedEmail && (storedRole === 'member' || storedRole === 'mentee' || storedRole === 'mentor')) {
-      const fetchActualRole = async () => {
-        const actualRole = await checkUserRole(storedEmail);
-        // Store the actual role in state and localStorage
-        setUserRole(actualRole);
-        localStorage.setItem('userRole', actualRole);
-        console.log('Actual user role:', actualRole);
-      };
-      
-      fetchActualRole();
-    }
-  }, [checkUserRole]);
 
   // Reset mentor index when search changes
   useEffect(() => {
@@ -226,8 +284,10 @@ export default function RealTimeDashboard() {
     }
   }, []);
 
-  // Setup real-time intervals
+  // Setup real-time intervals (only if authenticated)
   useEffect(() => {
+    if (!userEmail || !userRole) return; // Don't fetch if not authenticated
+    
     const initialFetch = async () => {
       setIsRefreshing(true);
       try {
@@ -269,7 +329,7 @@ export default function RealTimeDashboard() {
     return () => {
       Object.values(timers).forEach(timer => clearInterval(timer));
     };
-  }, []);
+  }, [userEmail, userRole]); // ADDED dependencies
 
   // Calculate derived data from real-time data
   useEffect(() => {
@@ -395,6 +455,16 @@ export default function RealTimeDashboard() {
     navigate('/admin_dashboard');
   };
 
+  // ADDED: Navigation function for other pages - NOW PASSING DECRYPTED EMAIL
+  const navigateWithEmail = (path) => {
+    if (userEmail) {
+      // PASS DECRYPTED EMAIL DIRECTLY IN URL
+      navigate(`${path}?email=${encodeURIComponent(userEmail)}`);
+    } else {
+      navigate(path);
+    }
+  };
+
   // Filter sessions for the carousel based on status only
   const filteredSessionsByStatus = sessions.filter(session => {
     return filterStatus === 'all' || session.status === filterStatus;
@@ -487,12 +557,9 @@ export default function RealTimeDashboard() {
   ];
 
   const getFilteredQuickActions = () => {
+    if (!userRole) return [];
+    
     return allQuickActions.filter(action => {
-      // Coordinator/admin have special roles
-      if (userRole === 'coordinator' || userRole === 'admin') {
-        return action.roles.includes(userRole);
-      }
-      // For regular users, use their actual role from the endpoint
       return action.roles.includes(userRole);
     });
   };
@@ -501,9 +568,9 @@ export default function RealTimeDashboard() {
 
   const handleQuickActionClick = (action) => {
     if (action.id === 5 && userEmail) {
-      navigate(`/scheduled_dashboard/${encodeURIComponent(userEmail)}`);
+      navigateWithEmail(`/scheduled_dashboard`);
     } else {
-      navigate(action.path);
+      navigateWithEmail(action.path);
     }
   };
 
@@ -592,14 +659,15 @@ export default function RealTimeDashboard() {
   };
 
   const getRoleDisplayName = (role) => {
+    if (!role) return 'Loading...';
+    
     switch(role) {
       case 'coordinator': return 'Coordinator';
       case 'mentor': return 'Mentor';
       case 'mentee': return 'Mentee';
       case 'new_user': return 'New User';
       case 'admin': return 'Admin';
-      case 'member': return 'Member'; // Added for initial login
-      default: return role;
+      default: return role.charAt(0).toUpperCase() + role.slice(1);
     }
   };
 
@@ -825,6 +893,19 @@ export default function RealTimeDashboard() {
     });
   };
 
+  // Show auth loading
+  if (authLoading) {
+    return (
+      <div className="mentorship-dashboard-wrapper">
+        <div className="dashboard-loading-container">
+          <div className="dashboard-spinner"></div>
+          <p>Authenticating...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading while fetching data
   if (loading) {
     return (
       <div className="mentorship-dashboard-wrapper">
@@ -864,10 +945,7 @@ export default function RealTimeDashboard() {
                     <span className="email-value">{userEmail}</span>
                   </div>
                 )}
-                <button className="logout-btn" onClick={handleLogout}>
-                  <LogOut size={16} />
-                  Logout
-                </button>
+               
               </div>
             </div>
           </div>
@@ -901,9 +979,6 @@ export default function RealTimeDashboard() {
             </div>
           </div>
         </div>
-
-        {/* Phase Distribution Graph */}
-       
 
         {/* Phase Filter */}
         <div className="section-header">

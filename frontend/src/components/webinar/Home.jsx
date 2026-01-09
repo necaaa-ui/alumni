@@ -1,20 +1,41 @@
 // Frontend - AlumniDashboard.js (updated version)
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import './Home.css';
 
-// Import your logo images - make sure these paths are correct
+// Import your logo images
 import AlumniLogo from '../../assets/Nec-alumni-association.jpeg';
 import NECLogo from '../../assets/NEC-college Logo.png';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onOpenMentorshipDashboard }) => {
+// Encryption/Decryption functions
+const encryptEmail = (email) => {
+  try {
+    return btoa(encodeURIComponent(email));
+  } catch (error) {
+    console.error('Error encrypting email:', error);
+    return email;
+  }
+};
+
+const decryptEmail = (encryptedEmail) => {
+  try {
+    return decodeURIComponent(atob(encryptedEmail));
+  } catch (error) {
+    console.error('Error decrypting email:', error);
+    return encryptedEmail;
+  }
+};
+
+const AlumniDashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedTab, setSelectedTab] = useState('webinars');
   const [selectedItem, setSelectedItem] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
   const [dashboardData, setDashboardData] = useState({
     mentors: [],
     mentees: [],
@@ -65,11 +86,62 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
   const [currentPhase, setCurrentPhase] = useState('');
   const [phases, setPhases] = useState([]);
 
+  // Get email from URL on component mount
+  useEffect(() => {
+    const getEmailFromURL = () => {
+      // Check URL parameters for encrypted email
+      const urlParams = new URLSearchParams(location.search);
+      const encryptedEmailFromUrl = urlParams.get('email');
+      
+      if (encryptedEmailFromUrl) {
+        try {
+          // Decrypt the email from URL
+          const decryptedEmail = decryptEmail(decodeURIComponent(encryptedEmailFromUrl));
+          if (decryptedEmail && decryptedEmail.includes('@')) {
+            // Store in localStorage for future use
+            localStorage.setItem('userEmail', decryptedEmail);
+            console.log('User email decrypted from URL and stored:', decryptedEmail);
+            return decryptedEmail;
+          }
+        } catch (error) {
+          console.error('Error decrypting email from URL:', error);
+        }
+      }
+      
+      // Get email from localStorage (fallback)
+      const storedEmail = localStorage.getItem('userEmail') || '';
+      return storedEmail;
+    };
+
+    const email = getEmailFromURL();
+    setUserEmail(email);
+  }, [location.search]);
+
+  // Helper function to generate encrypted email parameter for URL
+  const getEncryptedEmailParam = () => {
+    if (!userEmail) return '';
+    const encrypted = encryptEmail(userEmail);
+    return encodeURIComponent(encrypted);
+  };
+
+  // UPDATED: Navigation function WITHOUT alert
+  const navigateWithEmail = (path) => {
+    if (userEmail) {
+      // Log to console for debugging (optional)
+      console.log('User email (decrypted):', userEmail);
+      
+      // Encrypt and navigate without showing alert
+      const encryptedParam = getEncryptedEmailParam();
+      navigate(`${path}?email=${encryptedParam}`);
+    } else {
+      navigate(path);
+    }
+  };
+
   // Fetch phases and current phase
   useEffect(() => {
     const fetchPhases = async () => {
       try {
-        // Fetch phases from API
         const response = await fetch(`${API_BASE_URL}/api/phases`);
         const data = await response.json();
         
@@ -79,9 +151,7 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
           );
           setPhases(phaseNames);
           
-          // Set current phase (first phase or based on date)
           if (phaseNames.length > 0) {
-            // Try to get current phase from API
             try {
               const currentPhaseRes = await fetch(`${API_BASE_URL}/api/current-phase`);
               const currentPhaseData = await currentPhaseRes.json();
@@ -89,7 +159,6 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
               if (currentPhaseData.found) {
                 setCurrentPhase(currentPhaseData.displayText);
               } else {
-                // Fallback: Determine current phase based on date
                 const now = new Date();
                 let currentPhaseName = 'Phase 1';
                 
@@ -109,12 +178,10 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
               }
             } catch (error) {
               console.error('Error fetching current phase:', error);
-              // Fallback to Phase 1
               setCurrentPhase('Phase 1');
             }
           }
         } else {
-          // Fallback: Generate phases based on date
           generateFallbackPhases();
         }
       } catch (error) {
@@ -139,7 +206,6 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
       
       setPhases(basePhases);
       
-      // Determine current phase
       const nowDate = new Date();
       let currentPhaseName = 'Phase 1';
       
@@ -182,7 +248,6 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
             assignments: assignmentsRes.data.assignments || []
           });
 
-          // Calculate mentorship stats
           const totalMentors = mentorsRes.data.stats?.total || 0;
           const totalMentees = menteesRes.data.stats?.total || 0;
           const meetingStats = meetingsRes.data.stats || {};
@@ -226,7 +291,6 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
             applications: formatApplications(mappings)
           });
 
-          // Calculate placement stats
           const selectedCount = mappings.filter(m => m.alumni_status === 'Selected').length;
           const rejectedCount = mappings.filter(m => m.alumni_status === 'Rejected').length;
           const pendingCount = mappings.filter(m => m.alumni_status === 'Not Applied').length;
@@ -270,18 +334,16 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
     };
 
     fetchPlacementData();
-    // Set up refresh interval (every 30 seconds)
     const interval = setInterval(fetchPlacementData, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch webinar data - UPDATED with correct logic from WebinarDashboard
+  // Fetch webinar data
   useEffect(() => {
     const fetchWebinarData = async () => {
       try {
         setLoading(true);
         
-        // Use currentPhase from state (fetched in separate useEffect)
         if (!currentPhase) {
           console.log('Waiting for current phase to be determined...');
           setLoading(false);
@@ -290,7 +352,6 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
 
         console.log('Fetching webinar data for phase:', currentPhase);
 
-        // Fetch dashboard stats for the current phase
         const dashboardRes = await fetch(`${API_BASE_URL}/api/dashboard-stats?phase=${encodeURIComponent(currentPhase)}`);
         
         if (dashboardRes.ok) {
@@ -299,14 +360,12 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
           if (statsData && statsData.domains && Array.isArray(statsData.domains)) {
             const domains = statsData.domains;
             
-            // Calculate totals
             const planned = domains.reduce((sum, domain) => sum + (Number(domain.planned) || 0), 0);
             const conducted = domains.reduce((sum, domain) => sum + (Number(domain.conducted) || 0), 0);
             const postponed = domains.reduce((sum, domain) => sum + (Number(domain.postponed) || 0), 0);
             const totalSpeakers = domains.reduce((sum, domain) => sum + (Number(domain.totalSpeakers) || 0), 0);
             const newSpeakers = domains.reduce((sum, domain) => sum + (Number(domain.newSpeakers) || 0), 0);
 
-            // Fetch all webinars for recent list
             const webinarsRes = await fetch(`${API_BASE_URL}/api/webinars`);
             let allWebinars = [];
             
@@ -315,13 +374,11 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
               allWebinars = Array.isArray(webinarsData) ? webinarsData : [];
             }
 
-            // Get recent webinars (last 6)
             const recentWebinars = allWebinars
               .filter(w => w.webinarDate)
               .sort((a, b) => new Date(b.webinarDate) - new Date(a.webinarDate))
               .slice(0, 6);
 
-            // Get upcoming webinars (next 3)
             const now = new Date();
             const upcomingWebinars = allWebinars
               .filter(w => w.webinarDate && new Date(w.webinarDate) > now)
@@ -347,15 +404,7 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
               totalSpeakers: totalSpeakers + newSpeakers,
               totalNewSpeakers: newSpeakers
             });
-            
-            console.log('Webinar data loaded successfully:', {
-              phase: currentPhase,
-              domainsCount: domains.length,
-              recentWebinars: recentWebinars.length,
-              stats: { planned, conducted, totalSpeakers: totalSpeakers + newSpeakers }
-            });
           } else {
-            console.error('Invalid dashboard stats response:', statsData);
             throw new Error('Invalid dashboard stats response');
           }
         } else {
@@ -363,7 +412,6 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
         }
       } catch (error) {
         console.error('Error fetching webinar data:', error);
-        // Fallback to static data if API fails
         useFallbackWebinarData();
       } finally {
         setLoading(false);
@@ -373,10 +421,8 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
     const useFallbackWebinarData = () => {
       console.log('Using fallback webinar data');
       
-      // Use seed data similar to WebinarDashboard
       const seedData = {
         'Phase 1': {
-          months: ['Jun 2023', 'Jul 2023', 'Aug 2023', 'Sep 2023'],
           domains: [
             { id: 'd1', name: 'FULL STACK DEVELOPMENT', planned: 4, conducted: 4, postponed: 0, totalSpeakers: 0, newSpeakers: 4 },
             { id: 'd2', name: 'ARTIFICIAL INTELLIGENCE & DATA SCIENCE', planned: 4, conducted: 2, postponed: 0, totalSpeakers: 0, newSpeakers: 2 },
@@ -388,7 +434,6 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
           ]
         },
         'Phase 2': {
-          months: ['Dec 2023', 'Jan 2024', 'Feb 2024', 'Mar 2024'],
           domains: [
             { id: 'd1', name: 'FULL STACK DEVELOPMENT', planned: 4, conducted: 4, postponed: 0, totalSpeakers: 4, newSpeakers: 4 },
             { id: 'd2', name: 'ARTIFICIAL INTELLIGENCE & DATA SCIENCE', planned: 4, conducted: 2, postponed: 0, totalSpeakers: 2, newSpeakers: 3 },
@@ -401,7 +446,6 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
         }
       };
 
-      // Determine which phase data to use
       const phaseData = seedData[currentPhase] || seedData['Phase 1'];
       const domains = phaseData.domains || [];
       
@@ -410,7 +454,6 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
       const totalSpeakers = domains.reduce((sum, domain) => sum + (domain.totalSpeakers + domain.newSpeakers), 0);
       const newSpeakers = domains.reduce((sum, domain) => sum + domain.newSpeakers, 0);
 
-      // Generate sample webinars
       const sampleWebinars = [
         { 
           id: 1, 
@@ -427,14 +470,6 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
           attendedCount: 95, 
           webinarDate: '2024-11-20',
           status: 'Completed'
-        },
-        { 
-          id: 3, 
-          topic: 'Cybersecurity Trends 2025', 
-          speaker: { name: 'John Smith' }, 
-          attendedCount: 0, 
-          webinarDate: '2025-01-10',
-          status: 'Scheduled'
         }
       ];
 
@@ -462,7 +497,6 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
       fetchWebinarData();
     }
     
-    // Set up refresh interval (every 30 seconds)
     const interval = setInterval(() => {
       if (currentPhase) {
         fetchWebinarData();
@@ -538,10 +572,9 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
     'pending': { class: 'status-pending', icon: '⏳', label: 'Pending' }
   };
 
-  // Get recent webinars - UPDATED
+  // Get recent webinars
   const getRecentWebinars = () => {
     return webinarData.webinars.map((webinar, index) => {
-      // Extract speaker name properly
       let speakerName = 'Speaker TBD';
       if (webinar.speaker) {
         if (typeof webinar.speaker === 'string') {
@@ -551,7 +584,6 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
         }
       }
       
-      // Determine status
       let status = 'Scheduled';
       if (webinar.status) {
         status = webinar.status;
@@ -593,6 +625,7 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
     </div>
   );
 
+  // UPDATED: Now will navigate directly without showing alert
   const renderDashboardAccess = () => {
     switch(selectedTab) {
       case 'webinars':
@@ -601,7 +634,7 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
             icon="🎓"
             title="Webinar Dashboard"
             description={`Manage webinar requests, speaker assignments, and topic approvals for ${currentPhase || 'current phase'}`}
-            onClick={() => navigate('/webinar-dashboard')}
+            onClick={() => navigateWithEmail('/webinar-dashboard')}
             stats={[
               { value: webinarStats.totalPlanned, label: 'Total Planned' },
               { value: webinarStats.totalConducted, label: 'Total Conducted' },
@@ -615,7 +648,7 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
             icon="🤝"
             title="Mentorship Dashboard"
             description="Manage mentorship programs, track progress, and handle mentor-mentee assignments."
-            onClick={() => navigate('/login1')}
+            onClick={() => navigateWithEmail('/dashboard')}
             stats={[
               { value: mentorshipStats.totalMentors, label: 'Total Mentors' },
               { value: mentorshipStats.totalMentees, label: 'Total Mentees' },
@@ -629,7 +662,7 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
             icon="💼"
             title="Placement Dashboard"
             description="View and manage placement data, company registrations, and alumni employment records."
-            onClick={() => navigate('/placement-dashboard')}
+            onClick={() => navigateWithEmail('/placement-dashboard')}
             stats={[
               { value: placementStats.totalApplications, label: 'Total Applications' },
               { value: placementStats.selected, label: 'Selected' },
@@ -963,7 +996,7 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
 
   return (
     <div className="alumni-dashboard">
-      {/* Header - Updated with logos */}
+      {/* Header */}
       <header className="dashboard-header">
         <div className="header-content">
           <div className="logo-container">
@@ -980,6 +1013,12 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
             <div className="center-title">
               <h1>NEC Alumni Association</h1>
               <p className="subtitle">Empowering Connections, Inspiring Success</p>
+              {userEmail && (
+                <p className="user-email-info">
+                  <span>Logged in as: </span>
+                  <span className="email-value">{userEmail}</span>
+                </p>
+              )}
             </div>
 
             {/* Right Logo - Alumni Association */}
@@ -1057,5 +1096,5 @@ const AlumniDashboard = ({ onOpenPlacementDashboard, onOpenWebinarDashboard, onO
     </div>
   );
 };
-  
+
 export default AlumniDashboard;

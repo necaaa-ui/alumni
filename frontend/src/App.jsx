@@ -60,7 +60,7 @@ function App() {
         <Route path="/meeting_updatation" element={<MeetingStatusUpdateForm/>} />
         <Route path="/program_feedback" element={<ProgramFeedbackForm/>} />
                                                
-        <Route path="/scheduled_dashboard/:email" element={<ScheduledDashboard/>} />
+        <Route path="/scheduled_dashboard" element={<ScheduledDashboard/>} />
                 
                         
         <Route path="/admin_dashboard" element={<AdminDashboard/>} />
