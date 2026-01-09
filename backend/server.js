@@ -11,7 +11,7 @@ app.use(express.json());
 // app.use(cors());
 //SSO ROUTES
 const webinarSSORoutes = require('./single-sign-on/routes/webinar');
-app.use('/api/webinar', webinarSSORoutes);
+app.use('/api/nec', webinarSSORoutes);
 const placementSSORoutes = require('./single-sign-on/routes/placement');
 app.use('/api/placement', placementSSORoutes);
 const mentorshipSSORoutes = require('./single-sign-on/routes/mentorShip');

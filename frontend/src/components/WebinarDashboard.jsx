@@ -1,4 +1,3 @@
-
 // ---------- FILE: WebinarDashboard.jsx ----------
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import './WebinarDashboard.css';
@@ -20,6 +19,15 @@ import WebinarStudentFeedbackForm from "./webinar/WebinarStudentFeedbackForm";
 import TopicApprovalForm from './webinar/TopicApprovalForm';
 import WebinarCircular from './webinar/WebinarCircular';
 
+// ADDED: Decryption function that matches other dashboards
+const decryptEmail = (encryptedEmail) => {
+  try {
+    return decodeURIComponent(atob(encryptedEmail));
+  } catch (error) {
+    console.error('Error decrypting email:', error);
+    return encryptedEmail;
+  }
+};
 
 /*WebinarDashboard.jsx
   
@@ -283,22 +291,32 @@ function DashboardShell() {
     const storedEmail = localStorage.getItem('userEmail');
     
     if (!encodedEmail && !storedEmail) {
-      navigate('/login');
+      navigate('/');
     }
   }, [searchParams, navigate]);
 
-  // Extract user email from URL params or localStorage and check admin status
+  // UPDATED: Extract and decrypt user email from URL params or localStorage
   useEffect(() => {
     let email = null;
     const encodedEmail = searchParams.get('email');
     
     if (encodedEmail) {
       try {
-        email = atob(encodedEmail); // Decode base64
+        // Try the proper decryption method first
+        email = decryptEmail(decodeURIComponent(encodedEmail));
+        console.log('Email decrypted from URL:', email);
         setUserEmail(email);
         localStorage.setItem('userEmail', email);
       } catch (error) {
-        console.error('Error decoding email:', error);
+        console.error('Error decrypting email from URL:', error);
+        // Fallback to simple atob
+        try {
+          email = atob(encodedEmail);
+          setUserEmail(email);
+          localStorage.setItem('userEmail', email);
+        } catch (fallbackError) {
+          console.error('Fallback decryption also failed:', fallbackError);
+        }
       }
     } else {
       // Check localStorage if no email in URL
@@ -818,16 +836,6 @@ function DashboardShell() {
                 ))}
               </select>
             )}
-            <button
-              className="btn-ghost"
-              onClick={() => {
-                localStorage.removeItem('userEmail');
-                localStorage.removeItem('isAdmin');
-                navigate('/login');
-              }}
-            >
-              Logout
-            </button>
           </div>
         </header>
         <section className="wb-content">

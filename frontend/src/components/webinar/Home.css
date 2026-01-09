@@ -11,6 +11,22 @@ body {
   overflow-x: hidden;
 }
 
+.logout-button {
+  background: radial-gradient(circle, #8b5cf6 0%, #a855f7 100%);
+  /* Smooth gradient from dark red to lighter red */
+  
+  transition: all 0.3s ease;
+  /* Silky smooth animations */
+  
+    box-shadow: 0 10px 40px rgba(139, 92, 246, 0.5);
+
+  color: white;
+
+  /* Subtle depth effect */
+}
+
+.logout-button:hover .logout-icon {  transform: rotate(-15deg);  transition: transform 0.3s ease;}
+
 /* Dashboard Layout */
 .alumni-dashboard {
   min-height: 100vh;

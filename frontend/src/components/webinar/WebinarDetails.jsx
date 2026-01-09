@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from  'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './Common.css';
 import { FiBookOpen } from "react-icons/fi";
@@ -32,7 +32,7 @@ export default function WebinarDetails() {
       if (response.ok) {
         setPopup({ message: 'Webinar deleted successfully!', type: 'success' });
         setTimeout(() => {
-          navigate('/webinar-events');
+          navigate(`/webinar-events/${encodeURIComponent(userEmail)}`);
         }, 2000);
       } else {
         setPopup({ message: 'Failed to delete webinar.', type: 'error' });
@@ -74,16 +74,21 @@ export default function WebinarDetails() {
                     registrations.map((registration, index) => (
                       <tr key={registration._id || index} className="hover:bg-gray-50">
                         <td className="px-8 py-12 whitespace-nowrap text-lg font-medium text-gray-900 text-center">
-                          {registration.name}
+                          {registration.userDetails?.name || 'N/A'}
                         </td>
                         <td className="px-8 py-12 whitespace-nowrap text-lg text-gray-500 text-center">
                           {registration.email}
                         </td>
                         <td className="px-8 py-12 whitespace-nowrap text-lg text-gray-500 text-center">
-                          {registration.department}
+                          {registration.userDetails?.department || 'N/A'}
                         </td>
                         <td className="px-8 py-12 whitespace-nowrap text-lg text-gray-500 text-center">
-                          {registration.batch}
+                          {(() => {
+                            console.log('Registration data:', registration);
+                            console.log('UserDetails:', registration.userDetails);
+                            console.log('Batch value:', registration.userDetails?.batch);
+                            return registration.userDetails?.batch || 'N/A';
+                          })()}
                         </td>
                       </tr>
                     ))
@@ -270,7 +275,7 @@ export default function WebinarDetails() {
       {/* Main Container */}
       <div className="form-wrapper">
         <div>
-          <button className="back-btn" onClick={() => navigate("/webinar-events")}>
+          <button className="back-btn" onClick={() => navigate(`/webinar-events/${encodeURIComponent(userEmail)}`)}>
             <ArrowLeft className="back-btn-icon" /> Back to Webinar Events
           </button>
 
