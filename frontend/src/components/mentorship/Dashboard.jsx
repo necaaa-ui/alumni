@@ -173,7 +173,7 @@ export default function RealTimeDashboard() {
         window.history.replaceState({}, '', window.location.pathname);
       } else {
         // No email found, redirect to home
-        navigate('/home');
+        navigate('/');
       }
       
       setAuthLoading(false);

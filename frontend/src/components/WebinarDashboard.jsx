@@ -291,7 +291,7 @@ function DashboardShell() {
     const storedEmail = localStorage.getItem('userEmail');
     
     if (!encodedEmail && !storedEmail) {
-      navigate('/login');
+      navigate('/');
     }
   }, [searchParams, navigate]);
 
@@ -836,16 +836,6 @@ function DashboardShell() {
                 ))}
               </select>
             )}
-            <button
-              className="btn-ghost"
-              onClick={() => {
-                localStorage.removeItem('userEmail');
-                localStorage.removeItem('isAdmin');
-                navigate('/login');
-              }}
-            >
-              Logout
-            </button>
           </div>
         </header>
         <section className="wb-content">

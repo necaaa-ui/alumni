@@ -16,6 +16,8 @@ import PlacementFeedbackForm from './PlacementFeedbackForm';
 import RequesterFeedbackForm from './RequesterFeedbackForm';
 import AlumniFeedbackDisplay from './AlumniFeedbackDisplay';
 import AlumniJobRequestsDisplay from './AlumniJobRequestsDisplay';
+import { useNavigate } from 'react-router-dom'; // ADDED useLocation
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // ADDED: Decryption function that matches MentorshipDashboard
@@ -31,6 +33,7 @@ const decryptEmail = (encryptedEmail) => {
 const PlacementDashboard = ({ onBackToHome }) => {
   const [view, setView] = useState('email-entry');
   const [analyticsData, setAnalyticsData] = useState(null);
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [allCompanies, setAllCompanies] = useState([]);
   const [userRole, setUserRole] = useState('');
@@ -95,7 +98,7 @@ const PlacementDashboard = ({ onBackToHome }) => {
           console.error('Fallback decryption also failed:', fallbackError);
         }
       }
-    }
+    } 
   }, []);
 
   const handleEmailSubmit = async (e) => {

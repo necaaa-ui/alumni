@@ -101,6 +101,9 @@ const AlumniDashboard = () => {
             // Store in localStorage for future use
             localStorage.setItem('userEmail', decryptedEmail);
             console.log('User email decrypted from URL and stored:', decryptedEmail);
+
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
             return decryptedEmail;
           }
         } catch (error) {
@@ -116,6 +119,20 @@ const AlumniDashboard = () => {
     const email = getEmailFromURL();
     setUserEmail(email);
   }, [location.search]);
+
+
+  const handleLogout = () => {
+    // Remove email from localStorage
+    localStorage.removeItem('userEmail');
+
+    // Clear user email state
+    setUserEmail('');
+
+    // Refresh the page
+    window.location.reload();
+
+    console.log('User logged out successfully');
+  };
 
   // Helper function to generate encrypted email parameter for URL
   const getEncryptedEmailParam = () => {
@@ -134,7 +151,7 @@ const AlumniDashboard = () => {
       const encryptedParam = getEncryptedEmailParam();
       navigate(`${path}?email=${encryptedParam}`);
     } else {
-      navigate(path);
+      window.location.reload();
     }
   };
 
@@ -1030,6 +1047,16 @@ const AlumniDashboard = () => {
               />
             </div>
           </div>
+
+           {userEmail && (
+            <button 
+              className="logout-button" 
+              onClick={handleLogout}
+              title="Logout"
+            >
+              <span className="logout-text">Logout</span>
+            </button>
+          )}
         </div>
       </header>
 
