@@ -2,6 +2,7 @@
 const express = require('express');
 const multer = require('multer');
 const mongoose = require('mongoose');
+const placementDB = require('../config/placementDB');
 
 // ========== MODEL ==========
 const companySchema = new mongoose.Schema({
@@ -18,11 +19,13 @@ const companySchema = new mongoose.Schema({
   poster: { type: String }
 });
 
-const Company = mongoose.model(
-  'Company',
-  companySchema,
-  'company_registration'
-);
+// const Company = mongoose.model(
+//   'Company',
+//   companySchema,
+//   'company_registration'
+// );
+
+const Company = placementDB.model('Company', companySchema,'company_registration');
 
 // ========== CONTROLLERS ==========
 const registerCompany = async (req, res) => {
