@@ -113,7 +113,7 @@ export default function RealTimeDashboard() {
       const cleanEmail = email.toLowerCase().trim();
       
       // Check hardcoded emails first
-      if (cleanEmail === "rampriya@gmail.com") {
+      if (cleanEmail === "rampriya-aids@nec.edu.in") {
         return 'coordinator';
       }
       if (cleanEmail === "admin@gmail.com") {

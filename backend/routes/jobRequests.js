@@ -8,15 +8,19 @@ const placementDB = require('../config/placementDB');
 const mongoose = require('mongoose');
 
 // ========== MULTER SETUP ==========
+const uploadDir = path.join(__dirname, '..', 'uploads'); 
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const dir = path.join(__dirname, 'uploads');
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir);
-    cb(null, dir);
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
+    const safeName = file.originalname.replace(/\s+/g, '_');
+    cb(null, `${uniqueSuffix}-${safeName}`);
   }
 });
 
