@@ -28,5 +28,6 @@ router.get("/mentor/:mentorId/meetings", meetingController.getAllMeetingsForMent
 
 // GET mentor by email
 router.get("/mentor-by-email/:email", meetingController.getMentorByEmail);
+router.get('/mentor-by-mentee', meetingController.getMentorByMenteeEmail); 
 
 module.exports = router;

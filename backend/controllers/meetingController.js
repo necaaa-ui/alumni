@@ -691,3 +691,82 @@ exports.getMentorByEmail = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+// NEW FUNCTION: Get mentor by mentee email
+exports.getMentorByMenteeEmail = async (req, res) => {
+  try {
+    const { email } = req.query;
+    
+    if (!email) {
+      return res.status(400).json({ 
+        message: "Mentee email is required" 
+      });
+    }
+
+    // 1. Find mentee by email
+    const mentee = await User.findOne({
+      "basic.email_id": { $regex: new RegExp(`^${email.trim().toLowerCase()}$`, "i") }
+    });
+
+    if (!mentee) {
+      return res.status(404).json({ message: "Mentee not found" });
+    }
+
+    // 2. Find which mentor is assigned to this mentee
+    const assignment = await MentorMenteeAssignment.findOne({
+      mentee_user_ids: mentee._id
+    });
+
+    if (!assignment) {
+      return res.status(404).json({ message: "No mentor assigned" });
+    }
+
+    // 3. Get the mentor's details
+    const mentor = await User.findById(assignment.mentor_user_id);
+
+    if (!mentor) {
+      return res.status(404).json({ message: "Mentor not found" });
+    }
+
+    // 4. Get ALL mentees of this mentor
+    const allAssignments = await MentorMenteeAssignment.find({
+      mentor_user_id: mentor._id
+    });
+
+    // Collect all mentee IDs
+    const allMenteeIds = [];
+    allAssignments.forEach(assign => {
+      allMenteeIds.push(...assign.mentee_user_ids);
+    });
+
+    // Get details of all mentees
+    const assignedMentees = await User.find({
+      _id: { $in: allMenteeIds }
+    });
+
+    // Format the response
+    const response = {
+      mentor: {
+        _id: mentor._id,
+        name: mentor.basic?.name || "",
+        email: mentor.basic?.email_id || ""
+      },
+      assignedMentees: assignedMentees.map(m => ({
+        _id: m._id,
+        name: m.basic?.name || "",
+        email: m.basic?.email_id || "",
+        basic: {
+          name: m.basic?.name || "",
+          email_id: m.basic?.email_id || ""
+        }
+      })),
+      commencement_date: assignment.commencement_date || "",
+      end_date: assignment.end_date || ""
+    };
+
+    res.json(response);
+
+  } catch (err) {
+    console.error("GET MENTOR BY MENTEE ERROR:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};

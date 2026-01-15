@@ -516,7 +516,7 @@ export default function RealTimeDashboard() {
       icon: Calendar,
       path: '/mentor_scheduling',
       color: '#f59e0b',
-      roles: ['mentor', 'admin']
+      roles: ['mentor','mentee']
     },
     {
       id: 5,

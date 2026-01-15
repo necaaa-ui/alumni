@@ -8,15 +8,20 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 export default function MentorshipSchedulingForm() {
   const navigate = useNavigate();
   
-  // Get email from localStorage
-  const getEmailFromSource = () => {
+  // Get email and role from localStorage
+  const getUserInfo = () => {
     const storedEmail = localStorage.getItem('userEmail');
-    return storedEmail || "";
+    const storedRole = localStorage.getItem('userRole'); // 'mentor' or 'mentee'
+    return { email: storedEmail || "", role: storedRole || "mentor" }; // Default to mentor
   };
+
+  const { email: storedEmail, role: storedRole } = getUserInfo();
+  const isMentor = storedRole === 'mentor';
+  const isMentee = storedRole === 'mentee';
 
   const [formData, setFormData] = useState({
     mentorName: '',
-    mentorEmail: getEmailFromSource(),
+    mentorEmail: isMentor ? storedEmail : '', // Only pre-fill if mentor
     mentorId: '',
     menteeEmails: [],
     commencementDate: '',
@@ -40,6 +45,7 @@ export default function MentorshipSchedulingForm() {
   const [phases, setPhases] = useState([]);
   const [loadingPhase, setLoadingPhase] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingMentor, setLoadingMentor] = useState(false);
 
   const emailTimeoutRef = useRef(null);
 
@@ -50,17 +56,21 @@ export default function MentorshipSchedulingForm() {
     }
   }, [submitted]);
 
-  // Fetch mentor data when email is available on component mount
+  // Fetch data based on user role on component mount
   useEffect(() => {
-    if (formData.mentorEmail && formData.mentorEmail.trim()) {
-      const trimmedEmail = formData.mentorEmail.toLowerCase().trim();
+    if (storedEmail && storedEmail.trim()) {
+      const trimmedEmail = storedEmail.toLowerCase().trim();
       if (/\S+@\S+\.\S+/.test(trimmedEmail)) {
         setTimeout(() => {
-          fetchMentorData(trimmedEmail);
+          if (isMentor) {
+            fetchMentorData(trimmedEmail);
+          } else if (isMentee) {
+            fetchMentorByMenteeEmail(trimmedEmail);
+          }
         }, 100);
       }
     }
-  }, []);
+  }, [storedEmail, isMentor, isMentee]);
 
   // Fetch phases on component mount
   useEffect(() => {
@@ -95,6 +105,51 @@ export default function MentorshipSchedulingForm() {
       console.error("Failed to fetch phases:", err);
     } finally {
       setLoadingPhase(false);
+    }
+  };
+
+  // Fetch mentor by mentee email (NEW FUNCTION)
+  const fetchMentorByMenteeEmail = async (menteeEmail) => {
+    try {
+      setLoadingMentor(true);
+      const res = await axios.get(`${API_BASE_URL}/api/meetings/mentor-by-mentee?email=${menteeEmail}`);
+      
+      const mentor = res.data.mentor || {};
+      const assigned = res.data.assignedMentees || [];
+      
+      setFormData(prev => ({
+        ...prev,
+        mentorName: mentor.name || '',
+        mentorEmail: mentor.email || '',
+        mentorId: mentor._id || '',
+        commencementDate: res.data.commencement_date || '',
+        endDate: res.data.end_date || '',
+        menteeEmails: assigned.map(m => (m.basic?.email_id || m.email || ''))
+      }));
+
+      const mentees = assigned.map(m => ({
+        _id: m._id || m.id || '',
+        name: m.basic?.name || m.name || 'Unknown',
+        email: m.basic?.email_id || m.email || '',
+        areaOfInterest: m.area_of_interest || m.areas_of_interest || ''
+      }));
+
+      setAssignedMentees(mentees);
+      
+    } catch (error) {
+      console.error("Failed to fetch mentor by mentee email:", error);
+      setAssignedMentees([]);
+      setFormData(prev => ({
+        ...prev,
+        mentorName: '',
+        mentorEmail: '',
+        mentorId: '',
+        commencementDate: '',
+        endDate: '',
+        menteeEmails: []
+      }));
+    } finally {
+      setLoadingMentor(false);
     }
   };
 
@@ -140,7 +195,8 @@ export default function MentorshipSchedulingForm() {
       }
     }
 
-    if (name === "mentorEmail" && value.length > 5) {
+    // Only allow email lookup if user is mentor (mentees can't change mentor email)
+    if (name === "mentorEmail" && value.length > 5 && isMentor) {
       if (emailTimeoutRef.current) clearTimeout(emailTimeoutRef.current);
       emailTimeoutRef.current = setTimeout(() => {
         fetchMentorData(value.trim());
@@ -336,7 +392,7 @@ export default function MentorshipSchedulingForm() {
         setSubmitted(false);
         setFormData({
           mentorName: '',
-          mentorEmail: formData.mentorEmail, // Keep the email
+          mentorEmail: isMentor ? storedEmail : '', // Keep appropriate email
           mentorId: '',
           menteeEmails: [],
           commencementDate: '',
@@ -386,8 +442,16 @@ export default function MentorshipSchedulingForm() {
         <div className="form-header">
           <h1 className="form-title">Mentorship Scheduling</h1>
           <p className="form-subtitle">
-            {formData.mentorEmail ? `Scheduling as mentor: ${formData.mentorEmail}` : "Manage mentees for the mentor"}
+            {isMentor 
+              ? `Scheduling as mentor: ${storedEmail}` 
+              : isMentee 
+                ? `Viewing schedule for mentor: ${formData.mentorName || 'Loading...'}` 
+                : "Manage mentorship scheduling"
+            }
           </p>
+          {isMentee && loadingMentor && (
+            <small className="info-text">Loading mentor information...</small>
+          )}
         </div>
 
         <div className="form-card">
@@ -431,7 +495,7 @@ export default function MentorshipSchedulingForm() {
             )}
           </div>
 
-          {/* Mentor Email - Read-only if auto-filled */}
+          {/* Mentor Email - Read-only for mentees, editable for mentors */}
           <div className="form-group">
             <label className="label">Mentor Email *</label>
             <input 
@@ -439,13 +503,16 @@ export default function MentorshipSchedulingForm() {
               name="mentorEmail" 
               value={formData.mentorEmail} 
               onChange={handleChange} 
-              className={`input ${errors.mentorEmail ? "input-error" : ""} ${getEmailFromSource() ? 'disabled-input' : ''}`}
-              disabled={submitting || submitted || (!!getEmailFromSource())}
-              readOnly={!!getEmailFromSource()}
+              className={`input ${errors.mentorEmail ? "input-error" : ""} ${(isMentee || (isMentor && storedEmail)) ? 'disabled-input' : ''}`}
+              disabled={submitting || submitted || isMentee || (isMentor && !!storedEmail)}
+              readOnly={isMentee || (isMentor && !!storedEmail)}
               placeholder="Enter mentor's email"
             />
-            {getEmailFromSource() && (
-              <small className="info-text">Email auto-filled from dashboard</small>
+            {isMentor && storedEmail && (
+              <small className="info-text">Your mentor email (read-only)</small>
+            )}
+            {isMentee && (
+              <small className="info-text">Your mentor's email (auto-filled)</small>
             )}
             {errors.mentorEmail && <span className="error-text">{errors.mentorEmail}</span>}
           </div>
@@ -570,17 +637,24 @@ export default function MentorshipSchedulingForm() {
           <div className="form-group">
             <label className="label">Assigned Mentees *</label>
             {assignedMentees.length === 0 && <p className="no-mentees-text">No mentees assigned to this mentor.</p>}
+            {isMentee && assignedMentees.length > 0 && (
+              <small className="info-text">
+                You are included in this list as: {storedEmail}
+              </small>
+            )}
             <div className="selected-mentees">
               {assignedMentees.filter(m => formData.menteeEmails.includes(m.email)).map(m => (
                 <span key={m._id} className="selected-mentee">
                   {m.name} ({m.email})
-                  <span 
-                    className="cross-symbol" 
-                    onClick={() => !submitting && !submitted && removeMentee(m.email)}
-                    style={{ cursor: (submitting || submitted) ? 'not-allowed' : 'pointer', opacity: (submitting || submitted) ? 0.5 : 1 }}
-                  >
-                    ×
-                  </span>
+                  {m.email !== storedEmail && ( // Don't let mentees remove themselves
+                    <span 
+                      className="cross-symbol" 
+                      onClick={() => !submitting && !submitted && removeMentee(m.email)}
+                      style={{ cursor: (submitting || submitted) ? 'not-allowed' : 'pointer', opacity: (submitting || submitted) ? 0.5 : 1 }}
+                    >
+                      ×
+                    </span>
+                  )}
                 </span>
               ))}
             </div>
@@ -672,9 +746,6 @@ export default function MentorshipSchedulingForm() {
               "Scheduled!"
             ) : !formData.phaseId ? (
               "No Active Phase"
-
-
-              
             ) : (
               "Schedule Meeting"
             )}

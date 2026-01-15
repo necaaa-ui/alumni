@@ -26,6 +26,8 @@ const SupportIcon = () => <span className="md-icon">🤝</span>;
 const CheckIcon = () => <span className="md-icon">✅</span>;
 const MenuIcon = () => <span className="md-icon">☰</span>;
 const CloseIcon = () => <span className="md-icon">✕</span>;
+const InterestIcon = () => <span className="md-icon">🎯</span>;
+const DescriptionIcon = () => <span className="md-icon">📄</span>;
 
 export default function MentorshipDashboard() {
   // Set default active tab to 'mentors' instead of 'dashboard'
@@ -65,8 +67,10 @@ export default function MentorshipDashboard() {
     sortOrder: 'asc'
   });
   
+  // UPDATED: Mentee filters with area_of_interest
   const [menteeFilters, setMenteeFilters] = useState({
     search: '',
+    areaOfInterest: '',
     phase: 'all',
     sortBy: 'createdAt',
     sortOrder: 'desc'
@@ -241,7 +245,7 @@ export default function MentorshipDashboard() {
     setFilteredMentors(filtered);
   };
 
-  // Apply mentee filters
+  // UPDATED: Apply mentee filters with area_of_interest
   const applyMenteeFilters = (menteesData, filters) => {
     let filtered = [...menteesData];
     
@@ -250,7 +254,20 @@ export default function MentorshipDashboard() {
       const searchLower = filters.search.toLowerCase();
       filtered = filtered.filter(mentee => {
         const email = (mentee.email || '').toLowerCase();
-        return email.includes(searchLower);
+        const area = (mentee.area_of_interest || '').toLowerCase();
+        const description = (mentee.description || '').toLowerCase();
+        return email.includes(searchLower) || 
+               area.includes(searchLower) || 
+               description.includes(searchLower);
+      });
+    }
+    
+    // Area of Interest filter
+    if (filters.areaOfInterest) {
+      const areaLower = filters.areaOfInterest.toLowerCase();
+      filtered = filtered.filter(mentee => {
+        const area = (mentee.area_of_interest || '').toLowerCase();
+        return area.includes(areaLower);
       });
     }
     
@@ -271,17 +288,18 @@ export default function MentorshipDashboard() {
           aValue = (a.email || '').toLowerCase();
           bValue = (b.email || '').toLowerCase();
           break;
-        case 'requested':
-          aValue = new Date(a.createdAt || 0);
-          bValue = new Date(b.createdAt || 0);
+        case 'area_of_interest':
+          aValue = (a.area_of_interest || '').toLowerCase();
+          bValue = (b.area_of_interest || '').toLowerCase();
           break;
         case 'phase':
           aValue = a.phaseId || 0;
           bValue = b.phaseId || 0;
           break;
+        case 'createdAt':
         default:
-          aValue = a.createdAt || 0;
-          bValue = b.createdAt || 0;
+          aValue = new Date(a.createdAt || 0);
+          bValue = new Date(b.createdAt || 0);
       }
       
       if (filters.sortOrder === 'desc') {
@@ -378,7 +396,7 @@ export default function MentorshipDashboard() {
     applyMentorFilters(mentors, updatedFilters);
   };
 
-  // Handle mentee filter changes
+  // UPDATED: Handle mentee filter changes with area_of_interest
   const handleMenteeFilterChange = (e) => {
     const { name, value } = e.target;
     const updatedFilters = {
@@ -412,10 +430,11 @@ export default function MentorshipDashboard() {
     applyMentorFilters(mentors, resetFilters);
   };
 
-  // Reset mentee filters
+  // UPDATED: Reset mentee filters with area_of_interest
   const resetMenteeFilters = () => {
     const resetFilters = {
       search: '',
+      areaOfInterest: '',
       phase: 'all',
       sortBy: 'createdAt',
       sortOrder: 'desc'
@@ -645,6 +664,17 @@ export default function MentorshipDashboard() {
       }
     });
     return Array.from(emails).sort();
+  };
+
+  // Get unique area of interests for suggestions
+  const getUniqueAreasOfInterest = () => {
+    const areas = new Set();
+    mentees.forEach(mentee => {
+      if (mentee.area_of_interest) {
+        areas.add(mentee.area_of_interest);
+      }
+    });
+    return Array.from(areas).sort();
   };
 
   // Render loading state
@@ -895,13 +925,13 @@ export default function MentorshipDashboard() {
               </div>
             )}
 
-            {/* MENTEES TAB - WITH FILTERS */}
+            {/* MENTEES TAB - WITH FILTERS INCLUDING area_of_interest and description */}
             {activeTab === 'mentees' && (
               <div className="md-mentees-tab">
                 <div className="md-section-header-with-filters">
                   <h2 className="md-section-title">All Mentees ({filteredMentees.length})</h2>
                   
-                  {/* Mentee Filters */}
+                  {/* Mentee Filters with area_of_interest */}
                   <div className="md-filters-container md-glass-card">
                     <div className="md-filter-row">
                       <div className="md-filter-group">
@@ -909,11 +939,29 @@ export default function MentorshipDashboard() {
                         <input
                           type="text"
                           name="search"
-                          placeholder="Search by email..."
+                          placeholder="Search by email, area of interest, or description..."
                           value={menteeFilters.search}
                           onChange={handleMenteeFilterChange}
                           className="md-filter-input"
                         />
+                      </div>
+                      
+                      <div className="md-filter-group">
+                        <label>Area of Interest</label>
+                        <input
+                          type="text"
+                          name="areaOfInterest"
+                          placeholder="Filter by area of interest..."
+                          value={menteeFilters.areaOfInterest}
+                          onChange={handleMenteeFilterChange}
+                          className="md-filter-input"
+                          list="areaOfInterestSuggestions"
+                        />
+                        <datalist id="areaOfInterestSuggestions">
+                          {getUniqueAreasOfInterest().map(area => (
+                            <option key={area} value={area} />
+                          ))}
+                        </datalist>
                       </div>
                       
                       <div className="md-filter-group">
@@ -940,8 +988,9 @@ export default function MentorshipDashboard() {
                           className="md-filter-select"
                         >
                           <option value="email">Email</option>
+                          <option value="area_of_interest">Area of Interest</option>
                           <option value="phase">Phase</option>
-                          <option value="requested">Request Date</option>
+                          <option value="createdAt">Request Date</option>
                         </select>
                       </div>
                       
@@ -988,7 +1037,10 @@ export default function MentorshipDashboard() {
                           <tr>
                             <th className="md-table-th">ID</th>
                             <th className="md-table-th">Email</th>
+                            <th className="md-table-th">Area of Interest</th>
+                            <th className="md-table-th">Description</th>
                             <th className="md-table-th">Phase</th>
+                            
                             <th className="md-table-th">Requested</th>
                           </tr>
                         </thead>
@@ -998,9 +1050,21 @@ export default function MentorshipDashboard() {
                               ? mentee.email 
                               : 'No email';
                             
+                            const displayArea = mentee.area_of_interest && mentee.area_of_interest !== 'N/A'
+                              ? mentee.area_of_interest
+                              : 'Not specified';
+                            
+                            const displayDescription = mentee.description && mentee.description !== 'N/A'
+                              ? mentee.description.length > 50
+                                ? mentee.description.substring(0, 50) + '...'
+                                : mentee.description
+                              : 'No description';
+                            
                             const displayPhase = mentee.phaseId && mentee.phaseId !== 'N/A'
                               ? `Phase ${mentee.phaseId}`
                               : 'N/A';
+                            
+                            const displayStatus = mentee.status || 'pending';
 
                             return (
                               <tr key={mentee._id}>
@@ -1014,8 +1078,23 @@ export default function MentorshipDashboard() {
                                   </div>
                                 </td>
                                 <td>
+                                  <div className="md-interest-cell">
+                                    <InterestIcon />
+                                    <span className="md-interest-text">{displayArea}</span>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div className="md-description-cell">
+                                    <DescriptionIcon />
+                                    <span className="md-description-text" title={mentee.description || ''}>
+                                      {displayDescription}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td>
                                   <span className="md-phase-badge">{displayPhase}</span>
                                 </td>
+                              
                                 <td className="md-date-cell">{formatDate(mentee.createdAt)}</td>
                               </tr>
                             );
@@ -1029,127 +1108,150 @@ export default function MentorshipDashboard() {
             )}
 
             {/* ASSIGNMENTS TAB - WITH EMAIL FILTERS */}
-            {activeTab === 'assignments' && (
-              <div className="md-assignments-tab">
-                <div className="md-section-header-with-filters">
-                  <h2 className="md-section-title">Mentor-Mentee Assignments ({filteredAssignments.length})</h2>
-                  
-                  {/* Assignment Filters */}
-                  <div className="md-filters-container md-glass-card">
-                    <div className="md-filter-row">
-                      <div className="md-filter-group">
-                        <label>Mentor Email</label>
-                        <input
-                          type="text"
-                          name="mentorEmail"
-                          placeholder="Filter by mentor email..."
-                          value={assignmentFilters.mentorEmail}
-                          onChange={handleAssignmentFilterChange}
-                          className="md-filter-input"
-                          list="mentorEmailSuggestions"
-                        />
-                        <datalist id="mentorEmailSuggestions">
-                          {getUniqueMentorEmails().map(email => (
-                            <option key={email} value={email} />
-                          ))}
-                        </datalist>
-                      </div>
-                      
-                      <div className="md-filter-group">
-                        <label>Mentee Email</label>
-                        <input
-                          type="text"
-                          name="menteeEmail"
-                          placeholder="Filter by mentee email..."
-                          value={assignmentFilters.menteeEmail}
-                          onChange={handleAssignmentFilterChange}
-                          className="md-filter-input"
-                        />
-                      </div>
-                      
-                      <div className="md-filter-group">
-                        <label>Phase</label>
-                        <select
-                          name="phase"
-                          value={assignmentFilters.phase}
-                          onChange={handleAssignmentFilterChange}
-                          className="md-filter-select"
-                        >
-                          <option value="all">All Phases</option>
-                          {getUniquePhases(assignments).map(phase => (
-                            <option key={phase} value={phase}>Phase {phase}</option>
-                          ))}
-                        </select>
-                      </div>
-                      
-                      <div className="md-filter-actions">
-                        <button 
-                          className="md-apply-btn"
-                          onClick={() => applyAssignmentFilters(assignments, assignmentFilters)}
-                        >
-                          <FilterIcon /> <span className="md-btn-text">Apply</span>
-                        </button>
-                        <button 
-                          className="md-reset-btn"
-                          onClick={resetAssignmentFilters}
-                        >
-                          <span className="md-btn-text">Reset</span>
-                        </button>
+{/* ASSIGNMENTS TAB - WITH EMAIL FILTERS */}
+{activeTab === 'assignments' && (
+  <div className="md-assignments-tab">
+    <div className="md-section-header-with-filters">
+      <h2 className="md-section-title">Mentor-Mentee Assignments ({filteredAssignments.length})</h2>
+      
+      {/* Assignment Filters */}
+      <div className="md-filters-container md-glass-card">
+        <div className="md-filter-row">
+          <div className="md-filter-group">
+            <label>Mentor Email</label>
+            <input
+              type="text"
+              name="mentorEmail"
+              placeholder="Filter by mentor email..."
+              value={assignmentFilters.mentorEmail}
+              onChange={handleAssignmentFilterChange}
+              className="md-filter-input"
+              list="mentorEmailSuggestions"
+            />
+            <datalist id="mentorEmailSuggestions">
+              {getUniqueMentorEmails().map(email => (
+                <option key={email} value={email} />
+              ))}
+            </datalist>
+          </div>
+          
+          <div className="md-filter-group">
+            <label>Mentee Email</label>
+            <input
+              type="text"
+              name="menteeEmail"
+              placeholder="Filter by mentee email..."
+              value={assignmentFilters.menteeEmail}
+              onChange={handleAssignmentFilterChange}
+              className="md-filter-input"
+            />
+          </div>
+          
+          <div className="md-filter-group">
+            <label>Phase</label>
+            <select
+              name="phase"
+              value={assignmentFilters.phase}
+              onChange={handleAssignmentFilterChange}
+              className="md-filter-select"
+            >
+              <option value="all">All Phases</option>
+              {getUniquePhases(assignments).map(phase => (
+                <option key={phase} value={phase}>Phase {phase}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="md-filter-actions">
+            <button 
+              className="md-apply-btn"
+              onClick={() => applyAssignmentFilters(assignments, assignmentFilters)}
+            >
+              <FilterIcon /> <span className="md-btn-text">Apply</span>
+            </button>
+            <button 
+              className="md-reset-btn"
+              onClick={resetAssignmentFilters}
+            >
+              <span className="md-btn-text">Reset</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    {filteredAssignments.length === 0 ? (
+      <div className="md-empty-state md-glass-card">
+        <p>No assignments found with current filters</p>
+      </div>
+    ) : (
+      <div className="md-assignments-grid">
+        {filteredAssignments.map((assignment) => (
+          <div key={assignment._id} className="md-assignment-card md-glass-card">
+            <div className="md-assignment-header">
+              <div className="md-mentor-info">
+                <div className="md-avatar md-mentor-avatar">👨‍🏫</div>
+                <div className="md-mentor-details">
+                  <h4 className="md-mentor-name">{assignment.mentorDetails?.name || 'Mentor'}</h4>
+                  <p className="md-email md-mentor-email">{assignment.mentorDetails?.email || 'No email'}</p>
+                </div>
+              </div>
+              <div className="md-mentee-count">
+                <span className="md-count-number">{assignment.mentees?.length || 0}</span>
+                <small className="md-count-label">mentees</small>
+              </div>
+            </div>
+            
+            <div className="md-assignment-mentees">
+              <h5 className="md-mentees-title">Assigned Mentees ({assignment.mentees?.length || 0}):</h5>
+              {assignment.mentees && assignment.mentees.length > 0 ? (
+                <div className="md-mentee-list-full">
+                  {assignment.mentees.map((mentee, idx) => (
+                    <div key={idx} className="md-mentee-item-full">
+                      <div className="md-avatar-small md-mentee-avatar">👨‍🎓</div>
+                      <div className="md-mentee-details-full">
+                        <div className="md-mentee-info-line">
+                          <strong>Name:</strong> {mentee.name || 'Mentee'}
+                        </div>
+                        <div className="md-mentee-info-line">
+                          <strong>Email:</strong> {mentee.email || 'No email'}
+                        </div>
+                        {mentee.area_of_interest && (
+                          <div className="md-mentee-info-line">
+                            <strong>Area of Interest:</strong> {mentee.area_of_interest}
+                          </div>
+                        )}
+                        {mentee.description && (
+                          <div className="md-mentee-info-line">
+                            <strong>Description:</strong> {mentee.description}
+                          </div>
+                        )}
+                        {mentee.phaseId && (
+                          <div className="md-mentee-info-line">
+                            <strong>Phase:</strong> {mentee.phaseId}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
-                
-                {filteredAssignments.length === 0 ? (
-                  <div className="md-empty-state md-glass-card">
-                    <p>No assignments found with current filters</p>
-                  </div>
-                ) : (
-                  <div className="md-assignments-grid">
-                    {filteredAssignments.map((assignment) => (
-                      <div key={assignment._id} className="md-assignment-card md-glass-card">
-                        <div className="md-assignment-header">
-                          <div className="md-mentor-info">
-                            <div className="md-avatar md-mentor-avatar">👨‍🏫</div>
-                            <div className="md-mentor-details">
-                              <h4 className="md-mentor-name">{assignment.mentorDetails?.name || 'Mentor'}</h4>
-                              <p className="md-email md-mentor-email">{assignment.mentorDetails?.email || 'No email'}</p>
-                            </div>
-                          </div>
-                          <div className="md-mentee-count">
-                            <span className="md-count-number">{assignment.mentees?.length || 0}</span>
-                            <small className="md-count-label">mentees</small>
-                          </div>
-                        </div>
-                        
-                        <div className="md-assignment-mentees">
-                          <h5 className="md-mentees-title">Assigned Mentees:</h5>
-                          {assignment.mentees && assignment.mentees.length > 0 ? (
-                            <div className="md-mentee-tags">
-                              {assignment.mentees.map((mentee, idx) => (
-                                <span key={idx} className="md-mentee-tag">
-                                  <div className="md-avatar-small md-mentee-avatar">👨‍🎓</div>
-                                  <span className="md-mentee-name">{mentee.name || 'Mentee'} {mentee.email ? `(${mentee.email})` : ''}</span>
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="md-no-mentees">No mentees assigned</p>
-                          )}
-                        </div>
-                        
-                        <div className="md-assignment-footer">
-                          <span className="md-assigned-date">Assigned: {formatDate(assignment.createdAt)}</span>
-                          {assignment.phaseId && (
-                            <span className="md-phase-tag">Phase {assignment.phaseId}</span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+              ) : (
+                <p className="md-no-mentees">No mentees assigned</p>
+              )}
+            </div>
+            
+            <div className="md-assignment-footer">
+              <span className="md-assigned-date">Assigned: {formatDate(assignment.createdAt)}</span>
+              {assignment.phaseId && (
+                <span className="md-phase-tag">Phase {assignment.phaseId}</span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+)}
 
             {/* MEETINGS TAB - SIMPLIFIED */}
             {activeTab === 'meetings' && (
@@ -1253,10 +1355,7 @@ export default function MentorshipDashboard() {
                               <p className="md-email md-mentor-email">{meeting.mentorDetails?.email || 'No email'}</p>
                             </div>
                           </div>
-                          <div className="md-meeting-status-simple">
-                            <CheckIcon />
-                            <span className="md-completed-text">Completed: {meetingStats.completed}</span>
-                          </div>
+                         
                         </div>
                         
                         <div className="md-meeting-details">

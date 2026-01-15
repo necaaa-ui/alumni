@@ -134,9 +134,9 @@ export default function MentorRegistrationForm() {
           fullName: userData.fullName || "",
           branch: userData.branch || "",
           passedOutYear: userData.batch || "",
-          contactNumber: userData.mobile || "Not provided",
-          designation: userData.designation || "Not provided",
-          currentCompany: userData.currentCompany || "Not provided",
+          contactNumber: userData.mobile || "",
+          designation: userData.designation || "",
+          currentCompany: userData.currentCompany || "",
         }));
         setEmailFetched(true);
         fetchPhases();
@@ -152,6 +152,8 @@ export default function MentorRegistrationForm() {
           branch: "",
           passedOutYear: "",
           contactNumber: "",
+          designation: "",
+          currentCompany: "",
         }));
       }
     } catch (err) {
@@ -346,24 +348,30 @@ export default function MentorRegistrationForm() {
 
             <div className="form-row">
               <div className="form-group">
-                <label className="label" htmlFor="designation">Designation</label>
+                <label className="label" htmlFor="designation">Designation *</label>
                 <input
                   id="designation"
-                  className="input disabled-input"
+                  className={`input ${errors.designation ? "input-error" : ""}`}
                   value={formData.designation}
-                  disabled
-                  placeholder="Designation"
+                  onChange={handleChange}
+                  name="designation"
+                  placeholder="Your current designation"
+                  disabled={submitting || submitted}
                 />
+                {errors.designation && <span className="error-text">{errors.designation}</span>}
               </div>
               <div className="form-group">
-                <label className="label" htmlFor="currentCompany">Company</label>
+                <label className="label" htmlFor="currentCompany">Company *</label>
                 <input
                   id="currentCompany"
-                  className="input disabled-input"
+                  className={`input ${errors.currentCompany ? "input-error" : ""}`}
                   value={formData.currentCompany}
-                  disabled
-                  placeholder="Company"
+                  onChange={handleChange}
+                  name="currentCompany"
+                  placeholder="Your current company"
+                  disabled={submitting || submitted}
                 />
+                {errors.currentCompany && <span className="error-text">{errors.currentCompany}</span>}
               </div>
             </div>
 
