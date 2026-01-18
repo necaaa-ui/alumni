@@ -18,7 +18,7 @@ export default function ScheduledDashboard() {
   const [editModalOpen, setEditModalOpen] = useState(false); // Edit modal state
   const [selectedMeeting, setSelectedMeeting] = useState(null); // Selected meeting for editing
   const [editFormData, setEditFormData] = useState({}); // Form data for editing
-  const [mentorMeetings, setMentorMeetings] = useState([]); // All meetings for mentor dropdown
+  const [userMeetings, setUserMeetings] = useState([]); // CHANGED: Renamed from mentorMeetings to userMeetings
   const [uniqueUserDates, setUniqueUserDates] = useState([]); // Store unique dates for the logged-in user
   const [userEmail, setUserEmail] = useState(''); // Store user email
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -45,10 +45,8 @@ export default function ScheduledDashboard() {
       preloadStatuses();
       preloadApprovalStatuses();
       
-      // If user is mentor, fetch all their meetings for the dropdown
-      if (storedRole.toLowerCase() === 'mentor') {
-        fetchAllMeetingsForMentor(decodedEmail);
-      }
+      // Fetch all meetings for the user (both mentor and mentee)
+      fetchAllMeetingsForUser(decodedEmail);
     } else {
       // Fallback to localStorage
       const storedEmail = localStorage.getItem('userEmail') || '';
@@ -61,9 +59,8 @@ export default function ScheduledDashboard() {
         preloadStatuses();
         preloadApprovalStatuses();
         
-        if (storedRole.toLowerCase() === 'mentor') {
-          fetchAllMeetingsForMentor(storedEmail);
-        }
+        // Fetch all meetings for the user (both mentor and mentee)
+        fetchAllMeetingsForUser(storedEmail);
       } else {
         // No email found, redirect to dashboard
         navigate('/dashboard');
@@ -111,21 +108,11 @@ export default function ScheduledDashboard() {
     return hasCompletedAndApproved; // Return true to disable button
   };
 
-  // Fetch all meetings for mentor (for dropdown selection) - SIMPLIFIED VERSION
-  const fetchAllMeetingsForMentor = async (mentorEmail) => {
+  // ✅ UPDATED FUNCTION: Fetch all meetings for user (both mentor and mentee)
+  const fetchAllMeetingsForUser = async (userEmail) => {
     try {
-      // Get mentor details including their ID
-      const mentorRes = await axios.get(`${API_BASE_URL}/api/meetings/mentor-details?email=${encodeURIComponent(mentorEmail)}`);
-      
-      if (!mentorRes.data.mentor?._id) {
-        console.log("No mentor ID found");
-        return;
-      }
-      
-      const mentorId = mentorRes.data.mentor._id;
-      
-      // Fetch all meetings for this mentor
-      const meetingsRes = await axios.get(`${API_BASE_URL}/api/meetings/scheduled/${encodeURIComponent(mentorEmail)}`);
+      // Fetch all meetings for this user (as both mentor and mentee)
+      const meetingsRes = await axios.get(`${API_BASE_URL}/api/meetings/scheduled/${encodeURIComponent(userEmail)}`);
       
       if (meetingsRes.data?.meetings?.length > 0) {
         // Flatten the meetings array to get individual date entries
@@ -138,42 +125,41 @@ export default function ScheduledDashboard() {
             platform: meeting.platform,
             meeting_link: meeting.meeting_link,
             agenda: meeting.agenda,
-            mentees: meeting.mentees || []
+            mentees: meeting.mentees || [],
+            mentor: meeting.mentor || { name: "Unknown", email: "-" }
           }))
         );
         
         // Filter out entries without meeting_id
         const validMeetings = flattenedMeetings.filter(m => m.meeting_id);
-        setMentorMeetings(validMeetings);
+        setUserMeetings(validMeetings);
         
-        console.log("Fetched mentor meetings:", validMeetings.length);
+        console.log("Fetched user meetings:", validMeetings.length);
       } else {
-        console.log("No meetings found for mentor");
-        setMentorMeetings([]);
+        console.log("No meetings found for user");
+        setUserMeetings([]);
       }
     } catch (err) {
-      console.error("Failed to fetch mentor meetings:", err);
+      console.error("Failed to fetch user meetings:", err);
       // Fallback: Try to get meetings from the current meetings state
       if (meetings.length > 0) {
-        const mentorUserMeetings = meetings.filter(m => 
-          m.mentor.email.toLowerCase() === mentorEmail.toLowerCase()
-        );
-        
-        const flattened = mentorUserMeetings.map(m => ({
+        // Use the meetings already fetched for display
+        const flattened = meetings.map(m => ({
           meeting_id: m.meetingId,
           date: m.date,
           time: m.time,
           duration_minutes: parseInt(m.duration) || 60,
           platform: m.platform,
           meeting_link: m.meeting_link,
-          agenda: m.agenda,
-          mentees: m.mentees
+          agenda: m.agenda || "-",
+          mentees: m.mentees,
+          mentor: m.mentor
         }));
         
-        setMentorMeetings(flattened);
+        setUserMeetings(flattened);
         console.log("Using fallback meetings:", flattened.length);
       } else {
-        setMentorMeetings([]);
+        setUserMeetings([]);
       }
     }
   };
@@ -310,15 +296,15 @@ export default function ScheduledDashboard() {
   // Handle Edit button click
   const handleEditButtonClick = () => {
     // First try to fetch meetings if array is empty
-    if (mentorMeetings.length === 0 && userEmail && isMentor()) {
-      fetchAllMeetingsForMentor(userEmail);
+    if (userMeetings.length === 0 && userEmail) {
+      fetchAllMeetingsForUser(userEmail);
     }
     
     setEditModalOpen(true);
     
     // Pre-select the first meeting if available
-    if (mentorMeetings.length > 0 && !selectedMeeting) {
-      const firstMeeting = mentorMeetings[0];
+    if (userMeetings.length > 0 && !selectedMeeting) {
+      const firstMeeting = userMeetings[0];
       setSelectedMeeting(firstMeeting);
       setEditFormData({
         meeting_date: firstMeeting.date ? new Date(firstMeeting.date).toISOString().split('T')[0] : "",
@@ -336,7 +322,7 @@ export default function ScheduledDashboard() {
       return;
     }
     
-    const meeting = mentorMeetings.find(m => String(m.meeting_id) === String(meetingId));
+    const meeting = userMeetings.find(m => String(m.meeting_id) === String(meetingId));
     if (meeting) {
       setSelectedMeeting(meeting);
       setEditFormData({
@@ -387,7 +373,7 @@ export default function ScheduledDashboard() {
       // Refresh data
       if (userEmail) {
         fetchScheduledData(userEmail);
-        fetchAllMeetingsForMentor(userEmail);
+        fetchAllMeetingsForUser(userEmail);
       }
     } catch (error) {
       console.error('Failed to update meeting:', error);
@@ -477,17 +463,15 @@ export default function ScheduledDashboard() {
         <span className="tab-text">Dashboard</span>
       </button>
 
-      {/* EDIT BUTTON - Only visible to mentors */}
-      {isMentor() && (
-        <button 
-          className="edit-meeting-button" 
-          onClick={handleEditButtonClick}
-          title="Edit Meeting Date and Time"
-        >
-          <span className="edit-icon">✏️</span>
-          <span className="edit-text">Edit Meeting</span>
-        </button>
-      )}
+      {/* EDIT BUTTON - Visible to both mentors and mentees */}
+      <button 
+        className="edit-meeting-button" 
+        onClick={handleEditButtonClick}
+        title="Edit Meeting Date and Time"
+      >
+        <span className="edit-icon">✏️</span>
+        <span className="edit-text">Edit Meeting</span>
+      </button>
 
       {/* Edit Meeting Modal - SIMPLIFIED (Only Date and Time) */}
       {editModalOpen && (
@@ -507,16 +491,19 @@ export default function ScheduledDashboard() {
                   value={selectedMeeting?.meeting_id || ""}
                 >
                   <option value="">-- Select a meeting --</option>
-                  {mentorMeetings.length === 0 ? (
+                  {userMeetings.length === 0 ? (
                     <option value="" disabled>Loading meetings...</option>
                   ) : (
-                    mentorMeetings.map((meeting, index) => {
+                    userMeetings.map((meeting, index) => {
                       const meetingDate = meeting.date ? new Date(meeting.date) : new Date();
                       const formattedDate = meetingDate.toLocaleDateString();
-                      const menteeCount = meeting.mentees?.length || 0;
                       
                       // ✅ Check if this meeting is completed and approved
                       const isLocked = isMeetingCompletedAndApproved(meeting.meeting_id);
+                      
+                      // Show mentor name and mentee count for better identification
+                      const mentorName = meeting.mentor?.name || "Unknown Mentor";
+                      const menteeCount = meeting.mentees?.length || 0;
                       
                       return (
                         <option 
@@ -525,14 +512,15 @@ export default function ScheduledDashboard() {
                           disabled={isLocked}
                         >
                           {formattedDate} at {meeting.time || "TBD"} 
-                          {isLocked && " (Completed & Approved)"}
+                         
+                          {isLocked && " - Completed & Approved"}
                         </option>
                       );
                     })
                   )}
                 </select>
-                {mentorMeetings.length === 0 && (
-                  <p className="no-meetings-text">No meetings found for this mentor. Schedule meetings first.</p>
+                {userMeetings.length === 0 && (
+                  <p className="no-meetings-text">No meetings found. Schedule meetings first.</p>
                 )}
               </div>
 
@@ -576,7 +564,7 @@ export default function ScheduledDashboard() {
                 </>
               )}
 
-              {!selectedMeeting && mentorMeetings.length > 0 && (
+              {!selectedMeeting && userMeetings.length > 0 && (
                 <div className="select-meeting-prompt">
                   <p>Please select a meeting from the dropdown above to edit its date and time.</p>
                   <p className="edit-note">
