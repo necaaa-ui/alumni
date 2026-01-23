@@ -1,13 +1,18 @@
-
 .student-form-page {
   width: 100%;
+  min-height: 100vh;
   position: relative;
   background: #ffffff;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 .background-orbs {
-  position: absolute;
+  position: fixed;
   inset: 0;
   pointer-events: none;
+  z-index: 0;
+  height: 100vh;
+  overflow: hidden;
 }
 .orb {
   position: absolute;
@@ -31,11 +36,11 @@
 .animation-delay-4000 { animation-delay: 4s; }
 .form-wrapper {
   position: relative;
-  /* z-index: 10; */
-  padding: 0;
-  max-width: 5920px;
-  max-height: 3970px;
+  padding: 2rem 1rem;
+  min-height: 100vh;
   background: transparent;
+  overflow-y: auto;
+  z-index: 1;
 }
 .form-container {
   width: 70%;
@@ -61,8 +66,9 @@
   color: transparent;
 }
 .form-card {
-  width: 920px; 
-  margin: 0 auto;  
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(15px);
   border-radius: 2rem;
@@ -91,17 +97,15 @@
   width: 630px;
 }
 .form-group .field-label {
-  display: flex !important;        /* FORCE flex */
+  display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
   gap: 8px !important;
-  
-    margin-top: 0.5rem; 
+  margin-top: 0.5rem; 
 }
 
 .form-group .field-label svg {
   display: inline-flex !important;
-   /* fixes SVG baseline issues */
 }
 
 .field-icon {
@@ -187,7 +191,6 @@
 }
 
 @media (max-width: 768px) {
-
   .form-wrapper {
     padding: 1rem;
     align-items: flex-start;
@@ -217,8 +220,9 @@
   }
 
   .form-card {
-     width: 520px; 
-     margin: 0 auto;  
+     width: 100%;
+     max-width: 520px;
+     margin: 0 auto;
     padding: 1.5rem;
     border-radius: 1.25rem;
   }
@@ -229,7 +233,7 @@
 
   .form-group label {
     font-size: 0.95rem;
-    margin-top: 1rem; 
+    margin-top: 1rem;
   }
 
   .input-field,
@@ -263,7 +267,6 @@
     margin-top: 1.5rem;
   }
 
-  /* Background orbs smaller for mobile */
   .orb {
     width: 16rem;
     height: 16rem;
@@ -274,36 +277,30 @@
   .orb-blue { top: -10rem; right: -10rem; }
   .orb-pink { bottom: -10rem; }
 
-  /* Back button responsive styles */
   .back-btn {
-    /* top: 1px; */
+    top: 10px;
     left: 10px;
-    padding: 1px;
-    font-size: 8px;
-    min-width: 10px;
-    min-height: 10px;
+    padding: 8px 12px;
+    font-size: 0.875rem;
     width: auto;
     max-width: 150px;
     align-self: flex-start;
   }
 
   .back-btn-icon {
-    width: 10px;
-    height: 10px;
+    width: 16px;
+    height: 16px;
   }
 
-  /* Hide remove slot X button in assign slot */
   .remove-slot {
     display: none;
   }
 
-  /* Admin buttons in same row on mobile */
   .admin-buttons {
     flex-direction: row !important;
     justify-content: center;
   }
 
-  /* Delete webinar button mobile - decrease width and align right */
   .delete-btn {
     width: auto !important;
     max-width: 150px !important;
@@ -312,7 +309,6 @@
     padding: 8px 12px !important;
   }
 
-  /* Tables mobile - decrease size for mobile phones */
   .form-card table {
     font-size: 12px !important;
     width: 100% !important;
@@ -336,13 +332,115 @@
     font-size: 10px !important;
   }
 
-  /* Make tables horizontally scrollable on mobile */
   .form-card {
     overflow-x: auto !important;
   }
 }
+
+@media (max-width: 480px) {
+  .student-form-page {
+    padding: 0.5rem;
+  }
+
+  .form-wrapper {
+    padding: 0.5rem;
+  }
+
+  .form-header {
+    margin-bottom: 1rem;
+    margin-top: 20px;
+  }
+
+  .icon-wrapper {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .header-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .form-title {
+    font-size: 1.5rem;
+  }
+
+  .webinar-subtitle {
+    font-size: 1rem;
+  }
+
+  .form-card {
+    width: 100%;
+    max-width: 100%;
+    padding: 1rem;
+    border-radius: 1rem;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .form-group label {
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+  }
+
+  .input-field,
+  .select-field,
+  .textarea-field {
+    padding: 0.75rem 0.875rem;
+    font-size: 0.9rem;
+    border-radius: 0.75rem;
+  }
+
+  .checkbox-group {
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+  }
+
+  .checkbox-label {
+    font-size: 0.85rem;
+  }
+
+  .submit-btn {
+    padding: 0.875rem;
+    font-size: 0.95rem;
+    border-radius: 0.75rem;
+  }
+
+  .form-footer {
+    font-size: 0.85rem;
+    margin-top: 1rem;
+  }
+
+  .orb {
+    width: 12rem;
+    height: 12rem;
+    filter: blur(1.5rem);
+  }
+
+  .orb-purple { top: -8rem; left: -8rem; }
+  .orb-blue { top: -8rem; right: -8rem; }
+  .orb-pink { bottom: -8rem; }
+
+  .back-btn {
+    top: 8px;
+    left: 8px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    max-width: 120px;
+  }
+
+  .back-btn-icon {
+    width: 14px;
+    height: 14px;
+  }
+}
+
 .back-btn {
-  position: absolute;  /* fixes it to top-left */
+  position: absolute;
   top: 8px;
   left: 50px;
   display: flex;
@@ -370,7 +468,22 @@
   height: 42px;
 }
 
-/* Additional spacing utilities for webinar details */
+@media (max-width: 768px) {
+  .back-btn-text {
+    display: none;
+  }
+  .back-btn {
+    margin-left: -30px;
+    padding: 6px;
+  }
+  .back-btn {
+    padding: 8px;
+    width: 40px;
+    height: 40px;
+    justify-content: center;
+  }
+}
+
 .modal-spacing {
   padding: 12px;
 }
@@ -395,6 +508,7 @@
   box-shadow: 0 8px 24px rgba(124, 58, 237, 0.3);
   transition: all 0.3s;
 }
+
 @media (max-width: 480px) {
   .generate-btn {
     width: 100%;
@@ -403,6 +517,7 @@
     border-radius: 0.8rem;
   }
 }
+
 .circular-container {
   width: 800px;
   margin: auto;
@@ -468,7 +583,6 @@
 .circular-table th:nth-child(1),
 .circular-table td:nth-child(1) {
   width: 8%;
-
 }
 
 .circular-table th:nth-child(2),
@@ -523,6 +637,7 @@
   text-align: center;
   vertical-align: bottom;
 }
+
 .form1-card {
   background: rgba(245, 245, 245, 0.863);
   backdrop-filter: blur(15px);
@@ -531,6 +646,7 @@
   border: 1px solid #e0cfff;
   padding: 1.25rem;
 }
+
 .submi1t-btn {
   width: 90%;
   padding: 0.7rem;
@@ -543,15 +659,18 @@
   box-shadow: 0 8px 24px rgba(124, 58, 237, 0.3);
   transition: all 0.3s;
 }
+
 .submit1-btn:hover {
   transform: scale(1.02);
   box-shadow: 0 12px 28px rgba(124, 58, 237, 0.4);
 }
+
 .webinar-subtitle {
   font-weight: 800;  
-  font-size: xx-large;    /* bolder */
-  text-align: center;   /* center align */
+  font-size: xx-large;
+  text-align: center;
 }
+
 .admin-buttons {
   display: flex;
   flex-direction: row;
@@ -559,9 +678,7 @@
   justify-content: center;
 }
 
-/* ========== WEBINAR EVENTS MOBILE RESPONSIVE ========== */
 @media (max-width: 768px) {
-  /* Webinar Events Header */
   .webinar-events-header {
     margin-bottom: 1rem;
   }
@@ -574,32 +691,27 @@
     font-size: 1.2rem;
   }
 
-  /* Webinar Section Title */
   .webinar-section-title {
     font-size: 1.5rem;
     margin-bottom: 0.5rem;
   }
 
-  /* Webinar Grid - Stack cards vertically on mobile */
   .webinar-grid {
     grid-template-columns: 1fr !important;
     gap: 1rem;
   }
 
-  /* Webinar Card Mobile Adjustments */
   .webinar-grid .form-card {
     width: 100% !important;
     max-width: 100%;
     padding: 1rem;
   }
 
-  /* Webinar Card Layout - Stack horizontal layout vertically */
   .webinar-grid .form-card .flex {
     flex-direction: column;
     gap: 1rem;
   }
 
-  /* Poster Container Mobile - Full width on small screens with maintained aspect ratio */
   .webinar-grid .form-card .flex-shrink-0 {
     width: 100% !important;
     height: auto !important;
@@ -611,18 +723,15 @@
     height: 100% !important;
   }
 
-  /* Content Area Mobile */
   .webinar-grid .form-card .flex-1 {
     width: 100% !important;
   }
 
-  /* Title Mobile */
   .webinar-grid .form-card h3 {
     font-size: 1.3rem !important;
     margin-bottom: 0.5rem;
   }
 
-  /* Info Section Mobile */
   .webinar-grid .form-card .space-y-1 {
     gap: 0.5rem !important;
   }
@@ -631,7 +740,6 @@
     font-size: 0.9rem !important;
   }
 
-  /* Buttons Mobile */
   .webinar-grid .form-card .flex.gap-2 {
     flex-direction: row;
     gap: 0.5rem;
@@ -653,7 +761,6 @@
     font-size: 0.85rem !important;
   }
 
-  /* Generate Button Mobile */
   .generate-btn {
     width: 30% !important;
     padding: 0.8rem !important;
@@ -661,7 +768,6 @@
     margin-top: 0.5rem;
   }
 
-  /* Month Header Layout Mobile */
   .webinar-grid .flex.justify-between.items-center {
     flex-direction: column;
     align-items: flex-start !important;
@@ -677,7 +783,6 @@
     margin-top: 0.5rem;
   }
 
-  /* Eye Icon Button Mobile - Reduce width and place in top right */
   .webinar-grid .form-card button.absolute {
     width: 14px !important;
     height: 14px !important;
@@ -691,20 +796,17 @@
     height: 8px !important;
   }
 
-  /* Circular Container Mobile */
   .circular-container {
     width: 100% !important;
     padding: 10px !important;
   }
 
-  /* Webinar Events Grid - Single card per row on mobile */
   .grid.grid-cols-2 {
     grid-template-columns: 1fr !important;
   }
 }
 
 @media (max-width: 480px) {
-  /* Extra small screens */
   .webinar-events-title {
     font-size: 1.5rem;
   }
@@ -717,7 +819,6 @@
     font-size: 1.3rem;
   }
 
-  /* Webinar Card Extra Small */
   .webinar-grid .form-card {
     padding: 0.8rem;
   }
@@ -736,21 +837,17 @@
     font-size: 0.8rem !important;
   }
 
-  /* Poster Container Extra Small */
   .webinar-grid .form-card .flex-shrink-0 .bg-gray-100 {
     height: 200px !important;
   }
 
-  /* Generate Button Extra Small */
   .generate-btn {
     padding: 0.7rem !important;
     font-size: 0.8rem !important;
   }
 }
 
-/* ========== TOPIC APPROVAL FORM MOBILE RESPONSIVE ========== */
 @media (max-width: 768px) {
-  /* Topic Approval Table Mobile */
   .topic-approval-table {
     font-size: 12px !important;
     width: 100% !important;
@@ -774,31 +871,26 @@
     font-size: 10px !important;
   }
 
-  /* Make topic approval table horizontally scrollable on mobile */
   .topic-approval-table {
     overflow-x: auto !important;
     min-width: 600px !important;
   }
 
-  /* Topic Approval Form Header Mobile */
   .topic-approval-header {
     font-size: 1.5rem !important;
     margin-bottom: 1rem !important;
   }
 
-  /* Phase Dropdown Mobile */
   .phase-dropdown {
     width: 100% !important;
     margin-bottom: 1rem !important;
   }
 
-  /* Approve Button Mobile */
   .approve-btn {
     padding: 0.5rem !important;
     font-size: 0.8rem !important;
   }
 
-  /* View Students Button Mobile */
   .view-students-btn {
     padding: 0.5rem !important;
     font-size: 0.8rem !important;
@@ -806,7 +898,6 @@
 }
 
 @media (max-width: 480px) {
-  /* Extra small screens for topic approval */
   .topic-approval-table {
     font-size: 10px !important;
   }
@@ -835,31 +926,32 @@
     font-size: 0.7rem !important;
   }
 }
+
 .view-details-button {
   position: absolute;
-  top: 0.75rem;          /* top-3 */
-  left : 36rem;           /*left-140 (140 × 0.25rem)*/
-  background-color: #7c3aed; /* bg-purple-600 */
-  color: #ffffff;        /* text-white */
-  padding: 0.25rem;      /* Reduced padding for smaller button */
-  border-radius: 0.5rem; /* rounded-lg */
-  width: 2rem;           /* Decreased width for shorter button */
+  top: 0.75rem;
+  left : 36rem;
+  background-color: #7c3aed;
+  color: #ffffff;
+  padding: 0.25rem;
+  border-radius: 0.5rem;
+  width: 2rem;
   z-index: 10;
   transition: background-color 0.2s ease-in-out;
 }
 
 .view-details-button:hover {
-  background-color: #6d28d9; /* bg-purple-700 */
+  background-color: #6d28d9;
 }
 
 @media (max-width: 768px) {
   .view-details-button {
     top: 1rem;
-    /* right: 1rem; */
   }
 }
+
 .slot-card {
   width: 100%;
-  max-width: 950px;   /* 🔽 smaller than main card */
-  margin: 0 auto;     /* center it */
+  max-width: 950px;
+  margin: 0 auto;
 }

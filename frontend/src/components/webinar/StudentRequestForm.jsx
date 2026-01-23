@@ -127,10 +127,35 @@ export default function StudentRequestForm() {
   // Handle Input Change
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    if (name === 'topic' || name === 'reason') {
+      // Apply validation: Allow English letters, numbers, spaces, punctuation. Block emojis, other languages, line breaks, multi-line paste.
+      const maxLength = name === 'topic' ? 150 : 500;
+      const minLength = name === 'topic' ? 10 : 30;
+      const filteredValue = value.replace(/[^\x20-\x7E]/g, '').slice(0, maxLength);
+      setFormData(prev => ({
+        ...prev,
+        [name]: filteredValue
+      }));
+      // Clear error if now valid
+      if (filteredValue.length >= minLength && filteredValue.length <= maxLength) {
+        setErrors(prev => ({
+          ...prev,
+          [name]: undefined
+        }));
+      }
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }));
+      // Clear error for other fields if they have value
+      if (value && errors[name]) {
+        setErrors(prev => ({
+          ...prev,
+          [name]: undefined
+        }));
+      }
+    }
   };
 
   // Submit Form
@@ -147,7 +172,11 @@ export default function StudentRequestForm() {
     if (!formData.department) newErrors.department = 'Department is required';
     if (!formData.domain) newErrors.domain = 'Domain is required';
     if (!formData.topic) newErrors.topic = 'Topic is required';
+    else if (formData.topic.length < 10) newErrors.topic = 'Topic must be at least 10 characters long';
+    else if (formData.topic.length > 150) newErrors.topic = 'Topic must not exceed 150 characters';
     if (!formData.reason) newErrors.reason = 'Reason is required';
+    else if (formData.reason.length < 30) newErrors.reason = 'Reason must be at least 30 characters long';
+    else if (formData.reason.length > 500) newErrors.reason = 'Reason must not exceed 500 characters';
 
     setErrors(newErrors);
 
@@ -205,8 +234,8 @@ export default function StudentRequestForm() {
       <div className="form-wrapper">
         <div >
 
-          <button className="back-btn" onClick={() => navigate("/")}>
-            <ArrowLeft className="back-btn-icon" /> Back to Dashboard
+          <button className="back-btn" onClick={() => navigate("/webinar-dashboard")}>
+            <ArrowLeft className="back-btn-icon" /> <span className="back-btn-text">Back to Dashboard</span>
           </button>
 
           <div className="form-header">
@@ -251,6 +280,7 @@ export default function StudentRequestForm() {
                   onChange={handleChange}
                   placeholder="Enter your email"
                   className="input-field"
+                   readOnly
                 />
                 {errors.email && <div className="error-text">{errors.email}</div>}
               </div>
