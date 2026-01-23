@@ -960,7 +960,7 @@ export default function WebinarEvents() {
       {/* Main Container */}
       <div className="form-wrapper">
         <div>
-            <button className="back-btn" onClick={() => navigate("/")}>
+            <button className="back-btn" onClick={() => navigate("/webinar-dashboard")}>
               <ArrowLeft className="back-btn-icon" /> Back to Dashboard
             </button>
           {/* Header */}

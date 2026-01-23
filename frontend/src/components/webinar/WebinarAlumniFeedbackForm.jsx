@@ -67,14 +67,14 @@ const WebinarAlumniFeedbackForm = () => {
     fetchWebinars();
   }, []);
 
-  // 🔥 Auto-fill Name + Email when email entered
+  // 🔥 Auto-fill Name when email entered
   useEffect(() => {
     const fetchMember = async () => {
       if (!formData.email || formData.email.length < 5) return;
 
       try {
         const res = await fetch(
-          `${API_BASE_URL}/api/member-by-email?email=${formData.email}`
+          `${API_BASE_URL}/api/member-by-email?email=${encodeURIComponent(formData.email)}`
         );
         const data = await res.json();
 
@@ -99,10 +99,35 @@ const WebinarAlumniFeedbackForm = () => {
   // Form change handler
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+    if (name === 'feedback') {
+      // Apply validation: Allow English letters, numbers, spaces, punctuation. Block emojis, other languages, line breaks, multi-line paste.
+      const maxLength = 500;
+      const minLength = 30;
+      const filteredValue = value.replace(/[^\x20-\x7E]/g, '').slice(0, maxLength);
+      setFormData(prev => ({
+        ...prev,
+        [name]: filteredValue
+      }));
+      // Clear error if now valid
+      if (filteredValue.length >= minLength && filteredValue.length <= maxLength) {
+        setErrors(prev => ({
+          ...prev,
+          [name]: undefined
+        }));
+      }
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: type === "checkbox" ? checked : value,
+      }));
+      // Clear error for other fields if they have value
+      if (value && errors[name]) {
+        setErrors(prev => ({
+          ...prev,
+          [name]: undefined
+        }));
+      }
+    }
   };
 
   // Submit handler
@@ -118,6 +143,8 @@ const WebinarAlumniFeedbackForm = () => {
     if (!formData.rating1) newErrors.rating1 = "Rating for arrangements is required";
     if (!formData.rating2) newErrors.rating2 = "Rating for student involvement is required";
     if (!formData.feedback) newErrors.feedback = "Feedback is required";
+    else if (formData.feedback.length < 30) newErrors.feedback = "Feedback must be at least 30 characters long";
+    else if (formData.feedback.length > 500) newErrors.feedback = "Feedback must not exceed 500 characters";
 
     setErrors(newErrors);
 
@@ -176,8 +203,8 @@ const WebinarAlumniFeedbackForm = () => {
       <div className="form-wrapper">
         <div>
 
-          <button className="back-btn" onClick={() => navigate("/")}>
-            <ArrowLeft className="back-btn-icon" /> Back to Dashboard
+          <button className="back-btn" onClick={() => navigate("/webinar-dashboard")}>
+            <ArrowLeft className="back-btn-icon" /> <span className="back-btn-text">Back to Dashboard</span>
           </button>
 
           <div className="form-header">
@@ -185,28 +212,13 @@ const WebinarAlumniFeedbackForm = () => {
               <GraduationCap className="header-icon" />
             </div>
             <h1 className="form-title">Webinar Alumni Feedback Form</h1>
-            <p className="webinar-subtitle">Provide your feedback for the attended webinar</p>
+            <div className="webinar-subtitle">Provide your feedback for the attended webinar</div>
           </div>
 
           <div className="form-card">
             <div className="form-fields">
 
-              {/* Email */}
-              <div className="form-group">
-                <label className="field-label">
-                  <Mail className="field-icon" /> Email <span className="required">*</span>
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="Enter your email"
-                  className="input-field"
-                />
-              </div>
-
-              {/* Name Auto-Filled */}
+              {/* NAME */}
               <div className="form-group">
                 <label className="field-label">
                   <User className="field-icon" /> Name <span className="required">*</span>
@@ -216,15 +228,35 @@ const WebinarAlumniFeedbackForm = () => {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
-                  placeholder="Auto fetched from email"
+                  placeholder="Auto fetched from email..."
                   className="input-field"
                   readOnly
                 />
+                {errors.name && <div className="error-text">{errors.name}</div>}
               </div>
 
-              {/* Webinar */}
+              {/* EMAIL */}
               <div className="form-group">
-                <label className="field-label">Select Webinar Attended <span className="required">*</span></label>
+                <label className="field-label">
+                  <Mail className="field-icon" /> Personal Email ID <span className="required">*</span>
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="Enter your email"
+                  className="input-field"
+                  readOnly
+                />
+                {errors.email && <div className="error-text">{errors.email}</div>}
+              </div>
+
+              {/* WEBINAR */}
+              <div className="form-group">
+                <label className="field-label">
+                  Select Webinar Attended <span className="required">*</span>
+                </label>
                 <select
                   name="webinar"
                   value={formData.webinar}
@@ -243,7 +275,7 @@ const WebinarAlumniFeedbackForm = () => {
                 {errors.webinar && <div className="error-text">{errors.webinar}</div>}
               </div>
 
-              {/* Rating 1 */}
+              {/* RATING 1 */}
               <div className="form-group">
                 <label className="field-label">
                   1. How would you rate the arrangements? <span className="required">*</span>
@@ -263,7 +295,7 @@ const WebinarAlumniFeedbackForm = () => {
                 {errors.rating1 && <div className="error-text">{errors.rating1}</div>}
               </div>
 
-              {/* Rating 2 */}
+              {/* RATING 2 */}
               <div className="form-group">
                 <label className="field-label">
                   2. Rate student participation <span className="required">*</span>
@@ -283,7 +315,7 @@ const WebinarAlumniFeedbackForm = () => {
                 {errors.rating2 && <div className="error-text">{errors.rating2}</div>}
               </div>
 
-              {/* Feedback */}
+              {/* FEEDBACK */}
               <div className="form-group">
                 <label className="field-label">
                   <MessageSquare className="field-icon" /> Share your experience <span className="required">*</span>
@@ -299,7 +331,7 @@ const WebinarAlumniFeedbackForm = () => {
                 {errors.feedback && <div className="error-text">{errors.feedback}</div>}
               </div>
 
-              {/* Robot Check */}
+              {/* CAPTCHA */}
               <div className="checkbox-group">
                 <input
                   type="checkbox"
@@ -311,7 +343,10 @@ const WebinarAlumniFeedbackForm = () => {
                 <label className="checkbox-label">I'm not a robot</label>
               </div>
 
-              <button onClick={handleSubmit} className="submit-btn">Submit Feedback</button>
+              {/* SUBMIT */}
+              <button onClick={handleSubmit} className="submit-btn">
+                Submit
+              </button>
 
             </div>
           </div>

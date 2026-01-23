@@ -1,6 +1,6 @@
 import { Building2, Clock, Compass, Globe, Upload, Calendar, X ,User,ArrowLeft, MapPin} from 'lucide-react';
 import { useNavigate } from "react-router-dom";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import './Common.css';
 import Popup from './Popup';
 
@@ -30,6 +30,22 @@ export default function WebinarSpeakerAssignmentForm() {
   const [topics, setTopics] = useState([]);
   const [currentPhase, setCurrentPhase] = useState(null);
   const [domains, setDomains] = useState([]);
+  const [errors, setErrors] = useState({});
+  const [existingWebinars, setExistingWebinars] = useState([]);
+
+  const designationRef = useRef(null);
+  const companyNameRef = useRef(null);
+  const alumniCityRef = useRef(null);
+  const webinarVenueRef = useRef(null);
+  const meetingLinkRef = useRef(null);
+
+  const refs = {
+    designation: designationRef,
+    companyName: companyNameRef,
+    alumniCity: alumniCityRef,
+    webinarVenue: webinarVenueRef,
+    meetingLink: meetingLinkRef,
+  };
 
   useEffect(() => {
     if (formData.speakerPhoto) {
@@ -99,9 +115,82 @@ export default function WebinarSpeakerAssignmentForm() {
     }
   }, [currentPhase]);
 
-  const handleChange = e => {
+  useEffect(() => {
+    const fetchExistingWebinars = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/webinars`);
+        const data = await response.json();
+        setExistingWebinars(data);
+      } catch (error) {
+        console.error('Error fetching existing webinars:', error);
+      }
+    };
+    fetchExistingWebinars();
+  }, []);
+
+  const sanitizeText = (value) =>
+    value
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const validateAlphabeticField = (field, value) => {
+    const cleaned = sanitizeText(value);
+    const alphaRegex = /^[A-Za-z ]+$/;
+
+    if (!cleaned) return "This field is required";
+    if (!alphaRegex.test(cleaned)) return "Only alphabets and spaces are allowed";
+    if (cleaned.length < 2) return "Minimum 2 characters required";
+    if (cleaned.length > 50) return "Maximum 50 characters allowed";
+    if (/(.)\1{3,}/.test(cleaned)) return "Repeated characters not allowed";
+
+    return "";
+  };
+
+  const validateMeetingLink = (value) => {
+    const cleaned = value.trim();
+    const urlRegex = /^(https:\/\/)[^\s]+$/i;
+
+    if (!cleaned) return "Meeting link is required";
+    if (!urlRegex.test(cleaned))
+      return "Enter a valid URL starting with https://";
+    return "";
+  };
+
+  const validateField = (field, value) => {
+    let error = "";
+
+    switch (field) {
+      case "designation":
+      case "companyName":
+      case "alumniCity":
+      case "webinarVenue":
+        error = validateAlphabeticField(field, value);
+        break;
+
+      case "meetingLink":
+        error = validateMeetingLink(value);
+        break;
+
+      default:
+        return true;
+    }
+
+    setErrors(prev => ({ ...prev, [field]: error }));
+    return !error;
+  };
+
+  const handleChange = (e) => {
     const { name, value, files } = e.target;
-    setFormData(prev => ({ ...prev, [name]: files ? files[0] : value }));
+
+    let newValue = files ? files[0] : value;
+
+    if (!files && typeof value === "string") {
+      newValue = value.replace(/\s+/g, " ");
+    }
+
+    setFormData(prev => ({ ...prev, [name]: newValue }));
+
+    if (errors[name]) validateField(name, newValue);
   };
 
   const handleSlotChange = (index, field, value) => {
@@ -143,6 +232,26 @@ export default function WebinarSpeakerAssignmentForm() {
   };
 
   const handleSubmit = async () => {
+    // Validate all fields
+    const fieldsToValidate = ['designation', 'companyName', 'alumniCity', 'webinarVenue', 'meetingLink'];
+    let hasErrors = false;
+    let firstErrorField = null;
+
+    fieldsToValidate.forEach(field => {
+      if (!validateField(field, formData[field])) {
+        hasErrors = true;
+        if (!firstErrorField) firstErrorField = field;
+      }
+    });
+
+    if (hasErrors) {
+      if (refs[firstErrorField]?.current) {
+        refs[firstErrorField].current.focus();
+      }
+      setPopup({ show: true, message: 'Please correct the errors in the form', type: 'error' });
+      return;
+    }
+
     if (!formData.email || !formData.name || !formData.department || !formData.batch || !formData.designation ||
         !formData.companyName || !formData.speakerPhoto || !formData.domain || !formData.topic ||
         !formData.meetingLink || slots.some(s => !s.deadline || !s.webinarDate || !s.time)) {
@@ -150,17 +259,37 @@ export default function WebinarSpeakerAssignmentForm() {
       return;
     }
 
+    const hasConflict = existingWebinars.some(webinar =>
+      webinar.venue && webinar.venue.trim().toLowerCase() ===
+      formData.webinarVenue.trim().toLowerCase() &&
+      webinar.slots && webinar.slots.some(oldSlot =>
+        slots.some(newSlot =>
+          oldSlot.webinarDate === newSlot.webinarDate &&
+          oldSlot.time === newSlot.time
+        )
+      )
+    );
+
+    if (hasConflict) {
+      setPopup({
+        show: true,
+        message: "Another webinar is already scheduled for this venue, date and time",
+        type: "error"
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('email', formData.email);
-      formDataToSend.append('designation', formData.designation);
-      formDataToSend.append('companyName', formData.companyName);
-      formDataToSend.append('alumniCity', formData.alumniCity);
+      formDataToSend.append('designation', formData.designation.trim());
+      formDataToSend.append('companyName', formData.companyName.trim());
+      formDataToSend.append('alumniCity', formData.alumniCity.trim());
       formDataToSend.append('domain', formData.domain);
       formDataToSend.append('topic', formData.topic);
-      formDataToSend.append('webinarVenue', formData.webinarVenue);
-      formDataToSend.append('meetingLink', formData.meetingLink);
+      formDataToSend.append('webinarVenue', formData.webinarVenue.trim());
+      formDataToSend.append('meetingLink', formData.meetingLink.trim());
       formDataToSend.append('speakerPhoto', formData.speakerPhoto);
       formDataToSend.append('phaseId', formData.phaseId);
       formDataToSend.append('slots', JSON.stringify(slots));
@@ -205,7 +334,7 @@ export default function WebinarSpeakerAssignmentForm() {
 
       <div className="form-wrapper">
         <div >
-          <button className="back-btn" onClick={() => navigate("/")}>
+          <button className="back-btn" onClick={() => navigate("/webinar-dashboard")}>
             <ArrowLeft className="back-btn-icon" /> Back to Dashboard
           </button>
           <div className="form-header">
@@ -253,6 +382,7 @@ export default function WebinarSpeakerAssignmentForm() {
                       onChange={handleChange}
                       placeholder="Enter name"
                       className="input-field"
+                      readOnly
                     />
                   </div>
 
@@ -277,13 +407,33 @@ export default function WebinarSpeakerAssignmentForm() {
                 <label className="field-label">
                     <Compass className="field-icon" /> Designation <span className="required">*</span>
                   </label>
-                  <input type="text" name="designation" value={formData.designation} onChange={handleChange} placeholder="Enter designation" className="input-field" />
+                  <input
+                    ref={designationRef}
+                    type="text"
+                    name="designation"
+                    value={formData.designation}
+                    onChange={handleChange}
+                    placeholder="Enter designation"
+                    maxLength="50"
+                    className={`input-field ${errors.designation ? 'border-red-500' : ''}`}
+                  />
+                  {errors.designation && <p className="text-red-500 text-sm mt-1">{errors.designation}</p>}
                 </div>
               <div className="form-group">
                 <label className="field-label">
                     <Building2 className="field-icon" /> Company Name <span className="required">*</span>
                   </label>
-                  <input type="text" name="companyName" value={formData.companyName} onChange={handleChange} placeholder="Enter company name" className="input-field" />
+                  <input
+                    ref={companyNameRef}
+                    type="text"
+                    name="companyName"
+                    value={formData.companyName}
+                    onChange={handleChange}
+                    placeholder="Enter company name"
+                    maxLength="50"
+                    className={`input-field ${errors.companyName ? 'border-red-500' : ''}`}
+                  />
+                  {errors.companyName && <p className="text-red-500 text-sm mt-1">{errors.companyName}</p>}
                 </div>
               </div>
               
@@ -294,7 +444,17 @@ export default function WebinarSpeakerAssignmentForm() {
                 <label className="field-label">
                     <Globe className="field-icon" /> Alumni City <span className="required">*</span>
                   </label>
-                  <input type="text" name="alumniCity" value={formData.alumniCity} onChange={handleChange} placeholder="Enter city" className="input-field" />
+                  <input
+                    ref={alumniCityRef}
+                    type="text"
+                    name="alumniCity"
+                    value={formData.alumniCity}
+                    onChange={handleChange}
+                    onBlur={(e) => validateField("alumniCity", e.target.value)}
+                    placeholder="Enter city"
+                    className={`input-field ${errors.alumniCity ? 'border-red-500' : ''}`}
+                  />
+                  {errors.alumniCity && <p className="text-red-500 text-sm mt-1">{errors.alumniCity}</p>}
                 </div>
               <div className="form-group">
                 <label className="field-label">
@@ -352,14 +512,32 @@ export default function WebinarSpeakerAssignmentForm() {
                 <label className="field-label">
                     <MapPin className="field-icon" /> Webinar Venue <span className="required">*</span>
                   </label>
-                  <input type="text" name="webinarVenue" value={formData.webinarVenue} onChange={handleChange} placeholder="Enter venue" className="input-field" />
+                  <input
+                    ref={webinarVenueRef}
+                    type="text"
+                    name="webinarVenue"
+                    value={formData.webinarVenue}
+                    onChange={handleChange}
+                    placeholder="Enter venue"
+                    className={`input-field ${errors.webinarVenue ? 'border-red-500' : ''}`}
+                  />
+                  {errors.webinarVenue && <p className="text-red-500 text-sm mt-1">{errors.webinarVenue}</p>}
                 </div>
                 {/* Meeting Link */}
               <div className="form-group">
                 <label className="field-label">
                   <Globe className="field-icon" /> Meeting Link (if Online) or else enter In Person <span className="required">*</span>
                 </label>
-                <input type="url" name="meetingLink" value={formData.meetingLink} onChange={handleChange} placeholder="Enter meeting link" className="input-field" />
+                <input
+                  ref={meetingLinkRef}
+                  type="url"
+                  name="meetingLink"
+                  value={formData.meetingLink}
+                  onChange={handleChange}
+                  placeholder="Enter meeting link"
+                  className={`input-field ${errors.meetingLink ? 'border-red-500' : ''}`}
+                />
+                {errors.meetingLink && <p className="text-red-500 text-sm mt-1">{errors.meetingLink}</p>}
               </div>
               </div>
               {/* Assign Slot */}
