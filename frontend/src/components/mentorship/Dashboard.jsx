@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom'; // ADDED useLocation
+import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { 
   Users, 
@@ -26,7 +26,10 @@ import {
   UserCheck,
   CalendarCheck,
   XCircle,
-  Activity
+  Activity,
+  MoreVertical,
+  Video,
+  Briefcase as BriefcaseIcon
 } from 'lucide-react';
 import './MentorshipDashboard.css';
 
@@ -62,7 +65,7 @@ const decryptEmail = (encryptedEmail) => {
 
 export default function RealTimeDashboard() {
   const navigate = useNavigate();
-  const location = useLocation(); // ADDED: to read URL params
+  const location = useLocation();
   
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchMentor, setSearchMentor] = useState('');
@@ -71,13 +74,14 @@ export default function RealTimeDashboard() {
   const [currentMentorIndex, setCurrentMentorIndex] = useState(0);
   const [currentPhaseGraphIndex, setCurrentPhaseGraphIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
-  const [userRole, setUserRole] = useState(''); // Start empty
+  const [userRole, setUserRole] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshIntervals, setRefreshIntervals] = useState(REFRESH_INTERVALS);
-  const [authLoading, setAuthLoading] = useState(true); // ADDED: auth loading state
+  const [authLoading, setAuthLoading] = useState(true);
+  const [showDropdown, setShowDropdown] = useState(false);
   
   // Real-time data states
   const [dashboardStats, setDashboardStats] = useState({
@@ -181,6 +185,22 @@ export default function RealTimeDashboard() {
 
     getEmailAndAuthenticate();
   }, [location.search, navigate, checkUserRole]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const dropdown = document.querySelector('.dropdown-menu');
+      const menuButton = document.querySelector('.menu-button');
+      if (dropdown && menuButton && !dropdown.contains(event.target) && !menuButton.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Check screen size
   useEffect(() => {
@@ -286,7 +306,7 @@ export default function RealTimeDashboard() {
 
   // Setup real-time intervals (only if authenticated)
   useEffect(() => {
-    if (!userEmail || !userRole) return; // Don't fetch if not authenticated
+    if (!userEmail || !userRole) return;
     
     const initialFetch = async () => {
       setIsRefreshing(true);
@@ -329,7 +349,7 @@ export default function RealTimeDashboard() {
     return () => {
       Object.values(timers).forEach(timer => clearInterval(timer));
     };
-  }, [userEmail, userRole]); // ADDED dependencies
+  }, [userEmail, userRole]);
 
   // Calculate derived data from real-time data
   useEffect(() => {
@@ -455,13 +475,46 @@ export default function RealTimeDashboard() {
     navigate('/admin_dashboard');
   };
 
-  // ADDED: Navigation function for other pages - NOW PASSING DECRYPTED EMAIL
+  // FIXED: Navigation function for other pages - PASS DECRYPTED EMAIL (NOT encrypted)
   const navigateWithEmail = (path) => {
     if (userEmail) {
-      // PASS DECRYPTED EMAIL DIRECTLY IN URL
+      // PASS DECRYPTED EMAIL DIRECTLY IN URL (not encrypted)
       navigate(`${path}?email=${encodeURIComponent(userEmail)}`);
     } else {
       navigate(path);
+    }
+  };
+
+  // ADDED: Get encrypted email for external URLs (for Webinar/Placement only)
+  const getEncryptedEmailParam = () => {
+    if (userEmail) {
+      const encryptedEmail = encryptEmail(userEmail);
+      return `?email=${encodeURIComponent(encryptedEmail)}`;
+    }
+    return '';
+  };
+
+  // UPDATED: Handle Webinar navigation with ENCRYPTED email
+  const handleWebinarClick = () => {
+    setShowDropdown(false);
+    if (userEmail) {
+      // ENCRYPT email for Webinar
+      const encryptedEmail = encryptEmail(userEmail);
+      navigate(`/webinar-dashboard?email=${encodeURIComponent(encryptedEmail)}`);
+    } else {
+      navigate('/webinar-dashboard');
+    }
+  };
+
+  // UPDATED: Handle Placement navigation with ENCRYPTED email
+  const handlePlacementClick = () => {
+    setShowDropdown(false);
+    if (userEmail) {
+      // ENCRYPT email for Placement
+      const encryptedEmail = encryptEmail(userEmail);
+      window.open(`http://localhost:5173/alumnimain/placement-dashboard?email=${encodeURIComponent(encryptedEmail)}`, '_blank');
+    } else {
+      window.open('http://localhost:5173/alumnimain/placement-dashboard', '_blank');
     }
   };
 
@@ -927,29 +980,58 @@ export default function RealTimeDashboard() {
       
       <div className="dashboard-container">
         {/* Header */}
-        <div className="dashboard-header">
-          <div className="header-content">
-            <div className="header-top">
-              <div className="logo-section">
-                <div className="logo">M</div>
-                <h1 className="title">Mentorship Dashboard</h1>
-              </div>
-              
-              <div className="user-info">
-                <div className="role-badge">
-                  {getRoleDisplayName(userRole)}
-                </div>
-                {userEmail && (
-                  <div className="email-display">
-                    <span className="email-label">Logged in as:</span>
-                    <span className="email-value">{userEmail}</span>
-                  </div>
-                )}
-               
-              </div>
+     <div className="dashboard-header">
+  <div className="header-content">
+    <div className="header-top">
+      <div className="logo-section">
+        <div className="logo">M</div>
+        <h1 className="title">Mentorship Dashboard</h1>
+        
+        {/* MOVED: Three-dot menu to top-right */}
+        <div className="header-menu">
+          <button 
+            className="menu-button"
+            onClick={() => setShowDropdown(!showDropdown)}
+            aria-label="More options"
+          >
+            <MoreVertical size={24} />
+          </button>
+          {showDropdown && (
+            <div className="dropdown-menu">
+              <button 
+                className="dropdown-item"
+                onClick={handleWebinarClick}
+              >
+                <Video size={18} />
+                <span>Webinar</span>
+              </button>
+              <button 
+                className="dropdown-item"
+                onClick={handlePlacementClick}
+              >
+                <BriefcaseIcon size={18} />
+                <span>Placement</span>
+              </button>
             </div>
-          </div>
+          )}
         </div>
+      </div>
+      <br/>
+      <div className="user-info">
+        <div className="role-badge">
+          {getRoleDisplayName(userRole)}
+        </div>
+        {userEmail && (
+          <div className="email-display">
+            <span className="email-label">Logged in as:</span>
+            <span className="email-value">{userEmail}</span>
+          </div>
+        )}
+        {/* REMOVED: Menu button from here */}
+      </div>
+    </div>
+  </div>
+</div>
 
         {/* Stats Grid */}
         <div className="stats-section">

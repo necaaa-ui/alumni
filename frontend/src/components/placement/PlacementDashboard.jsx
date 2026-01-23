@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   TrendingUp, Building2, Award, Users, ChevronLeft, Check, ArrowLeft, 
   Search, X, Mail, Calendar, DollarSign, Briefcase, User, ChevronRight, 
-  ChevronLeft as ChevronLeftIcon 
+  ChevronLeft as ChevronLeftIcon, MoreVertical, Video, GraduationCap
 } from 'lucide-react';
 import './PlacementDashboard.css';
 import AdminDashboard from './AdminDashboard';
@@ -10,13 +10,13 @@ import AssignedCompanies from './AssignedCompanies';
 import CompanyRegistrationForm from './CompanyRegistrationForm';
 import Companies from './companies';
 import InterviewResults from './InterviewResults';
-import InterviewResultsView from './InterviewResultsView'; // Add this import
+import InterviewResultsView from './InterviewResultsView';
 import PlacementDataRequestForm from './PlacementDataRequestForm';
 import PlacementFeedbackForm from './PlacementFeedbackForm';
 import RequesterFeedbackForm from './RequesterFeedbackForm';
 import AlumniFeedbackDisplay from './AlumniFeedbackDisplay';
 import AlumniJobRequestsDisplay from './AlumniJobRequestsDisplay';
-import { useNavigate } from 'react-router-dom'; // ADDED useLocation
+import { useNavigate } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -27,6 +27,16 @@ const decryptEmail = (encryptedEmail) => {
   } catch (error) {
     console.error('Error decrypting email:', error);
     return encryptedEmail;
+  }
+};
+
+// ADDED: Encryption function for passing email
+const encryptEmail = (email) => {
+  try {
+    return btoa(encodeURIComponent(email));
+  } catch (error) {
+    console.error('Error encrypting email:', error);
+    return email;
   }
 };
 
@@ -41,10 +51,27 @@ const PlacementDashboard = ({ onBackToHome }) => {
   const [emailInput, setEmailInput] = useState('');
   const [hasRequestedPlacement, setHasRequestedPlacement] = useState(false);
   const [dataVersion, setDataVersion] = useState(0);
+  const [showDropdown, setShowDropdown] = useState(false); // ADDED: Dropdown state
   
   const [currentPage, setCurrentPage] = useState(1);
   const applicationsPerPage = 6;
   
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const dropdown = document.querySelector('.dropdown-menu');
+      const menuButton = document.querySelector('.menu-button');
+      if (dropdown && menuButton && !dropdown.contains(event.target) && !menuButton.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   // UPDATED: Use the proper decryption function
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -276,6 +303,29 @@ const PlacementDashboard = ({ onBackToHome }) => {
 
   const forceDataRefresh = () => {
     setDataVersion(prev => prev + 1);
+  };
+
+  // ADDED: Navigation functions
+  const handleWebinarClick = () => {
+    setShowDropdown(false);
+    if (userEmail) {
+      // Encrypt email for Webinar dashboard
+      const encryptedEmail = encryptEmail(userEmail);
+      navigate(`/webinar-dashboard?email=${encodeURIComponent(encryptedEmail)}`);
+    } else {
+      navigate('/webinar-dashboard');
+    }
+  };
+
+  const handleMentorshipClick = () => {
+    setShowDropdown(false);
+    if (userEmail) {
+      // Encrypt email for Mentorship dashboard
+      const encryptedEmail = encryptEmail(userEmail);
+      navigate(`/dashboard?email=${encodeURIComponent(encryptedEmail)}`);
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   const mapStatus = (alumniStatus) => {
@@ -646,6 +696,36 @@ const PlacementDashboard = ({ onBackToHome }) => {
                 Logged in as: <strong>{userEmail}</strong>
               </p>
             </div>
+            
+            {/* ADDED: Three-dot menu at top-right */}
+            <div className="placement-header-menu">
+              <button 
+                className="menu-button"
+                onClick={() => setShowDropdown(!showDropdown)}
+                aria-label="More options"
+              >
+                <MoreVertical size={24} />
+              </button>
+              {showDropdown && (
+                <div className="dropdown-menu">
+                  <button 
+                    className="dropdown-item"
+                    onClick={handleWebinarClick}
+                  >
+                    <Video size={18} />
+                    <span>Webinar</span>
+                  </button>
+                  <button 
+                    className="dropdown-item"
+                    onClick={handleMentorshipClick}
+                  >
+                    <GraduationCap size={18} />
+                    <span>Mentorship</span>
+                  </button>
+                </div>
+              )}
+            </div>
+            
             {onBackToHome && (
               <button className="back-btn" onClick={onBackToHome}>
                 <ChevronLeft size={18} />
