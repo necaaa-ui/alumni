@@ -3,7 +3,7 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import './WebinarDashboard.css';
 // import './Adminpage';
 import './webinar/Common.css';
-import { GraduationCap, ArrowLeft} from "lucide-react";
+import { GraduationCap, ArrowLeft, MoreVertical, Users, Briefcase} from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, AlignmentType } from 'docx';
 import { saveAs } from 'file-saver';
@@ -281,9 +281,27 @@ function DashboardShell() {
   const [coordinators, setCoordinators] = useState([]);
   const [phaseDetails, setPhaseDetails] = useState({});
   const [searchParams] = useSearchParams();
+  // ADDED: Dropdown state
+  const [showDropdown, setShowDropdown] = useState(false);
 
   // When phase changes reset page
   useEffect(() => setPage(1), [selectedPhase, view]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const dropdown = document.querySelector('.dropdown-menu');
+      const menuButton = document.querySelector('.menu-button');
+      if (dropdown && menuButton && !dropdown.contains(event.target) && !menuButton.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Redirect to login if no userEmail (check both URL params and localStorage)
   useEffect(() => {
@@ -433,6 +451,38 @@ function DashboardShell() {
         setLoading(false);
       });
   }, [selectedPhase]);
+
+  // ADDED: Encryption function for email
+  const encryptEmail = (email) => {
+    try {
+      return btoa(encodeURIComponent(email));
+    } catch (error) {
+      console.error('Error encrypting email:', error);
+      return email;
+    }
+  };
+
+  // ADDED: Handle Mentorship navigation with email
+  const handleMentorshipClick = () => {
+    setShowDropdown(false);
+    if (userEmail) {
+      const encryptedEmail = encryptEmail(userEmail);
+      navigate(`/dashboard?email=${encodeURIComponent(encryptedEmail)}`);
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
+  // ADDED: Handle Placement navigation with email
+  const handlePlacementClick = () => {
+    setShowDropdown(false);
+    if (userEmail) {
+      const encryptedEmail = encryptEmail(userEmail);
+      window.open(`http://localhost:5173/alumnimain/placement-dashboard?email=${encodeURIComponent(encryptedEmail)}`, '_blank');
+    } else {
+      window.open('http://localhost:5173/alumnimain/placement-dashboard', '_blank');
+    }
+  };
 
   const downloadOverallReport = async () => {
     const columnWidths = [20, 8, 8, 8, 10, 10]; // Domain, Planned, Conducted, Postponed, Total Speakers, New Speakers
@@ -791,9 +841,9 @@ function DashboardShell() {
             <div className="icon-wrapper">
               <GraduationCap className="header-icon" />
             </div>
-<h1 className="form-title text-3xl font-extrabold">
-  WELCOME BACK!! {userName || 'User'} 👋
-</h1>
+            <h1 className="form-title text-3xl font-extrabold">
+              WELCOME BACK!! {userName || 'User'} 👋
+            </h1>
           </div>
         <header className="wb-header">
           <div className="header-left">
@@ -805,16 +855,38 @@ function DashboardShell() {
                 Admin Access
               </button>
             )}
-            {/* {(!isAdmin || userEmail === 'anithait@nec.edu.in') && 
-            (
-              <div className="webinar-subtitle">
-                {phaseLoading ? 'Loading current phase...' : `Current Phase: ${currentPhase}`}
-              </div>
-            )
-            } */}
           </div>
 
           <div className="header-right">
+            {/* ADDED: Three-dot menu */}
+            <div className="header-menu">
+              <button 
+                className="menu-button"
+                onClick={() => setShowDropdown(!showDropdown)}
+                aria-label="More options"
+              >
+                <MoreVertical size={24} />
+              </button>
+              {showDropdown && (
+                <div className="dropdown-menu">
+                  <button 
+                    className="dropdown-item"
+                    onClick={handleMentorshipClick}
+                  >
+                    <Users size={18} />
+                    <span>Mentorship</span>
+                  </button>
+                  <button 
+                    className="dropdown-item"
+                    onClick={handlePlacementClick}
+                  >
+                    <Briefcase size={18} />
+                    <span>Placement</span>
+                  </button>
+                </div>
+              )}
+            </div>
+            
             {isAdmin && (
               <button
                 className="btn-primary"
@@ -841,95 +913,87 @@ function DashboardShell() {
         <section className="wb-content">
           {view === 'overview' && (
             <div>
-
-            <div>
-              {/* <div className="controls-row">
-                <button className="btn-primary" onClick={() => alert('Schedule flow here')}>Schedule Webinar</button>
-                <button onClick={() => alert('Export CSV') } className="btn-ghost">Export</button>
-              </div> */}
-            <br></br>
-            {(!isAdmin || userEmail === 'anithait@nec.edu.in') && 
-            (
-              <div className="webinar-subtitle">
-                {phaseLoading ? 'Loading current phase...' : `Current Phase: ${currentPhase}`}
-              </div>
-            )
-            }
-              <div className="webinars-header">
-                <h3>Domain Webinars Overview</h3>
-                <p className="muted">Manage and track webinars across different domains</p>
-              </div>
-              <div className="header-center2">
-                <div className="stats-mini">
-                  <div>
-                    <div className="muted">Planned</div>
-                    <div className="large">{totals.planned}</div>
-                    </div>
+              <div>
+                <br></br>
+                {(!isAdmin || userEmail === 'anithait@nec.edu.in') && 
+                (
+                  <div className="webinar-subtitle">
+                    {phaseLoading ? 'Loading current phase...' : `Current Phase: ${currentPhase}`}
+                  </div>
+                )
+                }
+                <div className="webinars-header">
+                  <h3>Domain Webinars Overview</h3>
+                  <p className="muted">Manage and track webinars across different domains</p>
+                </div>
+                <div className="header-center2">
+                  <div className="stats-mini">
                     <div>
-                      <div className="muted">Conducted</div>
-                      <div className="large">{totals.conducted}</div>
-                    </div>
-                  <div>
-                    <div className="muted">Speakers</div>
-                      <div className="large">
-                        {Number(totals.totalSpeakers) + Number(totals.newSpeakers)}
+                      <div className="muted">Planned</div>
+                      <div className="large">{totals.planned}</div>
                       </div>
+                      <div>
+                        <div className="muted">Conducted</div>
+                        <div className="large">{totals.conducted}</div>
+                      </div>
+                    <div>
+                      <div className="muted">Speakers</div>
+                        <div className="large">
+                          {Number(totals.totalSpeakers) + Number(totals.newSpeakers)}
+                        </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="list-cards">
-                {phaseData.domains.map((d, idx) => {
-                  const progressPercentage = d.planned > 0 ? (d.conducted / d.planned) * 100 : 0;
-                  return (
-                    <div key={d.id} className="webinar-card">
-                      <div className="webinar-card-header">
-                        <div className="webinar-icon">🎓</div>
-                        <h4>{d.name}</h4>
-                        <div className="webinar-status">
-                          <span className={`status-dot ${progressPercentage === 100 ? 'completed' : progressPercentage > 50 ? 'in-progress' : 'pending'}`}></span>
+                <div className="list-cards">
+                  {phaseData.domains.map((d, idx) => {
+                    const progressPercentage = d.planned > 0 ? (d.conducted / d.planned) * 100 : 0;
+                    return (
+                      <div key={d.id} className="webinar-card">
+                        <div className="webinar-card-header">
+                          <div className="webinar-icon">🎓</div>
+                          <h4>{d.name}</h4>
+                          <div className="webinar-status">
+                            <span className={`status-dot ${progressPercentage === 100 ? 'completed' : progressPercentage > 50 ? 'in-progress' : 'pending'}`}></span>
+                          </div>
+                        </div>
+                        <div className="webinar-stats">
+                          <div className="stat-item">
+                            <span className="stat-label">Planned</span>
+                            <span className="stat-value planned">{d.planned}</span>
+                          </div>
+                          <div className="stat-item">
+                            <span className="stat-label">Conducted</span>
+                            <span className="stat-value conducted">{d.conducted}</span>
+                          </div>
+                          <div className="stat-item">
+                            <span className="stat-label">Postponed</span>
+                            <span className="stat-value postponed">{d.postponed}</span>
+                          </div>
+                        </div>
+                        <div className="webinar-progress">
+                          <div className="progress-bar">
+                            <div className="progress-fill" style={{ width: `${progressPercentage}%` }} />
+                          </div>
+                          <span className="progress-text">{Math.round(progressPercentage)}% Complete</span>
+                        </div>
+                        <div className="webinar-speakers">
+                          <div className="speaker-info">
+                            <span className="speaker-icon">👥</span>
+                              <span>
+                                Total Speakers:{Number(d.totalSpeakers) + Number(d.newSpeakers)}
+                              </span>
+                          </div>
+                        </div>
+                        <div className="webinar-actions">
+                          <button onClick={() => setSelectedDomain(d)} className="btn-primary small">View Details</button>
                         </div>
                       </div>
-                      <div className="webinar-stats">
-                        <div className="stat-item">
-                          <span className="stat-label">Planned</span>
-                          <span className="stat-value planned">{d.planned}</span>
-                        </div>
-                        <div className="stat-item">
-                          <span className="stat-label">Conducted</span>
-                          <span className="stat-value conducted">{d.conducted}</span>
-                        </div>
-                        <div className="stat-item">
-                          <span className="stat-label">Postponed</span>
-                          <span className="stat-value postponed">{d.postponed}</span>
-                        </div>
-                      </div>
-                      <div className="webinar-progress">
-                        <div className="progress-bar">
-                          <div className="progress-fill" style={{ width: `${progressPercentage}%` }} />
-                        </div>
-                        <span className="progress-text">{Math.round(progressPercentage)}% Complete</span>
-                      </div>
-                      <div className="webinar-speakers">
-                        <div className="speaker-info">
-                          <span className="speaker-icon">👥</span>
-                            <span>
-                              Total Speakers:{Number(d.totalSpeakers) + Number(d.newSpeakers)}
-                            </span>
-
-                        </div>
-                      </div>
-                      <div className="webinar-actions">
-                        <button onClick={() => setSelectedDomain(d)} className="btn-primary small">View Details</button>
-                        {/* <button onClick={() => alert('Schedule webinar for ' + d.name)} className="btn-ghost small">Schedule</button> */}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
           )}
-
         </section>
 
         {/* Popup for domain details */}
@@ -993,7 +1057,6 @@ function DashboardShell() {
                 )}
 
                 <div className="modal-actions">
-                  {/* <button className="btn-ghost" onClick={() => alert('Open schedule')}>Schedule Webinar</button> */}
                   <button className="btn-ghost" onClick={() => setSelectedDomain(null)}>Close</button>
                 </div>
               </div>
