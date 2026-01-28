@@ -20,7 +20,7 @@ const typeOptions = [
 export default function WebinarSpeakerAssignmentForm() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    email: '', name: '', department: '', batch: '', designation: '', companyName: '', speakerPhoto: null, domain: '', topic: '', webinarVenue: 'NEC Auditorium, Kovilpatti', alumniCity: 'Chennai', meetingLink: ''
+    email: '', name: '', department: '', batch: '', designation: '', companyName: '', speakerPhoto: null, domain: '', topic: '', webinarVenue: '', alumniCity: '', webinarType: 'In Person', meetingLink: ''
   });
   const [slots, setSlots] = useState([{ deadline: '2024-12-15', webinarDate: '', time: '9:30-10:30' }]);
   const [showPoster, setShowPoster] = useState(false);
@@ -38,6 +38,7 @@ export default function WebinarSpeakerAssignmentForm() {
   const alumniCityRef = useRef(null);
   const webinarVenueRef = useRef(null);
   const meetingLinkRef = useRef(null);
+  const speakerPhotoRef = useRef(null);
 
   const refs = {
     designation: designationRef,
@@ -45,6 +46,7 @@ export default function WebinarSpeakerAssignmentForm() {
     alumniCity: alumniCityRef,
     webinarVenue: webinarVenueRef,
     meetingLink: meetingLinkRef,
+    speakerPhoto: speakerPhotoRef,
   };
 
   useEffect(() => {
@@ -138,7 +140,7 @@ export default function WebinarSpeakerAssignmentForm() {
     const alphaRegex = /^[A-Za-z ]+$/;
 
     if (!cleaned) return "This field is required";
-    if (!alphaRegex.test(cleaned)) return "Only alphabets and spaces are allowed";
+    if (!alphaRegex.test(cleaned)) return "Only English letters and spaces are allowed";
     if (cleaned.length < 2) return "Minimum 2 characters required";
     if (cleaned.length > 50) return "Maximum 50 characters allowed";
     if (/(.)\1{3,}/.test(cleaned)) return "Repeated characters not allowed";
@@ -185,7 +187,12 @@ export default function WebinarSpeakerAssignmentForm() {
     let newValue = files ? files[0] : value;
 
     if (!files && typeof value === "string") {
-      newValue = value.replace(/\s+/g, " ");
+      // Filter input for alphabetic fields to only allow English letters and spaces
+      if (['designation', 'companyName', 'alumniCity', 'webinarVenue'].includes(name)) {
+        newValue = value.replace(/[^A-Za-z\s]/g, '').replace(/\s+/g, " ");
+      } else {
+        newValue = value.replace(/\s+/g, " ");
+      }
     }
 
     setFormData(prev => ({ ...prev, [name]: newValue }));
@@ -233,9 +240,14 @@ export default function WebinarSpeakerAssignmentForm() {
 
   const handleSubmit = async () => {
     // Validate all fields
-    const fieldsToValidate = ['designation', 'companyName', 'alumniCity', 'webinarVenue', 'meetingLink'];
+    const fieldsToValidate = ['designation', 'companyName', 'alumniCity', 'webinarVenue'];
     let hasErrors = false;
     let firstErrorField = null;
+
+    // Only validate meetingLink if webinarType is Online
+    if (formData.webinarType === 'Online') {
+      fieldsToValidate.push('meetingLink');
+    }
 
     fieldsToValidate.forEach(field => {
       if (!validateField(field, formData[field])) {
@@ -243,6 +255,15 @@ export default function WebinarSpeakerAssignmentForm() {
         if (!firstErrorField) firstErrorField = field;
       }
     });
+
+    // Validate speaker photo
+    if (!formData.speakerPhoto) {
+      setErrors(prev => ({ ...prev, speakerPhoto: "Speaker photo is required" }));
+      hasErrors = true;
+      if (!firstErrorField) firstErrorField = 'speakerPhoto';
+    } else {
+      setErrors(prev => ({ ...prev, speakerPhoto: "" }));
+    }
 
     if (hasErrors) {
       if (refs[firstErrorField]?.current) {
@@ -254,30 +275,12 @@ export default function WebinarSpeakerAssignmentForm() {
 
     if (!formData.email || !formData.name || !formData.department || !formData.batch || !formData.designation ||
         !formData.companyName || !formData.speakerPhoto || !formData.domain || !formData.topic ||
-        !formData.meetingLink || slots.some(s => !s.deadline || !s.webinarDate || !s.time)) {
+        (formData.webinarType === 'Online' && !formData.meetingLink) || slots.some(s => !s.deadline || !s.webinarDate || !s.time)) {
       setPopup({ show: true, message: 'Please fill all required fields', type: 'error' });
       return;
     }
 
-    const hasConflict = existingWebinars.some(webinar =>
-      webinar.venue && webinar.venue.trim().toLowerCase() ===
-      formData.webinarVenue.trim().toLowerCase() &&
-      webinar.slots && webinar.slots.some(oldSlot =>
-        slots.some(newSlot =>
-          oldSlot.webinarDate === newSlot.webinarDate &&
-          oldSlot.time === newSlot.time
-        )
-      )
-    );
 
-    if (hasConflict) {
-      setPopup({
-        show: true,
-        message: "Another webinar is already scheduled for this venue, date and time",
-        type: "error"
-      });
-      return;
-    }
 
     setLoading(true);
     try {
@@ -452,6 +455,7 @@ export default function WebinarSpeakerAssignmentForm() {
                     onChange={handleChange}
                     onBlur={(e) => validateField("alumniCity", e.target.value)}
                     placeholder="Enter city"
+                    maxLength="50"
                     className={`input-field ${errors.alumniCity ? 'border-red-500' : ''}`}
                   />
                   {errors.alumniCity && <p className="text-red-500 text-sm mt-1">{errors.alumniCity}</p>}
@@ -461,9 +465,14 @@ export default function WebinarSpeakerAssignmentForm() {
                     <Upload className="field-icon" /> Speaker Photo <span className="required">*</span>
                   </label>
                   <input type="file" name="speakerPhoto" id="speaker-photo-upload" accept="image/*" className="input-field hidden" onChange={handleChange} />
-                  <label htmlFor="speaker-photo-upload" className="field-label input-field cursor-pointer flex items-center gap-2">
+                  <label
+                    ref={speakerPhotoRef}
+                    htmlFor="speaker-photo-upload"
+                    className={`field-label input-field cursor-pointer flex items-center gap-2 ${errors.speakerPhoto ? 'border-red-500' : ''}`}
+                  >
                     <Upload className="field-icon" /> {formData.speakerPhoto ? formData.speakerPhoto.name : "Choose photo or drag here"}
                   </label>
+                  {errors.speakerPhoto && <p className="text-red-500 text-sm mt-1">{errors.speakerPhoto}</p>}
                 </div>
               </div>
 
@@ -506,7 +515,7 @@ export default function WebinarSpeakerAssignmentForm() {
                 </select>
               </div>
 
-              {/* Webinar Venue and Alumni City */}
+              {/* Webinar Venue and Type */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="form-group">
                 <label className="field-label">
@@ -519,27 +528,46 @@ export default function WebinarSpeakerAssignmentForm() {
                     value={formData.webinarVenue}
                     onChange={handleChange}
                     placeholder="Enter venue"
+                    maxLength="50"
                     className={`input-field ${errors.webinarVenue ? 'border-red-500' : ''}`}
                   />
                   {errors.webinarVenue && <p className="text-red-500 text-sm mt-1">{errors.webinarVenue}</p>}
                 </div>
-                {/* Meeting Link */}
+                {/* Webinar Type */}
               <div className="form-group">
                 <label className="field-label">
-                  <Globe className="field-icon" /> Meeting Link (if Online) or else enter In Person <span className="required">*</span>
+                  <Globe className="field-icon" /> Webinar Type <span className="required">*</span>
                 </label>
-                <input
-                  ref={meetingLinkRef}
-                  type="url"
-                  name="meetingLink"
-                  value={formData.meetingLink}
+                <select
+                  name="webinarType"
+                  value={formData.webinarType}
                   onChange={handleChange}
-                  placeholder="Enter meeting link"
-                  className={`input-field ${errors.meetingLink ? 'border-red-500' : ''}`}
-                />
-                {errors.meetingLink && <p className="text-red-500 text-sm mt-1">{errors.meetingLink}</p>}
+                  className="input-field"
+                >
+                  <option value="In Person">In Person</option>
+                  <option value="Online">Online</option>
+                </select>
               </div>
               </div>
+
+              {/* Meeting Link - Only show if Online */}
+              {formData.webinarType === 'Online' && (
+                <div className="form-group">
+                  <label className="field-label">
+                    <Globe className="field-icon" /> Meeting Link <span className="required">*</span>
+                  </label>
+                  <input
+                    ref={meetingLinkRef}
+                    type="url"
+                    name="meetingLink"
+                    value={formData.meetingLink}
+                    onChange={handleChange}
+                    placeholder="Enter meeting link (https://...)"
+                    className={`input-field ${errors.meetingLink ? 'border-red-500' : ''}`}
+                  />
+                  {errors.meetingLink && <p className="text-red-500 text-sm mt-1">{errors.meetingLink}</p>}
+                </div>
+              )}
               {/* Assign Slot */}
               <h2 className="section-heading">Assign Slot</h2>
               {slots.map((slot, i) => (

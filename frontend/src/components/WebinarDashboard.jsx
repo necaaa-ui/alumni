@@ -279,6 +279,7 @@ function DashboardShell() {
   const [userName, setUserName] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [coordinators, setCoordinators] = useState([]);
+  const [speakers, setSpeakers] = useState([]);
   const [phaseDetails, setPhaseDetails] = useState({});
   const [searchParams] = useSearchParams();
   // ADDED: Dropdown state
@@ -370,6 +371,16 @@ function DashboardShell() {
           console.error('Error checking admin status:', error);
           setIsAdmin(false);
           localStorage.setItem('isAdmin', 'false');
+        });
+
+      // Fetch speakers
+      fetch(`${API_BASE_URL}/api/speakers`)
+        .then(response => response.json())
+        .then(speakers => {
+          setSpeakers(speakers);
+        })
+        .catch(error => {
+          console.error('Error fetching speakers:', error);
         });
     }
   }, [searchParams]);
@@ -1067,20 +1078,22 @@ function DashboardShell() {
   <h3 className="qa-title">Quick Actions</h3>
 
   <div className="qa-grid">
-  <div className="qa-card" onClick={() => {
-    if (!userEmail) {
-      alert("Please log in first");
-      return;
-    }
-    navigate(`/student-request/${btoa(userEmail)}`);
-  }} style={{ cursor: "pointer" }}>
-      <div className="qa-icon">📄</div>
-      <h4 className="qa-heading">Student Request Form</h4>
-      <span className="qa-tag">Request</span>
-      <p className="qa-desc">
-        Submit student requests for webinars, topics, domains and speaker preferences.
-      </p>
-    </div>
+  {speakers.length === 0 || !speakers.some(speaker => speaker.email.toLowerCase() === userEmail.toLowerCase()) && (
+    <div className="qa-card" onClick={() => {
+      if (!userEmail) {
+        alert("Please log in first");
+        return;
+      }
+      navigate(`/student-request/${btoa(userEmail)}`);
+    }} style={{ cursor: "pointer" }}>
+        <div className="qa-icon">📄</div>
+        <h4 className="qa-heading">Student Request Form</h4>
+        <span className="qa-tag">Request</span>
+        <p className="qa-desc">
+          Submit student requests for webinars, topics, domains and speaker preferences.
+        </p>
+      </div>
+  )}
     <div className="qa-card" onClick={() => {
       if (!userEmail) {
         alert("Please log in first");
@@ -1127,20 +1140,22 @@ function DashboardShell() {
         </p>
     </div>
   )}
-  <div className="qa-card" onClick={() => {
-    if (!userEmail) {
-      alert("Please log in first");
-      return;
-    }
-    navigate(`/alumni-feedback/${btoa(userEmail)}`);
-  }} style={{ cursor: "pointer" }}>
-      <div className="qa-icon">🏫</div>
-      <h4 className="qa-heading">Alumni Feedback Form</h4>
-      <span className="qa-tag">Feedback</span>
-      <p className="qa-desc">
-        Collect and manage alumni feedback regarding sessions and overall engagement.
-      </p>
-    </div>
+  {speakers.length > 0 && speakers.some(speaker => speaker.email.toLowerCase() === userEmail.toLowerCase()) && (
+    <div className="qa-card" onClick={() => {
+      if (!userEmail) {
+        alert("Please log in first");
+        return;
+      }
+      navigate(`/alumni-feedback/${btoa(userEmail)}`);
+    }} style={{ cursor: "pointer" }}>
+        <div className="qa-icon">🏫</div>
+        <h4 className="qa-heading">Alumni Feedback Form</h4>
+        <span className="qa-tag">Feedback</span>
+        <p className="qa-desc">
+          Collect and manage alumni feedback regarding sessions and overall engagement.
+        </p>
+      </div>
+  )}
   </div>
 </div>
 

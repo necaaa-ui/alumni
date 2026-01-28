@@ -24,6 +24,37 @@ export default function WebinarStudentFeedbackForm() {
   });
 
   const [popup, setPopup] = useState({ show: false, message: '', type: 'success' });
+  const [errors, setErrors] = useState({});
+
+  const validateFeedback = (value) => {
+    const trimmed = value.trim();
+
+    // Check if empty
+    if (trimmed === "") return "Feedback is required";
+
+    // Check minimum length (1 character)
+    if (trimmed.length < 1) return "Feedback must be at least 1 character long";
+
+    // Check maximum length (500 characters)
+    if (trimmed.length > 500) return "Feedback cannot exceed 500 characters";
+
+    // Check for line breaks
+    if (value.includes('\n') || value.includes('\r')) return "Line breaks are not allowed";
+
+    return "";
+  };
+
+  // Function to filter input - allow English letters, numbers, spaces, punctuation
+  const filterFeedbackInput = (value) => {
+    // Remove line breaks and carriage returns
+    let filtered = value.replace(/[\n\r]/g, '');
+
+    // Allow: English letters (a-z, A-Z), numbers (0-9), spaces, and common punctuation
+    // Block: emojis, Tamil letters, other non-English characters
+    filtered = filtered.replace(/[^\w\s.,!?'"()-]/g, '');
+
+    return filtered;
+  };
 
   // Auto-fill Name when Email is typed
   useEffect(() => {
@@ -74,10 +105,23 @@ export default function WebinarStudentFeedbackForm() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    let newValue = type === "checkbox" ? checked : value;
+
+    // Apply input filtering for feedback field
+    if (name === 'feedback') {
+      newValue = filterFeedbackInput(value);
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: newValue,
     }));
+
+    // Validate feedback field
+    if (name === 'feedback') {
+      const error = validateFeedback(newValue);
+      setErrors(prev => ({ ...prev, feedback: error }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -88,58 +132,65 @@ export default function WebinarStudentFeedbackForm() {
       return;
     }
 
-    if (
-      !formData.webinar ||
-      !formData.speaker ||
-      !formData.q1 ||
-      !formData.q2 ||
-      !formData.feedback
-    ) {
-      setPopup({ show: true, message: 'Please fill all required fields', type: 'error' });
-      return;
+    const newErrors = {};
+
+    if (!formData.email) newErrors.email = 'Email is required';
+    if (!formData.name) newErrors.name = 'Name is required';
+    if (!formData.webinar) newErrors.webinar = 'Webinar is required';
+    if (!formData.speaker) newErrors.speaker = 'Speaker is required';
+    if (!formData.q1) newErrors.q1 = 'Please rate the quality of the webinar';
+    if (!formData.q2) newErrors.q2 = 'Please rate the speaker';
+    if (!formData.feedback) newErrors.feedback = 'Feedback is required';
+    else {
+      const feedbackError = validateFeedback(formData.feedback);
+      if (feedbackError) newErrors.feedback = feedbackError;
     }
 
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/submit-student-feedback`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          name: formData.name,
-          webinar: formData.webinar,
-          speaker: formData.speaker,
-          q1: parseInt(formData.q1),
-          q2: parseInt(formData.q2),
-          feedback: formData.feedback,
-          phaseId: parseInt(formData.phaseId),
-        }),
-      });
+    setErrors(newErrors);
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setPopup({ show: true, message: 'Feedback submitted successfully! 🎉', type: 'success' });
-
-        // Reset form data after successful submission
-        setFormData({
-          name: "",
-          email: "",
-          webinar: "",
-          speaker: "",
-          q1: "",
-          q2: "",
-          feedback: "",
-          phaseId: "",
-          isRobot: false,
+    if (Object.keys(newErrors).length === 0) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/submit-student-feedback`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email,
+            name: formData.name,
+            webinar: formData.webinar,
+            speaker: formData.speaker,
+            q1: parseInt(formData.q1),
+            q2: parseInt(formData.q2),
+            feedback: formData.feedback,
+            phaseId: parseInt(formData.phaseId),
+          }),
         });
-      } else {
-        setPopup({ show: true, message: data.error || 'Failed to submit feedback', type: 'error' });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          setPopup({ show: true, message: 'Feedback submitted successfully! 🎉', type: 'success' });
+
+          // Reset form data after successful submission
+          setFormData({
+            name: "",
+            email: "",
+            webinar: "",
+            speaker: "",
+            q1: "",
+            q2: "",
+            feedback: "",
+            phaseId: "",
+            isRobot: false,
+          });
+        } else {
+          setPopup({ show: true, message: data.error || 'Failed to submit feedback', type: 'error' });
+        }
+      } catch (error) {
+        console.error('Error submitting feedback:', error);
+        setPopup({ show: true, message: 'Network error. Please try again.', type: 'error' });
       }
-    } catch (error) {
-      console.error('Error submitting feedback:', error);
-      setPopup({ show: true, message: 'Network error. Please try again.', type: 'error' });
     }
   };
 
@@ -153,7 +204,7 @@ export default function WebinarStudentFeedbackForm() {
 
       <div className="form-wrapper">
         <div >
-          <button className="back-btn" onClick={() => navigate("/")}>
+          <button className="back-btn" onClick={() => navigate("/webinar-dashboard")}>
             <ArrowLeft className="back-btn-icon" /> Back to Dashboard
           </button>
 
@@ -185,6 +236,7 @@ export default function WebinarStudentFeedbackForm() {
                   className="input-field"
                   required
                 />
+                {errors.email && <div className="error-text">{errors.email}</div>}
               </div>
 
               {/* Name */}
@@ -245,6 +297,7 @@ export default function WebinarStudentFeedbackForm() {
                     </label>
                   ))}
                 </div>
+                {errors.q1 && <div className="error-text">{errors.q1}</div>}
               </div>
 
               <div className="form-group">
@@ -258,6 +311,7 @@ export default function WebinarStudentFeedbackForm() {
                     </label>
                   ))}
                 </div>
+                {errors.q2 && <div className="error-text">{errors.q2}</div>}
               </div>
 
               {/* Feedback */}
@@ -272,6 +326,7 @@ export default function WebinarStudentFeedbackForm() {
                   placeholder="Write your feedback..."
                   className="textarea-field"
                 ></textarea>
+                {errors.feedback && <div className="error-text">{errors.feedback}</div>}
               </div>
 
               {/* Robot Check */}

@@ -127,11 +127,27 @@ export default function StudentRequestForm() {
   // Handle Input Change
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    if (name === 'topic' || name === 'reason') {
-      // Apply validation: Allow English letters, numbers, spaces, punctuation. Block emojis, other languages, line breaks, multi-line paste.
-      const maxLength = name === 'topic' ? 150 : 500;
-      const minLength = name === 'topic' ? 10 : 30;
-      const filteredValue = value.replace(/[^\x20-\x7E]/g, '').slice(0, maxLength);
+    if (name === 'topic') {
+      // Apply validation: Allow English letters, numbers, spaces. Block punctuation, emojis, other languages, line breaks, multi-line paste.
+      const maxLength = 150;
+      const minLength = 10;
+      const filteredValue = value.replace(/[^\w\s]/g, '').slice(0, maxLength);
+      setFormData(prev => ({
+        ...prev,
+        [name]: filteredValue
+      }));
+      // Clear error if now valid
+      if (filteredValue.length >= minLength && filteredValue.length <= maxLength) {
+        setErrors(prev => ({
+          ...prev,
+          [name]: undefined
+        }));
+      }
+    } else if (name === 'reason') {
+      // Apply validation: Allow English letters, numbers, spaces, and specific punctuation: ., !, ?, ', ", (, ), -. Block emojis, other languages, line breaks, multi-line paste.
+      const maxLength = 500;
+      const minLength = 30;
+      const filteredValue = value.replace(/[^\w\s.,!?'"()-]/g, '').slice(0, maxLength);
       setFormData(prev => ({
         ...prev,
         [name]: filteredValue

@@ -155,6 +155,21 @@ router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) =
       return res.status(400).json({ error: 'All required fields must be provided' });
     }
 
+    // Check for conflicts with existing webinars
+    for (const slot of parsedSlots) {
+      const existingWebinar = await req.app.locals.Webinar.findOne({
+        venue: webinarVenue,
+        webinarDate: new Date(slot.webinarDate),
+        time: slot.time
+      });
+
+      if (existingWebinar) {
+        return res.status(409).json({
+          error: `Conflict detected: A webinar is already scheduled at ${webinarVenue} on ${new Date(slot.webinarDate).toLocaleDateString()} at ${slot.time}.`
+        });
+      }
+    }
+
     // Get member details
     const member = await req.app.locals.Member.findOne({ 'basic.email_id': email });
     if (!member) {
