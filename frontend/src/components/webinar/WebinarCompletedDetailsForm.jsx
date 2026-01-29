@@ -88,8 +88,17 @@ const WebinarCompletedDetailsForm = () => {
             batch: data.batch || "",
             contact: data.contact_no || "",
           }));
+          setErrors(prev => ({ ...prev, prizeWinnerEmail: null }));
         } else {
           console.log("No member found for entered email");
+          setErrors(prev => ({ ...prev, prizeWinnerEmail: "Unregistered email. Please enter a registered email address." }));
+          setFormData((prev) => ({
+            ...prev,
+            name: "",
+            department: "",
+            batch: "",
+            contact: "",
+          }));
         }
       } catch (err) {
         console.error("Error fetching member:", err);
@@ -101,13 +110,32 @@ const WebinarCompletedDetailsForm = () => {
 
   // Handle input fields
   const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'attendedCount') {
+      // Allow only positive integers
+      const trimmedValue = value.trim();
+      if (trimmedValue === '' || (/^\d+$/.test(trimmedValue) && parseInt(trimmedValue) > 0)) {
+        setFormData({ ...formData, [name]: trimmedValue });
+      }
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   // Handle file upload
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Check file size (2MB limit)
+      const maxSize = 2 * 1024 * 1024; // 2MB in bytes
+      if (file.size > maxSize) {
+        setErrors(prev => ({ ...prev, attendanceFile: "File size must be less than 2MB" }));
+        setAttendanceFile(null);
+        setAttendanceData([]);
+        return;
+      }
+
+      setErrors(prev => ({ ...prev, attendanceFile: null }));
       setAttendanceFile(file);
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -251,12 +279,13 @@ const WebinarCompletedDetailsForm = () => {
                     <FiAward className="field-icon" /> Attended Count <span>*</span>
                   </label>
                   <input
-                    type="text"
+                    type="number"
                     name="attendedCount"
                     value={formData.attendedCount}
                     onChange={handleInputChange}
                     placeholder="Attended Count of the Students"
                     className="input-field"
+                    min="1"
                     required
                   />
                   {errors.attendedCount && (
@@ -279,6 +308,9 @@ const WebinarCompletedDetailsForm = () => {
                   <small className="help-text">
                     Upload Excel file with Email and Duration columns. Certificate download will be enabled for attendees with duration {'>'} 30 minutes.
                   </small>
+                  {errors.attendanceFile && (
+                    <div className="error-text">{errors.attendanceFile}</div>
+                  )}
                 </div>
                 {/* Prize Winner Email */}
                 <div className="form-group">

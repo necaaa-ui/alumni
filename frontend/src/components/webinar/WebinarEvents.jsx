@@ -1000,7 +1000,9 @@ export default function WebinarEvents() {
                     <h2 className="text-2xl font-bold text-purple-900 webinar-section-title">
                       {month.charAt(0).toUpperCase() + month.slice(1)} 2025
                     </h2>
-                    <button className="generate-btn" onClick={() => generateCircular(month)}>Generate Circular</button>
+                    {userEmail === 'anithait@nec.edu.in' && (
+                      <button className="generate-btn" onClick={() => generateCircular(month)}>Generate Circular</button>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-12 mb-12">
                     {monthWebinars.map((wb, i) => (

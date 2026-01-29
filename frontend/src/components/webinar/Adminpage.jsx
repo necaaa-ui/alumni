@@ -4,6 +4,19 @@ import './AdminDashboard.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+// Validation helper functions
+const validateDomain = (value) => {
+  const trimmed = value.trim();
+
+  if (!trimmed) return "Domain cannot be empty.";
+  if (trimmed.length < 3) return "Domain must be at least 3 characters.";
+  if (trimmed.length > 50) return "Domain cannot exceed 50 characters.";
+  if (!/^[A-Za-z]+( [A-Za-z]+)*$/.test(trimmed))
+    return "Domain must contain only letters and single spaces.";
+
+  return "";
+};
+
 const Adminpage = () => {
   const [activeView, setActiveView] = useState(null);
   const [showRemoveDomain, setShowRemoveDomain] = useState(false);
@@ -12,6 +25,9 @@ const Adminpage = () => {
   const [showAddStudentForm, setShowAddStudentForm] = useState(false);
   const [showAddDepartmentForm, setShowAddDepartmentForm] = useState(false);
   const [studentEmail, setStudentEmail] = useState('');
+  const [studentCoordinatorData, setStudentCoordinatorData] = useState({ name: '', department: '', phoneNumber: '' });
+  const [studentCoordinatorLoading, setStudentCoordinatorLoading] = useState(false);
+  const [studentEmailError, setStudentEmailError] = useState('');
   const [deptCoordinator, setDeptCoordinator] = useState({ name: '', email: '', department: '', phoneNumber: '' });
   const [deptCoordinatorLoading, setDeptCoordinatorLoading] = useState(false);
   const [coordinators, setCoordinators] = useState([]);
@@ -21,6 +37,7 @@ const Adminpage = () => {
   const [endingDate, setEndingDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [errors, setErrors] = useState({});
   const [currentPhase, setCurrentPhase] = useState(null);
   const [phaseLoading, setPhaseLoading] = useState(true);
   const [webinars, setWebinars] = useState([]);
@@ -30,6 +47,7 @@ const Adminpage = () => {
   const [showSpeakerDropdown, setShowSpeakerDropdown] = useState(false);
   const [filterOptions, setFilterOptions] = useState({ phaseIds: [], domains: [], batches: [], departments: [] });
   const [selectedFilters, setSelectedFilters] = useState({ phaseId: '', domain: '', speakerName: '', batch: '', department: '' });
+  const [lastPhaseDomains, setLastPhaseDomains] = useState([]);
 
   // Fetch current phase on component mount
   useEffect(() => {
@@ -47,6 +65,28 @@ const Adminpage = () => {
 
     fetchCurrentPhase();
   }, []);
+
+  // Fetch last phase domains when phase view is active
+  useEffect(() => {
+    if (activeView === 'phase') {
+      const fetchLastPhaseDomains = async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/phases`);
+          const data = await response.json();
+          if (data.success && data.phases && data.phases.length > 0) {
+            // Sort phases by createdAt descending to get the most recently created phase
+            const sortedPhases = data.phases.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            const lastPhase = sortedPhases[0];
+            setLastPhaseDomains(lastPhase.domains || []);
+          }
+        } catch (error) {
+          console.error('Error fetching last phase domains:', error);
+        }
+      };
+
+      fetchLastPhaseDomains();
+    }
+  }, [activeView]);
 
   // Fetch webinars, filter options, and speakers when webinar view is active
   useEffect(() => {
@@ -157,16 +197,78 @@ const Adminpage = () => {
   }, [activeView]);
 
   const handleCreatePhase = async () => {
+    // Clear previous errors
+    setErrors({});
+
     // Validate inputs
-    if (!phaseId || !startingDate || !endingDate) {
-      setMessage('Please fill in all required fields.');
-      return;
+    const newErrors = {};
+
+    if (!phaseId.trim()) {
+      newErrors.phaseId = 'Phase ID is required.';
+    } else if (!/^\d+$/.test(phaseId)) {
+      newErrors.phaseId = "Phase ID must contain only numbers.";
+    } else if (phaseId.length > 4) {
+      newErrors.phaseId = "Phase ID cannot exceed 4 digits.";
+    } else {
+      // Check if Phase ID already exists
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/phases`);
+        const data = await response.json();
+        if (response.ok && data.success) {
+          const existingPhase = data.phases.find(phase => phase.phaseId === parseInt(phaseId));
+          if (existingPhase) {
+            newErrors.phaseId = "Phase ID already exists. Please choose a different ID.";
+          }
+        }
+      } catch (error) {
+        console.error('Error checking phase uniqueness:', error);
+        // Don't block submission if uniqueness check fails, let backend handle it
+      }
+    }
+
+    if (!startingDate) {
+      newErrors.startingDate = 'Starting date is required.';
+    }
+
+    if (!endingDate) {
+      newErrors.endingDate = 'Ending date is required.';
+    }
+
+    // Validate dates if both are provided
+    if (startingDate && endingDate) {
+      const start = new Date(startingDate);
+      const end = new Date(endingDate);
+      if (isNaN(start)) {
+        newErrors.startingDate = "Please enter a valid starting date.";
+      }
+      if (isNaN(end)) {
+        newErrors.endingDate = "Please enter a valid ending date.";
+      }
+      if (!isNaN(start) && !isNaN(end) && end < start) {
+        newErrors.endingDate = "Ending date cannot be earlier than starting date.";
+      }
     }
 
     // Validate domains
     const validDomains = domains.filter(d => d.department && d.domain);
     if (validDomains.length === 0) {
-      setMessage('Please add at least one domain with department and domain name.');
+      newErrors.domains = 'Please add at least one domain with department and domain name.';
+    } else {
+      // Validate each domain
+      for (let i = 0; i < domains.length; i++) {
+        const d = domains[i];
+        if (d.department && d.domain) {
+          const error = validateDomain(d.domain);
+          if (error) {
+            newErrors[`domain_${i}`] = `Domain Error (${d.department}): ${error}`;
+          }
+        }
+      }
+    }
+
+    // Set errors if any
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
@@ -198,6 +300,7 @@ const Adminpage = () => {
         setStartingDate('');
         setEndingDate('');
         setDomains([{ department: '', domain: '' }]);
+        setErrors({});
       } else {
         setMessage(result.message || 'Failed to create phase.');
       }
@@ -209,10 +312,82 @@ const Adminpage = () => {
     }
   };
 
+  // Handle student email change with validation and auto-fetch
+  const handleStudentEmailChange = async (email) => {
+    setStudentEmail(email);
+    setStudentEmailError('');
+
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !emailRegex.test(email)) {
+      setStudentEmailError('Please enter a valid email address.');
+      setStudentCoordinatorData({ name: '', department: '', phoneNumber: '' });
+      return;
+    }
+
+    if (!email.trim()) {
+      setStudentCoordinatorData({ name: '', department: '', phoneNumber: '' });
+      return;
+    }
+
+    setStudentCoordinatorLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/coordinators/member-by-email?email=${encodeURIComponent(email.trim())}`);
+      const data = await response.json();
+
+      if (data.found) {
+        setStudentCoordinatorData({
+          name: data.name || '',
+          department: data.department || '',
+          phoneNumber: data.contact_no || ''
+        });
+        setStudentEmailError('');
+      } else {
+        setStudentCoordinatorData({ name: '', department: '', phoneNumber: '' });
+        setStudentEmailError('Email not found in member database. Please enter a valid registered email.');
+      }
+    } catch (error) {
+      console.error('Error fetching student details:', error);
+      setStudentCoordinatorData({ name: '', department: '', phoneNumber: '' });
+      setStudentEmailError('Error fetching student details. Please try again.');
+    } finally {
+      setStudentCoordinatorLoading(false);
+    }
+  };
+
   // Handle adding student coordinator
   const handleAddStudentCoordinator = async () => {
+    // Clear previous errors
+    setStudentEmailError('');
+
+    // Validate email
     if (!studentEmail.trim()) {
-      alert('Please enter a student email.');
+      setStudentEmailError('Email is required.');
+      document.querySelector('input[placeholder="Enter student email to fetch details"]').focus();
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(studentEmail.trim())) {
+      setStudentEmailError('Please enter a valid email address.');
+      document.querySelector('input[placeholder="Enter student email to fetch details"]').focus();
+      return;
+    }
+
+    // Check if student data was successfully fetched
+    if (!studentCoordinatorData.name || !studentCoordinatorData.department) {
+      setStudentEmailError('Please enter a valid registered email to fetch student details.');
+      document.querySelector('input[placeholder="Enter student email to fetch details"]').focus();
+      return;
+    }
+
+    // Check for duplicates
+    const existingCoordinator = coordinators.find(coord =>
+      coord.email.toLowerCase() === studentEmail.trim().toLowerCase() && coord.role === 'student'
+    );
+    if (existingCoordinator) {
+      setStudentEmailError('This student is already registered as a coordinator.');
+      document.querySelector('input[placeholder="Enter student email to fetch details"]').focus();
       return;
     }
 
@@ -230,15 +405,19 @@ const Adminpage = () => {
       if (response.ok) {
         alert('Student coordinator added successfully!');
         setStudentEmail('');
+        setStudentCoordinatorData({ name: '', department: '', phoneNumber: '' });
+        setStudentEmailError('');
         setShowAddStudentForm(false);
         // Refresh coordinators list
         fetchCoordinators();
       } else {
-        alert(result.message || 'Failed to add student coordinator.');
+        setStudentEmailError(result.message || 'Failed to add student coordinator.');
+        document.querySelector('input[placeholder="Enter student email to fetch details"]').focus();
       }
     } catch (error) {
       console.error('Error adding student coordinator:', error);
-      alert('An error occurred while adding the student coordinator.');
+      setStudentEmailError('An error occurred while adding the student coordinator.');
+      document.querySelector('input[placeholder="Enter student email to fetch details"]').focus();
     }
   };
 
@@ -373,9 +552,13 @@ const Adminpage = () => {
                 type="number"
                 placeholder="e.g., 1"
                 className="input-field"
+                min="1"
                 value={phaseId}
                 onChange={(e) => setPhaseId(e.target.value)}
               />
+              {errors.phaseId && (
+                <div className="error-text">{errors.phaseId}</div>
+              )}
             </div>
 
             <div className="form-group">
@@ -386,6 +569,9 @@ const Adminpage = () => {
                 value={startingDate}
                 onChange={(e) => setStartingDate(e.target.value)}
               />
+              {errors.startingDate && (
+                <div className="error-text">{errors.startingDate}</div>
+              )}
             </div>
 
             <div className="form-group">
@@ -396,8 +582,26 @@ const Adminpage = () => {
                 value={endingDate}
                 onChange={(e) => setEndingDate(e.target.value)}
               />
+              {errors.endingDate && (
+                <div className="error-text">{errors.endingDate}</div>
+              )}
             </div>
-            <h2 style={{ fontWeight: "bold" , fontSize: '20px' }}>Domain Details</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ fontWeight: "bold" , fontSize: '20px', margin: 0 }}>Domain Details</h2>
+              {lastPhaseDomains.length > 0 && (
+                <button
+                  className="submit1-btn"
+                  onClick={() => {
+                    if (window.confirm('This will replace current domain details with last phase domains. Continue?')) {
+                      setDomains(lastPhaseDomains.map(d => ({ department: d.department, domain: d.domain })));
+                    }
+                  }}
+                  style={{ fontSize: '14px', padding: '8px 16px' }}
+                >
+                  Auto-fill from Last Phase
+                </button>
+              )}
+            </div>
             {domains.map((domain, index) => (
                 <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', gap: '1rem' }}>
                     <div className="form-group" style={{ flex: "0.5 1 0%" }}>
@@ -429,13 +633,47 @@ const Adminpage = () => {
                       type="text"
                       placeholder="Domain"
                       className="input-field"
+                      maxLength={50}
                       value={domain.domain}
                       onChange={(e) => {
                         const newDomains = [...domains];
-                        newDomains[index].domain = e.target.value;
+                        newDomains[index].domain = e.target.value.replace(/\s+/g, ' ');
+                        setDomains(newDomains);
+                      }}
+                      onBlur={(e) => {
+                        const newDomains = [...domains];
+                        newDomains[index].domain = e.target.value.trim();
                         setDomains(newDomains);
                       }}
                     />
+                    {errors[`domain_${index}`] && (
+                      <div className="error-text">{errors[`domain_${index}`]}</div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', marginTop: '1.5rem' }}>
+                    <button
+                      className="submit1-btn"
+                      onClick={() => {
+                        if (domains.length > 1) {
+                          const newDomains = domains.filter((_, i) => i !== index);
+                          setDomains(newDomains);
+                        }
+                      }}
+                      disabled={domains.length <= 1}
+                      style={{
+                        fontSize: '16px',
+                        padding: '6px 12px',
+                        minWidth: '40px',
+                        backgroundColor: domains.length <= 1 ? '#ccc' : '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: domains.length <= 1 ? 'not-allowed' : 'pointer'
+                      }}
+                      title="Remove this domain"
+                    >
+                      ×
+                    </button>
                   </div>
                 </div>
               ))}
@@ -597,9 +835,68 @@ const Adminpage = () => {
                         <div className="form-fields" style={{ background: '#f0f0f0', padding: '1rem', borderRadius: '8px' }}>
                             <div className="form-group">
                                 <label>Student Email</label>
-                                <input type="email" placeholder="Enter student email to fetch details" className="input-field" value={studentEmail} onChange={(e) => setStudentEmail(e.target.value)} />
+                                <input
+                                    type="email"
+                                    placeholder="Enter student email to fetch details"
+                                    className={`input-field ${studentEmailError ? 'error' : ''}`}
+                                    value={studentEmail}
+                                    onChange={(e) => handleStudentEmailChange(e.target.value)}
+                                    disabled={studentCoordinatorLoading}
+                                />
+                                {studentEmailError && (
+                                    <div className="error-text">{studentEmailError}</div>
+                                )}
+                                {studentCoordinatorLoading && (
+                                    <span style={{ marginLeft: '10px', color: '#666' }}>Fetching student details...</span>
+                                )}
                             </div>
-                            <button className="submit-btn" onClick={handleAddStudentCoordinator}>Add</button>
+
+                            {studentCoordinatorData.name && (
+                                <div className="form-group">
+                                    <label>Student Name</label>
+                                    <input
+                                        type="text"
+                                        className="input-field"
+                                        value={studentCoordinatorData.name}
+                                        readOnly
+                                        style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
+                                    />
+                                </div>
+                            )}
+
+                            {studentCoordinatorData.department && (
+                                <div className="form-group">
+                                    <label>Department</label>
+                                    <input
+                                        type="text"
+                                        className="input-field"
+                                        value={studentCoordinatorData.department}
+                                        readOnly
+                                        style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
+                                    />
+                                </div>
+                            )}
+
+                            {studentCoordinatorData.phoneNumber && (
+                                <div className="form-group">
+                                    <label>Phone Number</label>
+                                    <input
+                                        type="text"
+                                        className="input-field"
+                                        value={studentCoordinatorData.phoneNumber}
+                                        readOnly
+                                        style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
+                                    />
+                                </div>
+                            )}
+
+                            <button
+                                className="submit-btn"
+                                onClick={handleAddStudentCoordinator}
+                                disabled={studentCoordinatorLoading || !!studentEmailError || !studentCoordinatorData.name}
+                            >
+                                Add
+                            </button>
                         </div>
                     )}
 
