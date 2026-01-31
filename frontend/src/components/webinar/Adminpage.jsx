@@ -11,8 +11,8 @@ const validateDomain = (value) => {
   if (!trimmed) return "Domain cannot be empty.";
   if (trimmed.length < 3) return "Domain must be at least 3 characters.";
   if (trimmed.length > 50) return "Domain cannot exceed 50 characters.";
-  if (!/^[A-Za-z]+( [A-Za-z]+)*$/.test(trimmed))
-    return "Domain must contain only letters and single spaces.";
+  if (!/^[A-Za-z0-9]+$/.test(trimmed))
+    return "Domain must contain only English letters and numbers. Spaces, punctuation, emojis, and other languages are not allowed.";
 
   return "";
 };
@@ -30,6 +30,7 @@ const Adminpage = () => {
   const [studentEmailError, setStudentEmailError] = useState('');
   const [deptCoordinator, setDeptCoordinator] = useState({ name: '', email: '', department: '', phoneNumber: '' });
   const [deptCoordinatorLoading, setDeptCoordinatorLoading] = useState(false);
+  const [deptCoordinatorErrors, setDeptCoordinatorErrors] = useState({ name: '', email: '', department: '', phoneNumber: '' });
   const [coordinators, setCoordinators] = useState([]);
   const [coordinatorsLoading, setCoordinatorsLoading] = useState(false);
   const [phaseId, setPhaseId] = useState('');
@@ -424,7 +425,30 @@ const Adminpage = () => {
   // Handle email change for department coordinator auto-fetch
   const handleDeptCoordinatorEmailChange = async (email) => {
     setDeptCoordinator({ ...deptCoordinator, email });
-    if (!email.trim()) return;
+    setDeptCoordinatorErrors({ ...deptCoordinatorErrors, email: '' });
+
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email && !emailRegex.test(email)) {
+      setDeptCoordinatorErrors({ ...deptCoordinatorErrors, email: 'Please enter a valid email address.' });
+      setDeptCoordinator({
+        name: '',
+        email: email.trim(),
+        department: '',
+        phoneNumber: ''
+      });
+      return;
+    }
+
+    if (!email.trim()) {
+      setDeptCoordinator({
+        name: '',
+        email: '',
+        department: '',
+        phoneNumber: ''
+      });
+      return;
+    }
 
     setDeptCoordinatorLoading(true);
     try {
@@ -438,6 +462,7 @@ const Adminpage = () => {
           department: data.department || '',
           phoneNumber: data.contact_no || ''
         });
+        setDeptCoordinatorErrors({ ...deptCoordinatorErrors, email: '' });
       } else {
         // Clear other fields if member not found
         setDeptCoordinator({
@@ -446,6 +471,7 @@ const Adminpage = () => {
           department: '',
           phoneNumber: ''
         });
+        setDeptCoordinatorErrors({ ...deptCoordinatorErrors, email: 'Email not found in member database. Please enter a valid registered email.' });
       }
     } catch (error) {
       console.error('Error fetching member details:', error);
@@ -456,6 +482,7 @@ const Adminpage = () => {
         department: '',
         phoneNumber: ''
       });
+      setDeptCoordinatorErrors({ ...deptCoordinatorErrors, email: 'Error fetching member details. Please try again.' });
     } finally {
       setDeptCoordinatorLoading(false);
     }
@@ -463,8 +490,27 @@ const Adminpage = () => {
 
   // Handle adding department coordinator
   const handleAddDepartmentCoordinator = async () => {
-    if (!deptCoordinator.name.trim() || !deptCoordinator.email.trim() || !deptCoordinator.department.trim() || !deptCoordinator.phoneNumber.trim()) {
-      alert('Please fill in all fields.');
+    // Clear previous errors
+    setDeptCoordinatorErrors({ name: '', email: '', department: '', phoneNumber: '' });
+
+    // Validate fields
+    const newErrors = {};
+    if (!deptCoordinator.name.trim()) {
+      newErrors.name = 'Name is required.';
+    }
+    if (!deptCoordinator.email.trim()) {
+      newErrors.email = 'Email is required.';
+    }
+    if (!deptCoordinator.department.trim()) {
+      newErrors.department = 'Department is required.';
+    }
+    if (!deptCoordinator.phoneNumber.trim()) {
+      newErrors.phoneNumber = 'Phone Number is required.';
+    }
+
+    // Set errors if any
+    if (Object.keys(newErrors).length > 0) {
+      setDeptCoordinatorErrors(newErrors);
       return;
     }
 
@@ -488,6 +534,7 @@ const Adminpage = () => {
       if (response.ok) {
         alert('Department coordinator added successfully!');
         setDeptCoordinator({ name: '', email: '', department: '', phoneNumber: '' });
+        setDeptCoordinatorErrors({ name: '', email: '', department: '', phoneNumber: '' });
         setShowAddDepartmentForm(false);
         // Refresh coordinators list
         fetchCoordinators();
@@ -511,6 +558,31 @@ const Adminpage = () => {
       console.error('Error fetching coordinators:', error);
     } finally {
       setCoordinatorsLoading(false);
+    }
+  };
+
+  // Handle deleting coordinator
+  const handleDeleteCoordinator = async (coordinatorId, coordinatorName) => {
+    if (!window.confirm(`Are you sure you want to delete coordinator "${coordinatorName}"?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/coordinators/${coordinatorId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        alert('Coordinator deleted successfully!');
+        // Refresh coordinators list
+        fetchCoordinators();
+      } else {
+        const errorData = await response.json();
+        alert(errorData.message || 'Failed to delete coordinator.');
+      }
+    } catch (error) {
+      console.error('Error deleting coordinator:', error);
+      alert('An error occurred while deleting the coordinator.');
     }
   };
 
@@ -623,7 +695,7 @@ const Adminpage = () => {
                         <option value="ECE">ECE</option>
                         <option value="MECH">MECH</option>
                         <option value="CIVIL">CIVIL</option>
-                        <option value="AD & DS">AD & DS</option>
+                        <option value="AI & DS">AI & DS</option>
                       </select>
                     </div>
 
@@ -637,7 +709,19 @@ const Adminpage = () => {
                       value={domain.domain}
                       onChange={(e) => {
                         const newDomains = [...domains];
-                        newDomains[index].domain = e.target.value.replace(/\s+/g, ' ');
+                        newDomains[index].domain = e.target.value.replace(/[^A-Za-z0-9]/g, '');
+                        setDomains(newDomains);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === ' ' || e.key === 'Enter') {
+                          e.preventDefault();
+                        }
+                      }}
+                      onPaste={(e) => {
+                        e.preventDefault();
+                        const paste = e.clipboardData.getData('text').replace(/[^A-Za-z0-9]/g, '');
+                        const newDomains = [...domains];
+                        newDomains[index].domain = paste;
                         setDomains(newDomains);
                       }}
                       onBlur={(e) => {
@@ -677,8 +761,6 @@ const Adminpage = () => {
                   </div>
                 </div>
               ))}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
               <button
                 className="submit1-btn"
                 onClick={() => setDomains([...domains, { department: '', domain: '' }])}
@@ -760,19 +842,18 @@ const Adminpage = () => {
               </select>
             </div>
             <div style={{ overflowX: 'auto', width: '100%', marginTop: '1rem' }}>
-              <div style={{ width: "100%", overflowX: "auto" }}>
-  <table style={{ width: "1200px", borderCollapse: "collapse" }}>
+              <table style={{ minWidth: "1200px", borderCollapse: "collapse", tableLayout: "fixed" }}>
     <thead>
       <tr style={{ backgroundColor: "#eee", paddingTop: "15px", paddingBottom: "15px" }}>
-        <th style={{  width: "177px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Phase ID</th>
-        <th style={{  width: "350px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Domain</th>
-        <th style={{  width: "400px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Webinar Topic</th>
-        <th style={{  width: "350px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Name</th>
-        <th style={{  width: "350px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Email</th>
-        <th style={{  width: "230px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Phone Number </th>
-        <th style={{  width: "300px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Batch & Dept</th>
-        <th style={{  width: "300px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Designation & Company</th>
-        <th style={{  width: "300px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>City</th>
+        <th style={{ minWidth: "100px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Phase ID</th>
+        <th style={{ minWidth: "150px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Domain</th>
+        <th style={{ minWidth: "200px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Webinar Topic</th>
+        <th style={{ minWidth: "150px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Name</th>
+        <th style={{ minWidth: "400px", padding: "10px", border: "1px solid #ddd", textAlign: "center", overflowX: "auto" }}>Speaker Email</th>
+        <th style={{ minWidth: "120px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Phone Number</th>
+        <th style={{ minWidth: "150px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Batch & Dept</th>
+        <th style={{ minWidth: "180px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Designation & Company</th>
+        <th style={{ minWidth: "100px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>City</th>
       </tr>
     </thead>
 
@@ -796,7 +877,7 @@ const Adminpage = () => {
             <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>{webinar.domain}</td>
             <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>{webinar.topic}</td>
             <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>{webinar.speaker?.name || 'N/A'}</td>
-            <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>{webinar.speaker?.email || 'N/A'}</td>
+            <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center", overflowX: "auto", whiteSpace: "nowrap" }}>{webinar.speaker?.email || 'N/A'}</td>
             <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>{webinar.speaker?.phoneNumber || 'N/A'}</td>
             <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>
               {webinar.speaker?.batch ? `${webinar.speaker.batch} & ${webinar.speaker.department || 'N/A'}` : 'N/A'}
@@ -810,14 +891,11 @@ const Adminpage = () => {
       )}
     </tbody>
   </table>
-</div>
-
-            </div>
+        </div>
           </div>
         );
       case 'coordiators':
         return (
-        <div>
           <div className="form-card">
             <h2 className="form-title" style={{ fontSize: '1.5rem', marginBottom: '1rem', textAlign: 'center' }}>Coordinators Management</h2>
             <div className="admin-buttons" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
@@ -907,18 +985,19 @@ const Adminpage = () => {
                                 <th style={{ padding: '15px', border: '1px solid #ddd', textAlign: 'center' }}>Email</th>
                                 <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Department</th>
                                 <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Phone Number</th>
+                                <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {coordinatorsLoading ? (
                                 <tr>
-                                    <td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>
+                                    <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
                                         Loading coordinators...
                                     </td>
                                 </tr>
                             ) : coordinators.filter(coord => coord.role === 'student').length === 0 ? (
                                 <tr>
-                                    <td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>
+                                    <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
                                         No student coordinators found
                                     </td>
                                 </tr>
@@ -929,6 +1008,14 @@ const Adminpage = () => {
                                         <td style={{ padding: '15px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.email || 'N/A'}</td>
                                         <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.department || 'N/A'}</td>
                                         <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.phoneNumber || 'N/A'}</td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                            <button
+                                                className="coordinator-delete-btn"
+                                                onClick={() => handleDeleteCoordinator(coord._id, coord.name)}
+                                            >
+                                                Delete
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -948,27 +1035,85 @@ const Adminpage = () => {
                         <div className="form-fields" style={{ background: '#f0f0f0', padding: '1rem', borderRadius: '8px' }}>
                             <div className="form-group">
                                 <label>Name</label>
-                                <input type="text" placeholder="Name" className="input-field" value={deptCoordinator.name} onChange={(e) => setDeptCoordinator({ ...deptCoordinator, name: e.target.value })} />
+                                <input
+                                    type="text"
+                                    placeholder="Name"
+                                    className={`input-field ${deptCoordinatorErrors.name ? 'error' : ''}`}
+                                    value={deptCoordinator.name}
+                                    onChange={(e) => {
+                                        const value = e.target.value.replace(/[^A-Za-z]/g, '');
+                                        setDeptCoordinator({ ...deptCoordinator, name: value });
+                                        if (e.target.value !== value) {
+                                            setDeptCoordinatorErrors({ ...deptCoordinatorErrors, name: 'Only English letters are allowed.' });
+                                        } else {
+                                            setDeptCoordinatorErrors({ ...deptCoordinatorErrors, name: '' });
+                                        }
+                                    }}
+                                    onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') e.preventDefault(); }}
+                                    onPaste={(e) => { e.preventDefault(); const paste = e.clipboardData.getData('text').replace(/[^A-Za-z]/g, ''); setDeptCoordinator({ ...deptCoordinator, name: paste }); setDeptCoordinatorErrors({ ...deptCoordinatorErrors, name: '' }); }}
+                                    onBlur={(e) => setDeptCoordinator({ ...deptCoordinator, name: e.target.value.trim() })}
+                                />
+                                {deptCoordinatorErrors.name && (
+                                    <div className="error-text">{deptCoordinatorErrors.name}</div>
+                                )}
                             </div>
                             <div className="form-group">
                                 <label>Email</label>
                                 <input
                                     type="email"
                                     placeholder="Enter email to auto-fetch details"
-                                    className="input-field"
+                                    className={`input-field ${deptCoordinatorErrors.email ? 'error' : ''}`}
                                     value={deptCoordinator.email}
-                                    onChange={(e) => handleDeptCoordinatorEmailChange(e.target.value)}
+                                    onChange={(e) => handleDeptCoordinatorEmailChange(e.target.value.replace(/[^A-Za-z0-9@.]/g, ''))}
+                                    onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') e.preventDefault(); }}
+                                    onPaste={(e) => { e.preventDefault(); const paste = e.clipboardData.getData('text').replace(/[^A-Za-z0-9@.]/g, ''); handleDeptCoordinatorEmailChange(paste); }}
+                                    onBlur={(e) => setDeptCoordinator({ ...deptCoordinator, email: e.target.value.trim() })}
                                     disabled={deptCoordinatorLoading}
                                 />
+                                {deptCoordinatorErrors.email && (
+                                    <div className="error-text">{deptCoordinatorErrors.email}</div>
+                                )}
                                 {deptCoordinatorLoading && <span style={{ marginLeft: '10px', color: '#666' }}>Fetching details...</span>}
                             </div>
                             <div className="form-group">
                                 <label>Department</label>
-                                <input type="text" placeholder="Department" className="input-field" value={deptCoordinator.department} onChange={(e) => setDeptCoordinator({ ...deptCoordinator, department: e.target.value })} />
+                                <input
+                                    type="text"
+                                    placeholder="Department"
+                                    className={`input-field ${deptCoordinatorErrors.department ? 'error' : ''}`}
+                                    value={deptCoordinator.department}
+                                    onChange={(e) => {
+                                        const value = e.target.value.replace(/[^A-Za-z]/g, '');
+                                        setDeptCoordinator({ ...deptCoordinator, department: value });
+                                        if (e.target.value !== value) {
+                                            setDeptCoordinatorErrors({ ...deptCoordinatorErrors, department: 'Only English letters are allowed.' });
+                                        } else {
+                                            setDeptCoordinatorErrors({ ...deptCoordinatorErrors, department: '' });
+                                        }
+                                    }}
+                                    onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') e.preventDefault(); }}
+                                    onPaste={(e) => { e.preventDefault(); const paste = e.clipboardData.getData('text').replace(/[^A-Za-z]/g, ''); setDeptCoordinator({ ...deptCoordinator, department: paste }); setDeptCoordinatorErrors({ ...deptCoordinatorErrors, department: '' }); }}
+                                    onBlur={(e) => setDeptCoordinator({ ...deptCoordinator, department: e.target.value.trim() })}
+                                />
+                                {deptCoordinatorErrors.department && (
+                                    <div className="error-text">{deptCoordinatorErrors.department}</div>
+                                )}
                             </div>
                             <div className="form-group">
                                 <label>Phone Number</label>
-                                <input type="text" placeholder="Phone Number" className="input-field" value={deptCoordinator.phoneNumber} onChange={(e) => setDeptCoordinator({ ...deptCoordinator, phoneNumber: e.target.value })} />
+                                <input
+                                    type="text"
+                                    placeholder="Phone Number"
+                                    className={`input-field ${deptCoordinatorErrors.phoneNumber ? 'error' : ''}`}
+                                    value={deptCoordinator.phoneNumber}
+                                    onChange={(e) => setDeptCoordinator({ ...deptCoordinator, phoneNumber: e.target.value.replace(/[^0-9]/g, '') })}
+                                    onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') e.preventDefault(); }}
+                                    onPaste={(e) => { e.preventDefault(); const paste = e.clipboardData.getData('text').replace(/[^0-9]/g, ''); setDeptCoordinator({ ...deptCoordinator, phoneNumber: paste }); }}
+                                    onBlur={(e) => setDeptCoordinator({ ...deptCoordinator, phoneNumber: e.target.value.trim() })}
+                                />
+                                {deptCoordinatorErrors.phoneNumber && (
+                                    <div className="error-text">{deptCoordinatorErrors.phoneNumber}</div>
+                                )}
                             </div>
                             <button className="submit-btn" onClick={handleAddDepartmentCoordinator}>Add</button>
                         </div>
@@ -981,18 +1126,19 @@ const Adminpage = () => {
                                 <th style={{ padding: '15px', border: '1px solid #ddd', textAlign: 'center' }}>Email</th>
                                 <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Department</th>
                                 <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Phone Number</th>
+                                <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {coordinatorsLoading ? (
                                 <tr>
-                                    <td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>
+                                    <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
                                         Loading coordinators...
                                     </td>
                                 </tr>
                             ) : coordinators.filter(coord => coord.role === 'department').length === 0 ? (
                                 <tr>
-                                    <td colSpan="4" style={{ textAlign: 'center', padding: '20px' }}>
+                                    <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
                                         No department coordinators found
                                     </td>
                                 </tr>
@@ -1003,6 +1149,14 @@ const Adminpage = () => {
                                         <td style={{ padding: '15px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.email || 'N/A'}</td>
                                         <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.department || 'N/A'}</td>
                                         <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.phoneNumber || 'N/A'}</td>
+                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                                            <button
+                                                className="coordinator-delete-btn"
+                                                onClick={() => handleDeleteCoordinator(coord._id, coord.name)}
+                                            >
+                                                Delete
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -1010,15 +1164,14 @@ const Adminpage = () => {
                     </table>
                 </div>
             )}
-        </div>
-      </div>
+          </div>
         );
-      default:
-        return null;
-    }
-  };
+    default:
+      return null;
+  }
+};
 
-  return (
+return (
     <div className="student-form-page">
       <div className="background-orbs">
         <div className="orb orb-purple"></div>

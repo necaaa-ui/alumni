@@ -102,6 +102,24 @@
   box-shadow: 0 8px 24px rgba(124, 58, 237, 0.3);
   transition: all 0.3s;
 }
+
+.coordinator-delete-btn {
+  width: auto !important;
+  min-width: 80px !important;
+  max-width: 150px !important;
+  padding: 0.5rem 1rem !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  border-radius: 0.5rem !important;
+  background: linear-gradient(to right, #dc2626, #b91c1c) !important;
+  color: #fff !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3) !important;
+  transition: all 0.3s !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
 .submit2-btn {
   width: 20%;
   padding: 1rem;

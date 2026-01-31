@@ -303,7 +303,7 @@
 
   .delete-btn {
     width: auto !important;
-    max-width: 150px !important;
+    max-width: 200px !important;
     margin: 0px 0px 20px 0px!important;
     font-size: 14px !important;
     padding: 8px 12px !important;
@@ -319,9 +319,9 @@
   .form-card td {
     padding: 6px 4px !important;
     white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-    max-width: 80px !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    max-width: 300px !important;
   }
 
   .form-card th {
