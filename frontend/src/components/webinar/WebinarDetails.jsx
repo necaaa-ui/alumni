@@ -2,8 +2,7 @@ import React, { useState, useEffect } from  'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './Common.css';
 import { FiBookOpen } from "react-icons/fi";
-import { Trash2, SquarePen } from "lucide-react";
-
+import { Trash2 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import WebinarCompletedDetailsForm from './WebinarCompletedDetailsForm';
 import ConfirmationDialog from './ConfirmationDialog';

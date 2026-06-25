@@ -1070,7 +1070,7 @@ export default function WebinarEvents() {
               <div className="icon-wrapper">
                   <FiBookOpen className="header-icon" />
               </div>
-              <h1 className="text-2xl font-bold text-[#7d48b9] mb-4 tracking-wider webinar-events-title">Webinar Events</h1>
+              <h1 className="form-title webinar-events-title">Webinar Events</h1>
               <p className="webinar-subtitle">
                 Current Phase: {phaseLoading ? 'Loading...' : currentPhase?.displayText || 'Not Set'}
               </p>

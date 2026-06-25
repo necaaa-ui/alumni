@@ -191,24 +191,12 @@ export default function TopicApprovalForm() {
           </div>
 
           {/* Export button + Phase Dropdown */}
-          
-          <div className="topic-phase-row" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', marginRight:'10.5rem' }}>
+          <div className="topic-phase-row" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', marginRight: '10.5rem' }}>
             <button
+              type="button"
               onClick={exportTopicsToExcel}
-              style={{
-                backgroundColor: '#16a34a',
-                color: 'white',
-                border: 'none',
-                padding: '10px',
-                borderRadius: '13px',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                fontSize: '16px'
-              }}
+              className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-white bg-gradient-to-r from-green-600 to-teal-500 hover:from-green-700 hover:to-teal-600 transition-all whitespace-nowrap"
             >
-              <FaFileExport size={16} />
               Export Topics
             </button>
             <div style={{ position: 'relative', display: 'inline-block' }}>
