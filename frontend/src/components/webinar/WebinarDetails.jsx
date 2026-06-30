@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from  'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './Common.css';
+import './WebinarDetails.css';
 import { FiBookOpen } from "react-icons/fi";
-import { Trash2 } from "lucide-react";
+import { Trash2,SquarePen } from "lucide-react";
 import * as XLSX from 'xlsx';
+
 import WebinarCompletedDetailsForm from './WebinarCompletedDetailsForm';
 import ConfirmationDialog from './ConfirmationDialog';
 import Popup from './Popup';
@@ -117,8 +119,8 @@ export default function WebinarDetails() {
               </button>
             </div>
 
-            <div>
-                <table style={{ width: "810px", borderCollapse: "collapse" }}>
+            <div className="table-wrapper">
+              <table className="responsive-table">
                 <thead>
                   <tr style={{ backgroundColor: "#eee", paddingTop: "15px", paddingBottom: "15px" }}>
                     <th style={{  width: "250px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Name</th>
@@ -179,8 +181,8 @@ export default function WebinarDetails() {
               </button>
             </div>
 
-            <div>
-                <table style={{ width: "810px", borderCollapse: "collapse" }}>
+            <div className="table-wrapper">
+              <table className="responsive-table">
                 <thead>
                   <tr style={{ backgroundColor: "#eee", paddingTop: "15px", paddingBottom: "15px" }}>
                     <th style={{  width: "250px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Name</th>
@@ -429,18 +431,19 @@ export default function WebinarDetails() {
 
 
           {/* Buttons Section */}
-          <div className="admin-buttons">
+          <div className="admin-buttons webinar-details-tabs">
             <button className="submit1-btn" onClick={() => setActiveView('registration')}>Webinar Registration Details</button>
             <button className="submit1-btn" onClick={() => setActiveView('feedback')}>Webinar Feedback Details</button>
             <button className="submit1-btn" onClick={() => setActiveView('uploads')}>Webinar Uploads</button>
           </div>
+
 
           {/* Content Area */}
           <div className="content-area">
             {renderContent()}
           </div>
 
-          <p className="form-footer">Designed with 💜 for Alumni Network</p>
+          {/* <p className="form-footer">Designed with 💜 for Alumni Network</p> */}
         </div>
       </div>
 

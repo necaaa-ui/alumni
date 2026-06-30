@@ -148,9 +148,21 @@ router.get('/member-by-email', async (req, res) => {
 router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) => {
   try {
     const {
-      email, designation, companyName, alumniCity, domain, topic,
-      webinarVenue, meetingLink, webinarType, slots, phaseId
-    } = req.body;
+  email,
+  name,
+  department,
+  batch,
+  designation,
+  companyName,
+  alumniCity,
+  domain,
+  topic,
+  webinarVenue,
+  meetingLink,
+  webinarType,
+  slots,
+  phaseId
+} = req.body;
 
     console.log('Received data:', { email, designation, companyName, alumniCity, domain, topic, webinarVenue, meetingLink, webinarType, slots });
 
@@ -197,12 +209,39 @@ router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) =
     }
 
     // Get member details
-    const member = await req.app.locals.Member.findOne({ 'basic.email_id': email });
-    if (!member) {
-      return res.status(404).json({ error: 'Member not found' });
-    }
+    // Get member details
+const member = await req.app.locals.Member.findOne({
+  'basic.email_id': email
+});
 
-    console.log('Found member:', member.basic?.name);
+let speakerName = "";
+let speakerDepartment = "";
+let speakerBatch = "";
+
+if (member) {
+  console.log("Registered Alumni Found");
+
+  speakerName = member.basic?.name || "";
+
+} else {
+  console.log("External Speaker");
+
+  speakerName = (name || "").trim();
+  speakerDepartment = (department || "").trim();
+  speakerBatch = (batch || "").trim();
+
+  if (!speakerName || !speakerDepartment || !speakerBatch) {
+    return res.status(400).json({
+      error: "Name, Department and Batch are required."
+    });
+  }
+}
+
+    if (member) {
+  console.log("Found member:", member.basic?.name);
+} else {
+  console.log("External Speaker:", speakerName);
+}
 
     // ------------------------------
     // Department Extraction Logic
@@ -289,45 +328,48 @@ router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) =
       return "";
     }
 
-    const name = member.basic?.name || "";
-    const department = getDepartmentFromMember(member);
+    if (member) {
+  speakerDepartment = getDepartmentFromMember(member);
 
-    // ------------------------------
-    // ⭐ FETCH BATCH FROM education_details[0].batch or end_year
-    // ------------------------------
-    const batch =
-      member.education_details?.[0]?.batch ||
-      member.basic?.batch ||
-      member.education_details?.[0]?.end_year ||
-      "";
+  speakerBatch =
+    member.education_details?.[0]?.batch ||
+    member.basic?.batch ||
+    member.education_details?.[0]?.end_year ||
+    "";
+}
 
-    console.log('Extracted data:', { name, department, batch });
+console.log("Extracted data:", {
+  speakerName,
+  speakerDepartment,
+  speakerBatch
+});
 
     // Allow empty department and batch for now, but log warning
-    if (!department) {
-      console.warn('Department not found for member, proceeding with empty department');
-    }
-    if (!batch) {
-      console.warn('Batch not found for member, proceeding with empty batch');
-    }
+    if (!speakerDepartment) {
+  console.warn("Department not found");
+}
+
+if (!speakerBatch) {
+  console.warn("Batch not found");
+}
 
     // Create speaker
     const speakerData = {
-      email,
-      name,
-      department: department || '',
-      batch: batch || '',
-      designation,
-      companyName,
-      speakerPhoto,
-      domain,
-      topic,
-      webinarVenue,
-      alumniCity,
-      meetingLink: normalizedMeetingLink,
-      phaseId,
-      slots: parsedSlots
-    };
+  email,
+  name: speakerName,
+  department: speakerDepartment,
+  batch: speakerBatch,
+  designation,
+  companyName,
+  speakerPhoto,
+  domain,
+  topic,
+  webinarVenue,
+  alumniCity,
+  meetingLink: normalizedMeetingLink,
+  phaseId,
+  slots: parsedSlots
+};
 
     console.log('Creating speaker with data:', speakerData);
 
@@ -391,11 +433,11 @@ router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) =
 
                 <div style="background-color: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px;">
                   <h3>Speaker Details:</h3>
-                  <p><strong>Name:</strong> ${name}</p>
+                  <p><strong>Name:</strong> ${speakerName}</p>
                   <p><strong>Designation:</strong> ${designation}</p>
                   <p><strong>Company:</strong> ${companyName}</p>
-                  <p><strong>Department:</strong> ${department}</p>
-                  <p><strong>Batch:</strong> ${batch}</p>
+                  <p><strong>Department:</strong> ${speakerDepartment}</p>
+                  <p><strong>Batch:</strong> ${speakerBatch}</p>
                 </div>
 
                 <div style="background-color: #e8f4f8; padding: 20px; margin: 20px 0; border-radius: 5px;">

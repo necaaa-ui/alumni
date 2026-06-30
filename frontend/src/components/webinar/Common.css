@@ -3,7 +3,7 @@
   min-height: 100vh;
   position: relative;
   background: #ffffff;
-  overflow-x: hidden;
+  overflow-x: auto;
   overflow-y: auto;
 }
 .background-orbs {
@@ -65,7 +65,7 @@
 }
 .form-card {
   width: 100%;
-  max-width: 520px;
+  max-width: 100%;
   margin: 0 auto;
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(15px);

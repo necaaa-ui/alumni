@@ -12,6 +12,20 @@ import '../WebinarDashboard.css';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export default function TopicApprovalForm() {
+  // Admin-only guard: prevents coordinators/students from seeing/using topic approval UI.
+  // NOTE: If your app already passes a role prop, wire it here instead of using localStorage.
+  const [isAdmin, setIsAdmin] = useState(() => {
+    const role = localStorage.getItem('role');
+    const email = localStorage.getItem('userEmail');
+    return role === 'admin' || email === 'admin';
+  });
+
+  useEffect(() => {
+    const role = localStorage.getItem('role');
+    const email = localStorage.getItem('userEmail');
+    setIsAdmin(role === 'admin' || email === 'admin');
+  }, []);
+
   const [selectedPhase, setSelectedPhase] = useState('');
   const [isPhaseDropdownOpen, setIsPhaseDropdownOpen] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
