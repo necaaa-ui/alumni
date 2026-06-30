@@ -21,7 +21,7 @@ export default function WebinarSpeakerAssignmentForm() {
   const [formData, setFormData] = useState({
     email: '', name: '', department: '', batch: '', designation: '', companyName: '', speakerPhoto: null, domain: '', topic: '', webinarVenue: '', alumniCity: '', webinarType: 'In Person', meetingLink: ''
   });
-  const [slots, setSlots] = useState([{ deadline: '2024-12-15', webinarDate: '', time: '9:30-10:30' }]);
+  const [slots, setSlots] = useState([{ deadline: '', webinarDate: '', time: '9:30-10:30' }]);
   const [showPoster, setShowPoster] = useState(false);
   const [photoURL, setPhotoURL] = useState(null);
   const [popup, setPopup] = useState({ show: false, message: '', type: 'success' });
@@ -31,7 +31,7 @@ export default function WebinarSpeakerAssignmentForm() {
   const [domains, setDomains] = useState([]);
   const [errors, setErrors] = useState({});
   const [existingWebinars, setExistingWebinars] = useState([]);
-
+  const [manualEntry, setManualEntry] = useState(false);
   const designationRef = useRef(null);
   const companyNameRef = useRef(null);
   const alumniCityRef = useRef(null);
@@ -67,37 +67,76 @@ export default function WebinarSpeakerAssignmentForm() {
     };
   }, []);
 
-  useEffect(() => {
-    const fetchTopics = async () => {
-      if (!formData.domain) {
-        setTopics([]);
-        return;
-      }
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/topic-approvals`);
-        const data = await response.json();
-        console.log('Fetched topic approvals:', data);
-        console.log('formData.domain:', formData.domain);
-        // Only show topics that are approved (not On Hold)
-        const filteredTopics = data.filter(topic => {
-          const topicDomainNormalized = topic.domain.toLowerCase().replace(/\s*\([^)]*\)\s*$/, '');
-          const formDomainNormalized = formData.domain.toLowerCase().replace(/\s*\([^)]*\)\s*$/, '');
-          const domainMatch = topicDomainNormalized === formDomainNormalized;
-          const approvalMatch = topic.approval === 'Approved';
-          console.log(
-            `Topic: ${topic.topic}, domain: ${topic.domain}, approval: ${topic.approval}, domainMatch: ${domainMatch}, approvalMatch: ${approvalMatch}`
-          );
-          return domainMatch && approvalMatch;
-        });
-        console.log('Filtered topics:', filteredTopics);
-        setTopics(filteredTopics);
+useEffect(() => {
+  const normalizeDomain = (val) => {
+    if (val === null || val === undefined) return "";
 
-      } catch (error) {
-        console.error('Error fetching topics:', error);
-      }
-    };
-    fetchTopics();
-  }, [formData.domain]);
+    return String(val)
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/(\s*\([^)]*\)\s*)+$/g, "")
+      .trim();
+  };
+
+  const fetchTopics = async () => {
+    if (!formData.domain) {
+      setTopics([]);
+      setFormData(prev => ({ ...prev, topic: "" }));
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/topic-approvals`);
+      const data = await response.json();
+
+      const formDomainNormalized = normalizeDomain(formData.domain);
+
+      const filteredTopics = (Array.isArray(data) ? data : []).filter(topic => {
+        if (topic?.approval !== "Approved") return false;
+
+        return (
+          normalizeDomain(topic?.domain) === formDomainNormalized
+        );
+      });
+
+      // console.log("Filtered Topics:", filteredTopics);
+
+      setTopics(filteredTopics);
+
+      setFormData(prev => {
+        // console.log("Selected Topic:", prev.topic);
+
+        if (!prev.topic) return prev;
+
+        const exists = filteredTopics.some(
+          t =>
+            t.topic?.trim().toLowerCase() ===
+            prev.topic?.trim().toLowerCase()
+        );
+
+        // console.log("Exists:", exists);
+
+        if (exists) {
+          return prev;
+        }
+
+        // console.log("Topic cleared");
+
+        return {
+          ...prev,
+          topic: "",
+        };
+      });
+    } catch (error) {
+      console.error("Error fetching topics:", error);
+    }
+  };
+
+  fetchTopics();
+}, [formData.domain]);
+
+
 
   useEffect(() => {
     const fetchCurrentPhase = async () => {
@@ -208,7 +247,7 @@ export default function WebinarSpeakerAssignmentForm() {
         newValue = value.replace(/\s+/g, " ");
       }
     }
-
+    // console.log("Changed:", name, newValue); 
     setFormData(prev => ({ ...prev, [name]: newValue }));
 
     if (errors[name]) validateField(name, newValue);
@@ -228,29 +267,59 @@ export default function WebinarSpeakerAssignmentForm() {
 
   const removeSlot = index => setSlots(slots.filter((_, i) => i !== index));
 
-  const fetchMemberDetails = async (email) => {
-    if (!email) return;
-    setLoading(true);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/member-by-email?email=${encodeURIComponent(email)}`);
-      const data = await response.json();
-      if (data.found) {
-        setFormData(prev => ({
-          ...prev,
-          name: data.name,
-          department: data.department,
-          batch: data.batch
-        }));
-      } else {
-        setPopup({ show: true, message: 'Alumni not found with this email', type: 'error' });
+  const fetchMemberDetails = async (email) => 
+    {
+      if (!email) return;
+
+      setLoading(true);
+
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/member-by-email?email=${encodeURIComponent(email)}`
+        );
+
+        const data = await response.json();
+
+        if (data.found) {
+          setManualEntry(false);
+
+          setFormData(prev => ({
+            ...prev,
+            name: data.name,
+            department: data.department,
+            batch: data.batch
+          }));
+        } else {
+          setManualEntry(true);
+
+          setFormData(prev => ({
+            ...prev,
+            name: "",
+            department: "",
+            batch: ""
+          }));
+
+          setPopup({
+            show: true,
+            message:
+              "Alumni not found. Please enter the speaker details manually.",
+            type: "error"
+          });
+        }
+      } catch (error) {
+        console.error(error);
+
+        setManualEntry(true);
+
+        setPopup({
+          show: true,
+          message: "Unable to fetch alumni details.",
+          type: "error"
+        });
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching member details:', error);
-      setPopup({ show: true, message: 'Error fetching alumni details', type: 'error' });
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
   const handleSubmit = async () => {
     // Validate all fields
@@ -300,6 +369,9 @@ export default function WebinarSpeakerAssignmentForm() {
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('email', formData.email);
+      formDataToSend.append('name', formData.name.trim());
+      formDataToSend.append('department', formData.department.trim());
+      formDataToSend.append('batch', formData.batch.trim());
       formDataToSend.append('designation', formData.designation.trim());
       formDataToSend.append('companyName', formData.companyName.trim());
       formDataToSend.append('alumniCity', formData.alumniCity.trim());
@@ -399,10 +471,10 @@ export default function WebinarSpeakerAssignmentForm() {
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
-                      placeholder="Enter name"
+                      placeholder="Enter speaker name"
                       className="input-field"
-                      readOnly
-                    />
+                      readOnly={!manualEntry}
+                  />
                   </div>
 
                 </div>
@@ -411,13 +483,28 @@ export default function WebinarSpeakerAssignmentForm() {
                 <label className="field-label">
                     <Building2 className="field-icon" /> Department <span className="required">*</span>
                   </label>
-                  <input type="text" name="department" value={formData.department} readOnly className="input-field bg-gray-100" />
+                    <input
+                      type="text"
+                      name="department"
+                      value={formData.department}
+                      onChange={handleChange}
+                      placeholder="Enter department"
+                      readOnly={!manualEntry}
+                      className="input-field"
+                  />
                 </div>
               <div className="form-group">
                 <label className="field-label">
                     <Globe className="field-icon" /> Batch <span className="required">*</span>
                   </label>
-                  <input type="text" name="batch" value={formData.batch} readOnly className="input-field bg-gray-100" />
+                  <input 
+                      type="text" 
+                      name="batch" 
+                      onChange={handleChange}
+                      placeholder="Enter Batch"
+                      value={formData.batch} 
+                      readOnly ={!manualEntry}
+                      className="input-field bg-gray-100" />
                 </div>
 
               </div>
@@ -527,7 +614,12 @@ export default function WebinarSpeakerAssignmentForm() {
                 >
                   <option value="">Select Webinar Topic</option>
                   {topics.map(topic => (
-                    <option key={topic._id} value={topic.topic}>{topic.topic}</option>
+                    <option
+                        key={topic._id}
+                        value={topic.topic.trim().replace(/\s+/g, " ")}
+                      >
+                        {topic.topic.trim().replace(/\s+/g, " ")}
+                      </option>
                   ))}
                 </select>
               </div>

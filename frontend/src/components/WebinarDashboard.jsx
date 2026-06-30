@@ -1217,7 +1217,7 @@ function DashboardShell() {
       </p>
     </div>
   )}
-  {(isCoordinatorUser || isAdmin) && (
+  {(isAdmin) && (
     <div className="qa-card" onClick={() => {
       if (!userEmail) {
         alert("Please log in first");

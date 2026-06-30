@@ -1,0 +1,173 @@
+/* ======================================================
+   Responsive Fixes for Webinar Details
+====================================================== */
+
+/* ---------------- Tabs ---------------- */
+
+.webinar-details-tabs {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  width: 100%;
+  margin: 20px 0;
+}
+
+.webinar-details-tabs .submit1-btn {
+  min-width: 230px;
+}
+
+/* ---------------- Content ---------------- */
+
+.content-area {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.content-area table {
+  min-width: 850px;
+  border-collapse: collapse;
+}
+/* ===============================
+   Table Wrapper
+================================ */
+
+.table-wrapper{
+    width:100%;
+    overflow-x:auto;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+}
+
+.responsive-table {
+    min-width: 900px;
+    width: max-content;
+}
+
+.responsive-table th,
+.responsive-table td {
+    border: 1px solid #ddd;
+    padding: 10px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+/* Scrollbar */
+
+.table-wrapper::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+    background: #7d48b9;
+    border-radius: 20px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+    background: #f2f2f2;
+}
+
+/* ---------------- Tablet ---------------- */
+
+@media (max-width: 992px) {
+
+  .webinar-details-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    width: 100%;
+  }
+
+  .webinar-details-tabs .submit1-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+}
+
+/* ---------------- Mobile ---------------- */
+
+@media (max-width: 767px) {
+
+  .student-form-page {
+    overflow-x:auto;
+  }
+
+  .student-form-page .form-wrapper {
+    width: 100%;
+    overflow: visible;
+  }
+
+  .admin-buttons.webinar-details-tabs{
+      display:flex !important;
+      flex-direction:column;
+      width:100%;
+      max-width:100%;
+      padding:0;
+      margin:20px 0;
+      box-sizing:border-box;
+      gap:12px;
+  }
+
+  .admin-buttons.webinar-details-tabs .submit1-btn {
+    display: block !important;
+    width: 100%;
+    min-width: 0;
+    padding: 12px;
+    font-size: 15px;
+    border-radius: 12px;
+  }
+
+  .content-area {
+    width: 100%;
+    overflow-x: auto;
+    padding: 0 8px 15px;
+  }
+
+  .content-area table {
+    min-width: 850px;
+  }
+
+}
+
+/* ---------------- Small Mobile ---------------- */
+@media (max-width: 480px) {
+
+    /* Tabs */
+
+    .admin-buttons.webinar-details-tabs {
+        display: flex !important;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .admin-buttons.webinar-details-tabs .submit1-btn {
+        width: 100%;
+    }
+
+    /* Upload Form */
+
+    .content-area {
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+    }
+
+    /* Tables */
+
+    .table-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    margin-top: 10px;
+}
+
+.responsive-table {
+    width: max-content;
+    min-width: 900px;
+    border-collapse: collapse;
+}
+}
