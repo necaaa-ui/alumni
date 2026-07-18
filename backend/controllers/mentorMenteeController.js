@@ -27,7 +27,7 @@ const getCurrentPhaseId = async () => {
 };
 
 // ================================
-// GET ALL MENTORS FOR CURRENT PHASE (NOT YET ASSIGNED)
+// GET ALL MENTORS FOR CURRENT PHASE - NEVER HIDE ANY MENTOR
 // ================================
 exports.getMentors = async (req, res) => {
   try {
@@ -38,36 +38,52 @@ exports.getMentors = async (req, res) => {
       return res.json([]);
     }
     
-    console.log(`\n========== FETCHING MENTORS FOR PHASE: ${currentPhaseId} ==========`);
+    console.log(`\n========== FETCHING ALL MENTORS FOR PHASE: ${currentPhaseId} ==========`);
     
-    // Get all mentors registered for current phase with status 'pending'
+    // Get ALL mentors registered for current phase - NO FILTERS AT ALL
     const mentors = await MentorRegistration.find({ 
-      phaseId: currentPhaseId,
-      status: "pending"
+      phaseId: currentPhaseId
+      // REMOVED: ALL filters including status
     });
-    console.log(`Total pending mentors in phase ${currentPhaseId}: ${mentors.length}`);
+    console.log(`Total mentors in phase ${currentPhaseId}: ${mentors.length}`);
     
     if (mentors.length === 0) {
-      console.log(`No pending mentors found for phase ${currentPhaseId}`);
+      console.log(`No mentors found for phase ${currentPhaseId}`);
       return res.json([]);
     }
     
-    const formatted = await Promise.all(
-      mentors.map(async (m) => {
-        const user = await User.findById(m.mentor_id);
-        
-        return {
-          user_id: user?._id || m.mentor_id || null,
-          name: user?.basic?.name || "Unknown Mentor",
-          email: user?.basic?.email_id || "No email found",
-          areas_of_interest: m.areas_of_interest || "Not specified",
-          status: m.status
-        };
-      })
-    );
+    // Get all mentors with their assignment count
+    const allMentors = [];
     
-    console.log(`Returning ${formatted.length} pending mentors\n`);
-    res.json(formatted);
+    for (const mentor of mentors) {
+      // Count how many mentees this mentor has been assigned in current phase
+      const existingAssignments = await MentorMenteeAssignment.find({
+        mentor_user_id: mentor.mentor_id,
+        phaseId: currentPhaseId
+      });
+      
+      // Calculate total mentees assigned to this mentor
+      let totalAssignedMentees = 0;
+      for (const assignment of existingAssignments) {
+        totalAssignedMentees += assignment.mentee_user_ids.length;
+      }
+      
+      console.log(`Mentor ${mentor.mentor_id} has ${totalAssignedMentees} mentees assigned`);
+      
+      const user = await User.findById(mentor.mentor_id);
+      
+      // ALWAYS include the mentor regardless of assignments
+      allMentors.push({
+        user_id: user?._id || mentor.mentor_id || null,
+        name: user?.basic?.name || "Unknown Mentor",
+        email: user?.basic?.email_id || "No email found",
+        areas_of_interest: mentor.areas_of_interest || "Not specified",
+        assignedMenteeCount: totalAssignedMentees
+      });
+    }
+    
+    console.log(`Returning ALL ${allMentors.length} mentors (including those with assignments)\n`);
+    res.json(allMentors);
     
   } catch (err) {
     console.error("Error fetching mentors:", err);
@@ -120,7 +136,7 @@ exports.getMentees = async (req, res) => {
 };
 
 // ================================
-// ASSIGN MENTOR (WITH PROPER SAVING AND VALIDATION)
+// ASSIGN MENTOR
 // ================================
 exports.assignMentor = async (req, res) => {
   try {
@@ -146,20 +162,21 @@ exports.assignMentor = async (req, res) => {
     
     console.log(`Using Phase ID: ${currentPhaseId}`);
     
-    // Verify mentor exists and is pending
+    // Check if mentor exists (NO status check)
     const mentor = await MentorRegistration.findOne({
       mentor_id: mentor_user_id,
-      phaseId: currentPhaseId,
-      status: "pending"
+      phaseId: currentPhaseId
     });
     
     if (!mentor) {
-      console.log(`❌ Mentor ${mentor_user_id} is not available for assignment`);
+      console.log(`❌ Mentor ${mentor_user_id} not found`);
       return res.status(400).json({
         success: false,
-        message: "Mentor is not available for assignment (already assigned or not registered)"
+        message: "Mentor not found for this phase"
       });
     }
+    
+    console.log(`✅ Mentor found: ${mentor.mentor_id}`);
     
     // Verify all mentees exist and are pending
     const mentees = await MenteeRequest.find({
@@ -186,19 +203,6 @@ exports.assignMentor = async (req, res) => {
     
     const savedAssignment = await assignment.save();
     console.log(`✅ Assignment saved successfully with ID: ${savedAssignment._id}`);
-    
-    // Update mentor status to 'assigned'
-    await MentorRegistration.updateOne(
-      { 
-        mentor_id: mentor_user_id,
-        phaseId: currentPhaseId 
-      },
-      { 
-        status: "assigned",
-        assignedDate: new Date()
-      }
-    );
-    console.log(`✅ Mentor status updated to 'assigned'`);
     
     // Update mentee status to 'assigned'
     const updateResult = await MenteeRequest.updateMany(

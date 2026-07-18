@@ -1328,9 +1328,9 @@ export default function RealTimeDashboard() {
                   
                   <div className="capacity-meter">
                     <div className="capacity-info">
-                      <span className="capacity-count">{mentor.menteeCount}/{mentor.maxCapacity} mentees</span>
+                      {/* <span className="capacity-count">{mentor.menteeCount}/{mentor.maxCapacity} mentees</span> */}
                       <span className="capacity-percentage">
-                        {Math.round((mentor.menteeCount / mentor.maxCapacity) * 100)}% capacity
+                        {/* {Math.round((mentor.menteeCount / mentor.maxCapacity) * 100)}% capacity */}
                       </span>
                     </div>
                     <div className="progress-bar">
