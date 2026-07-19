@@ -115,6 +115,16 @@ export default function MenteeMentorAssignment() {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
+    
+    // Auto-clear mentee selections if mentor changes
+    if (name === "mentorName") {
+      setFormData(prev => ({
+        ...prev,
+        mentee1: "",
+        mentee2: "",
+        mentee3: ""
+      }));
+    }
   };
 
   const validateForm = () => {
@@ -215,10 +225,6 @@ export default function MenteeMentorAssignment() {
                   <h3 className="success-title">Assignment Submitted Successfully!</h3>
                   <p className="success-text">
                     The mentees have been successfully assigned to the mentor.
-                    <br />
-                    <span style={{ fontSize: '14px', marginTop: '8px', display: 'block' }}>
-                      Assigned mentor and mentees have been removed from the lists.
-                    </span>
                   </p>
                 </div>
               </div>
@@ -240,13 +246,14 @@ export default function MenteeMentorAssignment() {
                 {mentors.map((mentor) => (
                   <option key={mentor.user_id} value={mentor.user_id}>
                     {mentor.name} ({mentor.email}) - {mentor.areas_of_interest?.join(", ") || "No interests"}
+                    
                   </option>
                 ))}
               </select>
               {errors.mentorName && <span className="error-text">{errors.mentorName}</span>}
               {mentors.length === 0 && !loadingPhase && (
                 <small className="info-text" style={{ color: "#10b981" }}>
-                  ✓ All mentors have been assigned for this phase
+                  ✓ No mentors found for this phase
                 </small>
               )}
             </div>
