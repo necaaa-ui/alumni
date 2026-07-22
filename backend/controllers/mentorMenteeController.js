@@ -27,7 +27,7 @@ const getCurrentPhaseId = async () => {
 };
 
 // ================================
-// GET ALL MENTORS FOR CURRENT PHASE (NOT YET ASSIGNED)
+// GET ALL MENTORS FOR CURRENT PHASE (WITH ASSIGNMENT COUNT)
 // ================================
 exports.getMentors = async (req, res) => {
   try {
@@ -40,15 +40,14 @@ exports.getMentors = async (req, res) => {
     
     console.log(`\n========== FETCHING MENTORS FOR PHASE: ${currentPhaseId} ==========`);
     
-    // Get all mentors registered for current phase with status 'pending'
+    // Get ALL mentors registered for current phase (both pending and assigned)
     const mentors = await MentorRegistration.find({ 
-      phaseId: currentPhaseId,
-      status: "pending"
+      phaseId: currentPhaseId
     });
-    console.log(`Total pending mentors in phase ${currentPhaseId}: ${mentors.length}`);
+    console.log(`Total mentors in phase ${currentPhaseId}: ${mentors.length}`);
     
     if (mentors.length === 0) {
-      console.log(`No pending mentors found for phase ${currentPhaseId}`);
+      console.log(`No mentors found for phase ${currentPhaseId}`);
       return res.json([]);
     }
     
@@ -56,18 +55,34 @@ exports.getMentors = async (req, res) => {
       mentors.map(async (m) => {
         const user = await User.findById(m.mentor_id);
         
+        // Check existing assignment for this mentor in current phase
+        const assignment = await MentorMenteeAssignment.findOne({
+          mentor_user_id: m.mentor_id,
+          phaseId: currentPhaseId
+        });
+        
+        const assignedCount = assignment ? assignment.mentee_user_ids.length : 0;
+        const isFullyAssigned = assignedCount >= 3;
+        
+        // Return ALL mentors, but mark which ones are fully assigned
         return {
           user_id: user?._id || m.mentor_id || null,
           name: user?.basic?.name || "Unknown Mentor",
           email: user?.basic?.email_id || "No email found",
           areas_of_interest: m.areas_of_interest || "Not specified",
-          status: m.status
+          status: m.status,
+          assignedMentees: assignedCount,
+          isFullyAssigned: isFullyAssigned,
+          maxMentees: 3,
+          availableSlots: Math.max(0, 3 - assignedCount)
         };
       })
     );
     
-    console.log(`Returning ${formatted.length} pending mentors\n`);
-    res.json(formatted);
+    // Filter out fully assigned mentors (those with 3 mentees)
+    const availableMentors = formatted.filter(m => !m.isFullyAssigned);
+    console.log(`Returning ${availableMentors.length} available mentors (${formatted.length - availableMentors.length} fully assigned)\n`);
+    res.json(availableMentors);
     
   } catch (err) {
     console.error("Error fetching mentors:", err);
@@ -120,7 +135,7 @@ exports.getMentees = async (req, res) => {
 };
 
 // ================================
-// ASSIGN MENTOR (WITH PROPER SAVING AND VALIDATION)
+// ASSIGN MENTOR (UPDATES EXISTING ASSIGNMENT)
 // ================================
 exports.assignMentor = async (req, res) => {
   try {
@@ -146,18 +161,40 @@ exports.assignMentor = async (req, res) => {
     
     console.log(`Using Phase ID: ${currentPhaseId}`);
     
-    // Verify mentor exists and is pending
+    // Verify mentor exists (check if registered for this phase)
     const mentor = await MentorRegistration.findOne({
       mentor_id: mentor_user_id,
-      phaseId: currentPhaseId,
-      status: "pending"
+      phaseId: currentPhaseId
     });
     
     if (!mentor) {
-      console.log(`❌ Mentor ${mentor_user_id} is not available for assignment`);
+      console.log(`❌ Mentor ${mentor_user_id} is not registered for this phase`);
       return res.status(400).json({
         success: false,
-        message: "Mentor is not available for assignment (already assigned or not registered)"
+        message: "Mentor is not registered for this phase"
+      });
+    }
+    
+    // Check if mentor already has an assignment in this phase
+    let existingAssignment = await MentorMenteeAssignment.findOne({
+      mentor_user_id: mentor_user_id,
+      phaseId: currentPhaseId
+    });
+    
+    // Calculate current and new counts
+    const currentMenteeCount = existingAssignment ? existingAssignment.mentee_user_ids.length : 0;
+    const newMenteeCount = mentee_user_ids.length;
+    const totalMentees = currentMenteeCount + newMenteeCount;
+    
+    // Check if adding these mentees would exceed 3
+    if (totalMentees > 3) {
+      console.log(`❌ Cannot assign ${newMenteeCount} mentees. Mentor already has ${currentMenteeCount} mentees.`);
+      return res.status(400).json({
+        success: false,
+        message: `Cannot assign ${newMenteeCount} mentees. Mentor already has ${currentMenteeCount} mentee(s). Maximum is 3 mentees per mentor.`,
+        currentMenteeCount: currentMenteeCount,
+        maxMentees: 3,
+        availableSlots: Math.max(0, 3 - currentMenteeCount)
       });
     }
     
@@ -170,35 +207,71 @@ exports.assignMentor = async (req, res) => {
     
     if (mentees.length !== mentee_user_ids.length) {
       console.log(`❌ Some mentees are not available for assignment`);
+      const foundMenteeIds = mentees.map(m => m.mentee_user_id.toString());
+      const notFoundMentees = mentee_user_ids.filter(id => !foundMenteeIds.includes(id.toString()));
+      console.log(`Not available mentees: ${notFoundMentees}`);
       return res.status(400).json({
         success: false,
-        message: "Some mentees are already assigned or not registered"
+        message: "Some mentees are already assigned or not registered",
+        notAvailableMentees: notFoundMentees
       });
     }
     
-    // Create assignment
-    const assignment = new MentorMenteeAssignment({
-      mentor_user_id,
-      mentee_user_ids,
-      phaseId: currentPhaseId,
-      assignedDate: new Date(),
-    });
+    let savedAssignment;
+    let isUpdate = false;
     
-    const savedAssignment = await assignment.save();
-    console.log(`✅ Assignment saved successfully with ID: ${savedAssignment._id}`);
+    if (existingAssignment) {
+      // Update existing assignment - add new mentees
+      isUpdate = true;
+      console.log(`📝 Updating existing assignment. Current mentees: ${existingAssignment.mentee_user_ids.length}`);
+      
+      // Combine existing and new mentees, remove duplicates
+      const allMenteeIds = [...existingAssignment.mentee_user_ids, ...mentee_user_ids];
+      const uniqueMenteeIds = [...new Set(allMenteeIds.map(id => id.toString()))];
+      
+      existingAssignment.mentee_user_ids = uniqueMenteeIds;
+      existingAssignment.assignedDate = new Date();
+      savedAssignment = await existingAssignment.save();
+      
+      console.log(`✅ Assignment updated. New total mentees: ${savedAssignment.mentee_user_ids.length}`);
+    } else {
+      // Create new assignment
+      const assignment = new MentorMenteeAssignment({
+        mentor_user_id,
+        mentee_user_ids,
+        phaseId: currentPhaseId,
+        assignedDate: new Date(),
+      });
+      
+      savedAssignment = await assignment.save();
+      console.log(`✅ New assignment created with ID: ${savedAssignment._id}`);
+    }
     
-    // Update mentor status to 'assigned'
+    // Update mentor status based on total mentees
+    const finalMenteeCount = savedAssignment.mentee_user_ids.length;
+    let newStatus = "pending";
+    let statusMessage = "";
+    
+    if (finalMenteeCount >= 3) {
+      newStatus = "assigned";
+      statusMessage = "Mentor fully assigned with 3 mentees";
+    } else {
+      newStatus = "pending";
+      statusMessage = `Mentor now has ${finalMenteeCount} mentee(s). ${3 - finalMenteeCount} slot(s) remaining.`;
+    }
+    
+    // Update mentor status
     await MentorRegistration.updateOne(
       { 
         mentor_id: mentor_user_id,
         phaseId: currentPhaseId 
       },
       { 
-        status: "assigned",
+        status: newStatus,
         assignedDate: new Date()
       }
     );
-    console.log(`✅ Mentor status updated to 'assigned'`);
+    console.log(`✅ Mentor status updated to '${newStatus}'`);
     
     // Update mentee status to 'assigned'
     const updateResult = await MenteeRequest.updateMany(
@@ -218,11 +291,16 @@ exports.assignMentor = async (req, res) => {
     
     res.json({ 
       success: true, 
-      message: "Mentor assigned successfully",
+      message: isUpdate ? `Mentor updated: ${statusMessage}` : `Mentor assigned: ${statusMessage}`,
       phaseId: currentPhaseId,
       assignedMentorId: mentor_user_id,
       assignedMenteeIds: mentee_user_ids,
-      assignmentId: savedAssignment._id
+      totalMentees: finalMenteeCount,
+      maxMentees: 3,
+      assignmentId: savedAssignment._id,
+      isFullyAssigned: finalMenteeCount >= 3,
+      availableSlots: Math.max(0, 3 - finalMenteeCount),
+      isUpdate: isUpdate
     });
     
   } catch (err) {
@@ -273,7 +351,8 @@ exports.getAssignedMentors = async (req, res) => {
           },
           mentees: mentees,
           assignedDate: assignment.assignedDate,
-          phaseId: assignment.phaseId
+          phaseId: assignment.phaseId,
+          menteeCount: assignment.mentee_user_ids.length
         };
       })
     );
