@@ -154,6 +154,8 @@ router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) =
   batch,
   designation,
   companyName,
+  alumniPhoneNumber,
+  phoneNumber,
   alumniCity,
   domain,
   topic,
@@ -185,7 +187,9 @@ router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) =
       : 'In Person';
 
     // Validate required fields
-    if (!email || !designation || !companyName || !alumniCity || !domain || !topic || !webinarVenue || !speakerPhoto) {
+    const normalizedPhoneNumber = (phoneNumber || alumniPhoneNumber || '').trim();
+
+    if (!email || !designation || !companyName || !normalizedPhoneNumber || !alumniCity || !domain || !topic || !webinarVenue || !speakerPhoto) {
       return res.status(400).json({ error: 'All required fields must be provided' });
     }
 
@@ -361,6 +365,7 @@ if (!speakerBatch) {
   batch: speakerBatch,
   designation,
   companyName,
+  phoneNumber: normalizedPhoneNumber,
   speakerPhoto,
   domain,
   topic,

@@ -7,8 +7,13 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
-      '/api': {
+      '/alumnimain/api': {
         target: 'https://necalumni.nec.edu.in',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api': {
+        target: 'https://necalumni.nec.edu.in/alumnimain',
         changeOrigin: true,
         secure: false,
       },

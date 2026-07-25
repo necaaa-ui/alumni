@@ -1,4 +1,4 @@
-const express = require('express');
+ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
@@ -8,7 +8,7 @@ const dotenv = require('dotenv');
 const app = express();
 const PORT = process.env.PORT || 5000;
 app.use(express.json({ limit: "30mb" }));
-// app.use(cors());
+app.use(cors());
 //SSO ROUTES
 const webinarSSORoutes = require('./single-sign-on/routes/webinar');
 app.use('/api/webinar', webinarSSORoutes);
@@ -83,7 +83,7 @@ const adminRoutes = require('./routes/admin'); // Assuming your admin routes fil
 // Middleware 
 
 //Cors For Producion
-app.use(cors({ origin: ["https://necalumni.nec.edu.in", "https://necalumni.nec.edu.in/alumnimain"], credentials: true }));
+// app.use(cors({ origin: ["https://necalumni.nec.edu.in", "https://necalumni.nec.edu.in/alumnimain"], credentials: true }));
 app.use(express.urlencoded({ extended: true, limit: "30mb" }));
 
 // uploads folder
@@ -92,6 +92,25 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Serve speaker photos through the API path as well. This is needed when the
+// deployed reverse proxy exposes /alumnimain/api but does not proxy /uploads.
+app.get('/api/speaker-photos/:filename', (req, res) => {
+  const filename = path.basename(req.params.filename || '');
+  const extension = path.extname(filename).toLowerCase();
+  const allowedImageExtensions = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
+
+  if (!filename || !allowedImageExtensions.has(extension)) {
+    return res.status(400).json({ error: 'Invalid speaker photo' });
+  }
+
+  const imagePath = path.join(uploadsDir, filename);
+  if (!fs.existsSync(imagePath)) {
+    return res.status(404).json({ error: 'Speaker photo not found' });
+  }
+
+  return res.sendFile(imagePath);
+});
 
 // MongoDB connection for 'test' database (used by both modules)
 // Remove quotes from MONGO_URI if present
@@ -324,7 +343,7 @@ app.get('/api/member-by-email', async (req, res) => {
 app.get('/api/webinars', async (req, res) => {
   try {
     const webinars = await WebinarWebinar.find()
-      .populate('speaker', 'name designation department batch companyName speakerPhoto email')
+      .populate('speaker', 'name designation department batch companyName speakerPhoto email phoneNumber alumniPhoneNumber')
       .sort({ webinarDate: 1 });
     // Add registration count for each webinar
     const webinarsWithCount = await Promise.all(
@@ -350,7 +369,7 @@ app.get('/api/webinars', async (req, res) => {
 app.get('/api/webinars/:id', async (req, res) => {
   try {
     const webinar = await WebinarWebinar.findById(req.params.id)
-      .populate('speaker', 'name designation department batch companyName');
+      .populate('speaker', 'name designation department batch companyName speakerPhoto phoneNumber alumniPhoneNumber');
     if (!webinar) {
       return res.status(404).json({ error: 'Webinar not found' });
     }
@@ -360,6 +379,46 @@ app.get('/api/webinars/:id', async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+
+const getAttendanceField = (row, field) => {
+  if (!row || typeof row !== 'object') return '';
+
+  const acceptedNames = field === 'email'
+    ? ['email', 'emailaddress', 'emailid']
+    : ['duration', 'totalduration', 'durationminutes', 'attendanceduration'];
+
+  const matchingKey = Object.keys(row).find((key) => {
+    const normalizedKey = String(key).toLowerCase().replace(/[^a-z0-9]/g, '');
+    return acceptedNames.includes(normalizedKey)
+      || (field === 'email' && normalizedKey.includes('email'))
+      || (field === 'duration' && normalizedKey.includes('duration'));
+  });
+
+  return matchingKey ? row[matchingKey] : '';
+};
+
+const getAttendanceMinutes = (duration) => {
+  if (typeof duration === 'number') {
+    // Excel may expose a time value as a fraction of one day.
+    return duration > 0 && duration < 1 ? duration * 24 * 60 : duration;
+  }
+
+  const value = String(duration || '').trim();
+  const timeMatch = value.match(/(\d+):(\d+)(?::(\d+))?/);
+  if (timeMatch) return Number(timeMatch[1]) * 60 + Number(timeMatch[2]) + Number(timeMatch[3] || 0) / 60;
+
+  // Attendance exports commonly use values such as "1 hour" or
+  // "1 hr 15 min", which parseFloat alone would incorrectly treat as 1 minute.
+  const hoursMatch = value.match(/(\d+(?:\.\d+)?)\s*(?:hours?|hrs?|h)\b/i);
+  const minutesMatch = value.match(/(\d+(?:\.\d+)?)\s*(?:minutes?|mins?|m)\b/i);
+  if (hoursMatch || minutesMatch) {
+    return (Number(hoursMatch?.[1]) || 0) * 60 + (Number(minutesMatch?.[1]) || 0);
+  }
+
+  return Number.parseFloat(value) || 0;
+};
 
 // Update webinar with completion details
 app.put('/api/webinars/:id/complete', async (req, res) => {
@@ -450,24 +509,16 @@ app.put('/api/webinars/:id/complete', async (req, res) => {
     // Update attended status in register collection based on attendance data
     if (attendanceData && Array.isArray(attendanceData)) {
       for (const attendee of attendanceData) {
-        if (attendee.Email && attendee.Duration !== undefined) {
-          // Parse duration
-          let durationMinutes = 0;
-          if (typeof attendee.Duration === 'number') {
-            durationMinutes = attendee.Duration;
-          } else if (typeof attendee.Duration === 'string') {
-            // Handle "HH:MM" format
-            const timeMatch = attendee.Duration.match(/(\d+):(\d+)/);
-            if (timeMatch) {
-              durationMinutes = parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]);
-            } else {
-              durationMinutes = parseFloat(attendee.Duration) || 0;
-            }
-          }
+        const attendeeEmail = normalizeEmail(getAttendanceField(attendee, 'email'));
+        const duration = getAttendanceField(attendee, 'duration');
+        if (attendeeEmail && duration !== '') {
+          const durationMinutes = getAttendanceMinutes(duration);
           const attendedStatus = durationMinutes > 30 ? 'yes' : 'no';
-          // Update the register record
+          const escapedEmail = attendeeEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          // Match registered email case-insensitively because Excel exports and
+          // registration records do not always preserve the same casing.
           await WebinarRegister.findOneAndUpdate(
-            { email: attendee.Email, webinarId: req.params.id },
+            { email: { $regex: new RegExp(`^${escapedEmail}$`, 'i') }, webinarId: req.params.id },
             { attendedStatus },
             { upsert: false } // Don't create new records, only update existing
           );
@@ -489,8 +540,10 @@ app.get('/api/check-certificate-eligibility', async (req, res) => {
       return res.status(400).json({ error: 'Email and webinarId are required' });
     }
     // Check if user has attendedStatus = "yes" in register collection
+    const normalizedEmail = normalizeEmail(email);
+    const escapedEmail = normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const registration = await WebinarRegister.findOne({
-      email: email,
+      email: { $regex: new RegExp(`^${escapedEmail}$`, 'i') },
       webinarId: webinarId,
       attendedStatus: 'yes'
     });
@@ -509,8 +562,10 @@ app.post('/api/download-certificate', async (req, res) => {
       return res.status(400).json({ error: 'Email and webinarId are required' });
     }
     // Check if user is eligible for certificate
+    const normalizedEmail = normalizeEmail(email);
+    const escapedEmail = normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const registration = await WebinarRegister.findOne({
-      email: email,
+      email: { $regex: new RegExp(`^${escapedEmail}$`, 'i') },
       webinarId: webinarId,
       attendedStatus: 'yes'
     });
@@ -603,7 +658,7 @@ app.post('/api/download-certificate', async (req, res) => {
 app.get('/api/speakers', async (req, res) => {
   try {
     const speakers = await WebinarSpeaker.find()
-      .select('name designation department batch companyName domain topic phaseId email')
+      .select('name designation department batch companyName domain topic phaseId email phoneNumber alumniPhoneNumber')
       .sort({ name: 1 });
     res.json(speakers);
   } catch (error) {
@@ -741,22 +796,35 @@ app.get('/api/dashboard-stats', async (req, res) => {
           console.log(`Generated ${newTopicApprovals.length} topic approvals for missing domains in phase ${phaseId}`);
         }
       }
+
     }
+// Initialize domain statistics
+const domainStats = domains.map((domain, idx) => ({
+  id: domain.toLowerCase().replace(/\s+/g, '-'),
+  name: domain,
+  planned: Number(phaseData.domains[idx]?.plannedWebinarCount || 4),
+  conducted: 0,
+  postponed: 0,
+  totalSpeakers: 0,
+  newSpeakers: 0,
+  requestedTopics: 0,
+  approvedTopics: 0
+}));
 
-    // Initialize domain stats
-    const domainStats = domains.map(domain => ({
-      id: domain.toLowerCase().replace(/\s+/g, '-'),
-      name: domain,
-      planned: 4, // Default 4 webinars planned per phase
-      conducted: 0,
-      postponed: 0,
-      totalSpeakers: 0,
-      newSpeakers: 0,
-      requestedTopics: 0,
-      approvedTopics: 0
-    }));
+// Calculate requested and approved topics
+domains.forEach((domain, index) => {
+  const domainApprovals = topicApprovals.filter(approval => {
+    const domainFirstWord = getFirstWord(domain);
+    const approvalFirstWord = getFirstWord(approval.domain);
+    return domainFirstWord === approvalFirstWord;
+  });
 
-    // Calculate requested and approved topics per domain for this phase
+  domainStats[index].requestedTopics = domainApprovals.length;
+
+  domainStats[index].approvedTopics = domainApprovals
+    .filter(a => a.approval === "Approved")
+    .reduce((sum, a) => sum + a.total_requested, 0);
+});
     domains.forEach((domain, index) => {
       const domainApprovals = topicApprovals.filter(approval => {
         // Use first word of domain for comparison, ignoring case
@@ -1126,6 +1194,11 @@ app.post('/api/webinar-phases', async (req, res) => {
     for (const domain of domains) {
       if (!domain.department || !domain.domain) {
         return res.status(400).json({ message: 'Each domain must have both department and domain fields' });
+      }
+
+      const plannedCount = Number(domain.plannedWebinarCount);
+      if (!Number.isInteger(plannedCount) || plannedCount < 1) {
+        return res.status(400).json({ message: 'Each domain must have a valid planned webinar count of at least 1' });
       }
     }
 

@@ -54,7 +54,7 @@ export default function WebinarCircular({ date = " ", data = [], month = "", onC
           <tr>
             <td>PROGRAM COORDINATOR</td>
             <td>ASSOCIATE ALUMNI COORDINATOR</td>
-            <td>ALUMNI COORDINATOR</td>
+            <td>DEAN (IR & AA)</td>
             <td>PRINCIPAL</td>
           </tr>
         </tbody>

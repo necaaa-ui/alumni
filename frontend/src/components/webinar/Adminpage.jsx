@@ -18,6 +18,16 @@ const validateDomain = (value) => {
   return "";
 };
 
+const validatePlannedWebinarCount = (value) => {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    return 'Planned webinar count must be a whole number of at least 1.';
+  }
+
+  return '';
+};
+
 const getMonthKey = (dateValue) => {
   if (!dateValue) return '';
   const date = new Date(dateValue);
@@ -61,7 +71,7 @@ const Adminpage = ({ userEmail }) => {
   const [activeView, setActiveView] = useState('phase');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showRemoveDomain, setShowRemoveDomain] = useState(false);
-  const [domains, setDomains] = useState([{ department: '', domain: '' }]);
+  const [domains, setDomains] = useState([{ department: '', domain: '', plannedWebinarCount: 1 }]);
   const [activeCoordinatorView, setActiveCoordinatorView] = useState(null);
   const [showAddStudentForm, setShowAddStudentForm] = useState(false);
   const [showAddDepartmentForm, setShowAddDepartmentForm] = useState(false);
@@ -149,10 +159,12 @@ const Adminpage = ({ userEmail }) => {
           const response = await fetch(`${API_BASE_URL}/api/webinars`);
           const webinarsData = await response.json();
 
-          // Fetch phone numbers for each speaker
+          // Prefer the stored speaker phone number from the database and fall back to member lookup only when needed.
           const webinarsWithPhones = await Promise.all(
             webinarsData.map(async (webinar) => {
-              if (webinar.speaker?.email) {
+              const storedPhone = webinar.speaker?.phoneNumber || webinar.speaker?.alumniPhoneNumber;
+
+              if (webinar.speaker?.email && !storedPhone) {
                 try {
                   const memberResponse = await fetch(`${API_BASE_URL}/api/coordinators/member-by-email?email=${webinar.speaker.email}`);
                   const memberData = await memberResponse.json();
@@ -174,11 +186,12 @@ const Adminpage = ({ userEmail }) => {
                   };
                 }
               }
+
               return {
                 ...webinar,
                 speaker: {
                   ...webinar.speaker,
-                  phoneNumber: 'N/A'
+                  phoneNumber: storedPhone || 'N/A'
                 }
               };
             })
@@ -344,7 +357,13 @@ const Adminpage = ({ userEmail }) => {
     }
 
     // Validate domains
-    const validDomains = domains.filter(d => d.department && d.domain);
+    const validDomains = domains
+      .filter(d => d.department && d.domain)
+      .map(d => ({
+        ...d,
+        plannedWebinarCount: Number.isFinite(Number(d.plannedWebinarCount)) ? Math.round(Number(d.plannedWebinarCount)) : 1
+      }));
+
     if (validDomains.length === 0) {
       newErrors.domains = 'Please add at least one domain with department and domain name.';
     } else {
@@ -355,6 +374,11 @@ const Adminpage = ({ userEmail }) => {
           const error = validateDomain(d.domain);
           if (error) {
             newErrors[`domain_${i}`] = `Domain Error (${d.department}): ${error}`;
+          }
+
+          const plannedError = validatePlannedWebinarCount(d.plannedWebinarCount);
+          if (plannedError) {
+            newErrors[`plannedCount_${i}`] = `Planned Count Error (${d.department}): ${plannedError}`;
           }
         }
       }
@@ -393,7 +417,7 @@ const Adminpage = ({ userEmail }) => {
         setPhaseId('');
         setStartingDate('');
         setEndingDate('');
-        setDomains([{ department: '', domain: '' }]);
+        setDomains([{ department: '', domain: '', plannedWebinarCount: 1 }]);
         setErrors({});
       } else {
         setMessage(result.message || 'Failed to create phase.');
@@ -795,7 +819,7 @@ const Adminpage = ({ userEmail }) => {
       'Webinar Topic': webinar.topic || 'N/A',
       'Speaker Name': webinar.speaker?.name || 'N/A',
       'Speaker Email': webinar.speaker?.email || 'N/A',
-      'Speaker Phone': webinar.speaker?.phoneNumber || 'N/A',
+      'Speaker Phone': webinar.speaker?.phoneNumber || webinar.speaker?.alumniPhoneNumber || 'N/A',
       'Speaker Batch': webinar.speaker?.batch || 'N/A',
       'Speaker Department': webinar.speaker?.department || 'N/A',
       'Designation & Company': webinar.speaker?.designation ? `${webinar.speaker.designation} & ${webinar.speaker.companyName || 'N/A'}` : 'N/A',
@@ -1168,7 +1192,7 @@ const renderContent = () => {
                   className="submit1-btn"
                   onClick={() => {
                     if (window.confirm('This will replace current domain details with last phase domains. Continue?')) {
-                      setDomains(lastPhaseDomains.map(d => ({ department: d.department, domain: d.domain })));
+                      setDomains(lastPhaseDomains.map(d => ({ department: d.department, domain: d.domain, plannedWebinarCount: d.plannedWebinarCount ?? 1 })));
                     }
                   }}
                   style={{ fontSize: '14px', padding: '8px 16px' }}
@@ -1177,99 +1201,127 @@ const renderContent = () => {
                 </button>
               )}
             </div>
-            {domains.map((domain, index) => (
-                <div key={index} className="domain-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', gap: '1rem' }}>
-                    <div className="form-group" style={{ flex: "0.5 1 0%" }}>
-                      <label>Department</label>
-                      <select
-                        className="input-field"
-                        style={{ width: "100%" }}
-                        value={domain.department}
-                        onChange={(e) => {
-                          const newDomains = [...domains];
-                          newDomains[index].department = e.target.value;
-                          setDomains(newDomains);
-                        }}
-                      >
-                        <option value="">Select</option>
-                        <option value="IT">IT</option>
-                        <option value="CSE">CSE</option>
-                        <option value="EEE">EEE</option>
-                        <option value="ECE">ECE</option>
-                        <option value="MECH">MECH</option>
-                        <option value="CIVIL">CIVIL</option>
-                        <option value="AI & DS">AI & DS</option>
-                      </select>
-                    </div>
-
-                  <div className="form-group" style={{ flex: '2 1 0%' }}>
-                    <label>Domain </label>
-                    <input
-                      type="text"
-                      placeholder="Domain"
-                      className="input-field"
-                      maxLength={50}
-                      value={domain.domain}
-                      onChange={(e) => {
-                        const newDomains = [...domains];
-                        newDomains[index].domain = e.target.value;
-                        setDomains(newDomains);
-                      }}
-                      onKeyDown={(e) => {
-                        if ( e.key === 'Enter') {
-                          e.preventDefault();
-                        }
-                      }}
-                      onPaste={(e) => {
-                        e.preventDefault();
-                        const paste = e.clipboardData.getData('text');
-                        const newDomains = [...domains];
-                        newDomains[index].domain = paste;
-                        setDomains(newDomains);
-                      }}
-                      onBlur={(e) => {
-                        const newDomains = [...domains];
-                        newDomains[index].domain = e.target.value.trim();
-                        setDomains(newDomains);
-                      }}
-                    />
-                    {errors[`domain_${index}`] && (
-                      <div className="error-text">{errors[`domain_${index}`]}</div>
-                    )}
-                  </div>
-                  <div className="domain-row-action" style={{ display: 'flex', alignItems: 'center', marginTop: '1.5rem' }}>
-                    <button
-                      className="submit1-btn"
-                      onClick={() => {
-                        if (domains.length > 1) {
-                          const newDomains = domains.filter((_, i) => i !== index);
-                          setDomains(newDomains);
-                        }
-                      }}
-                      disabled={domains.length <= 1}
-                      style={{
-                        fontSize: '16px',
-                        padding: '6px 12px',
-                        minWidth: '40px',
-                        backgroundColor: domains.length <= 1 ? '#ccc' : '#dc3545',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: domains.length <= 1 ? 'not-allowed' : 'pointer'
-                      }}
-                      title="Remove this domain"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              ))}
-              <button
-                className="submit1-btn"
-                onClick={() => setDomains([...domains, { department: '', domain: '' }])}
-              >
-                +
-              </button>
+            <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f3f4f6' }}>
+                    <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', minWidth: '240px' }}>Department</th>
+                    <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', minWidth: '620px' }}>Domain</th>
+                    <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', minWidth: '20px' }}>Planned Webinar Count</th>
+                    <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', width: '90px' }}>✕</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {domains.map((domain, index) => (
+                    <tr key={index}>
+                      <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                        <select
+                          className="input-field"
+                          style={{ width: '100%' }}
+                          value={domain.department}
+                          onChange={(e) => {
+                            const newDomains = [...domains];
+                            newDomains[index].department = e.target.value;
+                            setDomains(newDomains);
+                          }}
+                        >
+                          <option value="">Select</option>
+                          <option value="IT">IT</option>
+                          <option value="CSE">CSE</option>
+                          <option value="EEE">EEE</option>
+                          <option value="ECE">ECE</option>
+                          <option value="MECH">MECH</option>
+                          <option value="CIVIL">CIVIL</option>
+                          <option value="AI & DS">AI & DS</option>
+                        </select>
+                      </td>
+                      <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                        <input
+                          type="text"
+                          placeholder="Domain"
+                          className="input-field"
+                          maxLength={50}
+                          value={domain.domain}
+                          onChange={(e) => {
+                            const newDomains = [...domains];
+                            newDomains[index].domain = e.target.value;
+                            setDomains(newDomains);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                            }
+                          }}
+                          onPaste={(e) => {
+                            e.preventDefault();
+                            const paste = e.clipboardData.getData('text');
+                            const newDomains = [...domains];
+                            newDomains[index].domain = paste;
+                            setDomains(newDomains);
+                          }}
+                          onBlur={(e) => {
+                            const newDomains = [...domains];
+                            newDomains[index].domain = e.target.value.trim();
+                            setDomains(newDomains);
+                          }}
+                        />
+                        {errors[`domain_${index}`] && (
+                          <div className="error-text">{errors[`domain_${index}`]}</div>
+                        )}
+                      </td>
+                      <td style={{ padding: '10px', border: '1px solid #ddd' }}>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          className="input-field"
+                          value={domain.plannedWebinarCount ?? 1}
+                          onChange={(e) => {
+                            const newDomains = [...domains];
+                            newDomains[index].plannedWebinarCount = e.target.value;
+                            setDomains(newDomains);
+                          }}
+                        />
+                        {errors[`plannedCount_${index}`] && (
+                          <div className="error-text">{errors[`plannedCount_${index}`]}</div>
+                        )}
+                      </td>
+                      <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                        <button
+                          className="submit1-btn"
+                          onClick={() => {
+                            if (domains.length > 1) {
+                              const newDomains = domains.filter((_, i) => i !== index);
+                              setDomains(newDomains);
+                            }
+                          }}
+                          disabled={domains.length <= 1}
+                          style={{
+                            fontSize: '16px',
+                            padding: '6px 12px',
+                            minWidth: '40px',
+                            backgroundColor: domains.length <= 1 ? '#ccc' : '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: domains.length <= 1 ? 'not-allowed' : 'pointer'
+                          }}
+                          title="Remove this domain"
+                        >
+                          ×
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <button
+              className="submit1-btn"
+              onClick={() => setDomains([...domains, { department: '', domain: '', plannedWebinarCount: 1 }])}
+            >
+              +
+            </button>
             </div>
             {message && (
               <div style={{
@@ -1404,7 +1456,7 @@ const renderContent = () => {
             <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>{webinar.topic}</td>
             <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>{webinar.speaker?.name || 'N/A'}</td>
             <td className="email-scroll-cell" style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center", overflowX: "auto", whiteSpace: "nowrap" }}>{webinar.speaker?.email || 'N/A'}</td>
-            <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>{webinar.speaker?.phoneNumber || 'N/A'}</td>
+            <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>{webinar.speaker?.phoneNumber || webinar.speaker?.alumniPhoneNumber || 'N/A'}</td>
             <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>
               {webinar.speaker?.batch ? `${webinar.speaker.batch} & ${webinar.speaker.department || 'N/A'}` : 'N/A'}
             </td>
@@ -1432,7 +1484,7 @@ const renderContent = () => {
                 <div><strong>Topic:</strong> {webinar.topic || 'N/A'}</div>
                 <div><strong>Speaker:</strong> {webinar.speaker?.name || 'N/A'}</div>
                 <div className="mobile-email"><strong>Email:</strong> {webinar.speaker?.email || 'N/A'}</div>
-                <div><strong>Phone:</strong> {webinar.speaker?.phoneNumber || 'N/A'}</div>
+                <div><strong>Phone:</strong> {webinar.speaker?.phoneNumber || webinar.speaker?.alumniPhoneNumber || 'N/A'}</div>
                 <div><strong>Batch & Dept:</strong> {webinar.speaker?.batch ? `${webinar.speaker.batch} & ${webinar.speaker.department || 'N/A'}` : 'N/A'}</div>
                 <div><strong>Designation & Company:</strong> {webinar.speaker?.designation ? `${webinar.speaker.designation} & ${webinar.speaker.companyName || 'N/A'}` : 'N/A'}</div>
                 <div><strong>City:</strong> {webinar.alumniCity || 'N/A'}</div>

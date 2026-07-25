@@ -4,8 +4,12 @@ import { useState, useEffect } from "react";
 import "./Common.css";
 import Popup from './Popup';
 
-// Add API base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+// Use the deployed API path in production. Pointing to localhost here makes the
+// alumni's browser request its own machine instead of the application server.
+const isLocalDev = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const API_BASE_URL = isLocalDev
+  ? '/alumnimain'
+  : (import.meta.env.VITE_API_BASE_URL || '/alumnimain').replace(/\/$/, '');
 
 const WebinarAlumniFeedbackForm = () => {
   const { email: encodedEmail } = useParams();
@@ -58,11 +62,16 @@ const WebinarAlumniFeedbackForm = () => {
         const data = await res.json();
         const normalizedEmail = formData.email.trim().toLowerCase();
         const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
         const speakerAttendedWebinars = (Array.isArray(data) ? data : []).filter((item) => {
           const speakerEmail = String(item?.speaker?.email || "").trim().toLowerCase();
           const webinarDate = item?.webinarDate ? new Date(item.webinarDate) : null;
-          const isPastWebinar = webinarDate instanceof Date && !isNaN(webinarDate) && webinarDate <= now;
+          // Keep this in sync with the submit API, which permits feedback on
+          // the webinar date and for all earlier webinars.
+          const isPastWebinar = webinarDate instanceof Date
+            && !isNaN(webinarDate)
+            && new Date(webinarDate.getFullYear(), webinarDate.getMonth(), webinarDate.getDate()) <= todayStart;
           return speakerEmail === normalizedEmail && isPastWebinar;
         });
 
