@@ -48,4 +48,5 @@ jobs:
 
           git add .
           git commit -m "Auto build from $GITHUB_SHA" || echo "No changes"
-          git push
+          git push "https://x-access-token:${{ secrets.COMPILED_REPO_TOKEN }}@github.com/necaaa-ui/alumni-compiled-repo.git" HEAD:main
+
