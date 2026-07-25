@@ -929,6 +929,16 @@ function DashboardShell() {
       });
     }
 
+    // STATIC OVERRIDE: Phases 1 through 6 should display Planned: 4 for all domains
+    // This ensures consistency across all domains for these phases, matching the
+    // total planned count of 28 (7 domains × 4 planned per domain)
+    if (['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4', 'Phase 5', 'Phase 6'].includes(phase) && result && result.domains) {
+      result.domains = result.domains.map(domain => ({
+        ...domain,
+        planned: 4
+      }));
+    }
+
     // TEMPORARY STATIC OVERRIDE: Phase 7 should display Planned: 3 for all 7 domains
     // This is a temporary fix while the dynamic plannedWebinarCount functionality
     // continues to work for Phase 8 and beyond
