@@ -1,0 +1,51 @@
+name: Build and Publish
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - refined
+
+jobs:
+  publish:
+    if: github.event.pull_request.merged == true
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
+
+      - name: Checkout compiled repo
+        uses: actions/checkout@v4
+        with:
+          repository: necaaa-ui/alumni-compiled-repo
+          token: ${{ secrets.COMPILED_REPO_TOKEN }}
+          path: compiled
+
+      - name: Copy build
+        run: |
+          find compiled -mindepth 1 -maxdepth 1 ! -name ".git" -exec rm -rf {} +
+          cp -R frontend/dist/* compiled/
+
+      - name: Commit & Push
+        run: |
+          cd compiled
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add .
+          git commit -m "Auto build from $GITHUB_SHA" || echo "No changes"
+          git push
