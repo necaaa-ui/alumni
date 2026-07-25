@@ -22,6 +22,12 @@ const webinarPhaseSchema = new mongoose.Schema({
     domain: {
       type: String,
       required: true
+    },
+    plannedWebinarCount: {
+      type: Number,
+      required: true,
+      default: 1,
+      min: 1
     }
   }]
 }, { timestamps: true });

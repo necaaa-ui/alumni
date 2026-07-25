@@ -11,7 +11,10 @@ import ConfirmationDialog from './ConfirmationDialog';
 import Popup from './Popup';
 
 // Add API base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const isLocalDev = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const API_BASE_URL = isLocalDev
+  ? '/alumnimain'
+  : (import.meta.env.VITE_API_BASE_URL || '/alumnimain').replace(/\/$/, '');
 
 export default function WebinarDetails() {
   const { id, encodedUserEmail } = useParams();

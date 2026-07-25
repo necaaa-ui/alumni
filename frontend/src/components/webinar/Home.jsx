@@ -84,6 +84,7 @@ const AlumniDashboard = () => {
   });
 
   const [currentPhase, setCurrentPhase] = useState('');
+  const [currentPhaseId, setCurrentPhaseId] = useState(null);
   const [phases, setPhases] = useState([]);
 
   // Get email from URL on component mount
@@ -173,6 +174,7 @@ const AlumniDashboard = () => {
               
               if (currentPhaseData.found) {
                 setCurrentPhase(currentPhaseData.displayText);
+                setCurrentPhaseId(currentPhaseData.phaseId);
               } else {
                 const now = new Date();
                 let currentPhaseName = 'Phase 1';
@@ -365,9 +367,11 @@ const AlumniDashboard = () => {
           return;
         }
 
-        console.log('Fetching webinar data for phase:', currentPhase);
+        // Extract clean phase name (e.g., "Phase 6") from displayText like "Phase 6 (Dec 2025 - Mar 2026)"
+        const cleanPhase = currentPhase.split(' (')[0];
+        console.log('Fetching webinar data for phase:', currentPhase, 'cleaned to:', cleanPhase);
 
-        const dashboardRes = await fetch(`${API_BASE_URL}/api/dashboard-stats?phase=${encodeURIComponent(currentPhase)}`);
+        const dashboardRes = await fetch(`${API_BASE_URL}/api/dashboard-stats?phase=${encodeURIComponent(cleanPhase)}`);
         
         if (dashboardRes.ok) {
           const statsData = await dashboardRes.json();
@@ -436,6 +440,7 @@ const AlumniDashboard = () => {
     const useFallbackWebinarData = () => {
       console.log('Using fallback webinar data');
       
+      // All domains statically show planned: 3 to total 21 planned webinars (7 domains × 3)
       const seedData = {
         'Phase 1': {
           domains: [

@@ -9,7 +9,10 @@ import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, Align
 import { saveAs } from 'file-saver';
 
 // API Base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const isLocalDev = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const API_BASE_URL = isLocalDev
+  ? '/alumnimain'
+  : (import.meta.env.VITE_API_BASE_URL || '/alumnimain').replace(/\/$/, '');
 import MentorshipDashboard from './MentorshipDashboard';
 import WebinarAlumniFeedbackForm from "./webinar/WebinarAlumniFeedbackForm";
 import WebinarCompletedDetailsForm from "./webinar/WebinarCompletedDetailsForm";
@@ -248,19 +251,33 @@ const generateInitialData = (phaseNumber, phaseDetails) => {
     // Add more phases as needed
   };
 
+  const rawDomains = Array.isArray(prevData?.domains)
+    ? prevData.domains
+    : Array.isArray(prevData)
+      ? prevData
+      : [];
+
+  const fallbackDomains = Array.isArray(seedPhases['Phase 5']?.domains)
+    ? seedPhases['Phase 5'].domains
+    : [];
+
+  const domains = (rawDomains.length > 0 ? rawDomains : fallbackDomains).map((d, idx) => ({
+    ...d,
+    id: d?.id || `d${idx + 1}`,
+    name: d?.name || d?.domain || `Domain ${idx + 1}`,
+    planned: d?.plannedWebinarCount ?? d?.planned ?? 0,
+    conducted: 0,
+    postponed: 0,
+    totalSpeakers: 0, // Start from 0 for new phases
+    newSpeakers: 0,
+    requestedTopics: [],
+    approvedTopics: [],
+    completedTopics: []
+  }));
+
   return {
     months: monthMappings[phaseNumber] || [],
-    domains: prevData.domains.map(d => ({
-      ...d,
-      planned: 0,
-      conducted: 0,
-      postponed: 0,
-      totalSpeakers: 0, // Start from 0 for new phases
-      newSpeakers: 0,
-      requestedTopics: [],
-      approvedTopics: [],
-      completedTopics: []
-    }))
+    domains
   };
 };
 
@@ -852,42 +869,77 @@ function DashboardShell() {
     if (!phase) {
       return { domains: [] };
     }
-    if (isPhaseFuture(phase)) {
-      const phaseNumber = parseInt(phase.split(' ')[1]);
-      if (phaseDetails[phase]) {
-          const monthMappings = {
-          6: ['Dec 2025', 'Jan 2026', 'Feb 2026', 'Mar 2026'],
-          7: ['Jul 2026', 'Aug 2026', 'Sep 2026', 'Oct 2026'],
-          8: ['Jan 2027', 'Feb 2027', 'Mar 2027', 'Apr 2027'],
-          // Add more phases as needed
-        };
-        return {
-          months: monthMappings[phaseNumber] || [],
-          domains: phaseDetails[phase].map((d, idx) => ({
-            id: `d${idx + 1}`,
-            name: d.domain,
-            planned: phaseNumber === 7 ? 8 : 0,
-            conducted: 0,
-            postponed: 0,
-            totalSpeakers: 0,
-            newSpeakers: 0,
-            requestedTopics: [],
-            approvedTopics: [],
-            completedTopics: []
-          }))
-        };
-      } else {
-        return generateInitialData(phaseNumber, phaseDetails) || { domains: [] };
-      }
-    } else if (dynamicPhaseData && !seedPhases[phase]) {
-      return dynamicPhaseData;
-    } else if (seedPhases[phase]) {
-      return seedPhases[phase];
-    } else {
-      const phaseNumber = parseInt(phase.split(' ')[1]);
-      const data = generateInitialData(phaseNumber, phaseDetails);
-      return data || { domains: [] };
+
+    let result;
+
+    // Priority 1: If dynamic phase data exists (from /api/dashboard-stats), use it
+    // This has computed conducted/postponed/speaker stats from the backend
+    if (dynamicPhaseData && dynamicPhaseData.domains && dynamicPhaseData.domains.length > 0 && !seedPhases[phase]) {
+      result = dynamicPhaseData;
     }
+    // Priority 2: If this phase exists in seed data, use it
+    else if (seedPhases[phase]) {
+      result = seedPhases[phase];
+    }
+    // Priority 3: If we have actual phase details from the database, map them with plannedWebinarCount
+    else if (phaseDetails[phase]) {
+      const phaseNumber = parseInt(phase.split(' ')[1]);
+      const monthMappings = {
+        6: ['Dec 2025', 'Jan 2026', 'Feb 2026', 'Mar 2026'],
+        7: ['Jul 2026', 'Aug 2026', 'Sep 2026', 'Oct 2026'],
+        8: ['Jan 2027', 'Feb 2027', 'Mar 2027', 'Apr 2027'],
+      };
+      result = {
+        months: monthMappings[phaseNumber] || [],
+        domains: phaseDetails[phase].map((d, idx) => ({
+          id: `d${idx + 1}`,
+          name: d.domain,
+            planned: d.plannedWebinarCount || d.planned || 0,
+          conducted: 0,
+          postponed: 0,
+          totalSpeakers: 0,
+          newSpeakers: 0,
+          requestedTopics: [],
+          approvedTopics: [],
+          completedTopics: []
+        }))
+      };
+    }
+    // Priority 4: Fallback - generate initial data from previous phase
+    else {
+      const phaseNumber = parseInt(phase.split(' ')[1]);
+      if (!isNaN(phaseNumber)) {
+        result = generateInitialData(phaseNumber, phaseDetails);
+      }
+    }
+
+    // CRITICAL: Merge the correct plannedWebinarCount from phaseDetails into the result
+    // This ensures that even if backend /api/dashboard-stats returns wrong planned count,
+    // the correct value from the database is used
+    if (result && result.domains && phaseDetails[phase]) {
+      result.domains = result.domains.map((domain, idx) => {
+        const dbDomain = phaseDetails[phase][idx];
+        if (dbDomain && dbDomain.plannedWebinarCount !== undefined) {
+          return {
+            ...domain,
+            planned: Number(dbDomain.plannedWebinarCount) || 0
+          };
+        }
+        return domain;
+      });
+    }
+
+    // TEMPORARY STATIC OVERRIDE: Phase 7 should display Planned: 3 for all 7 domains
+    // This is a temporary fix while the dynamic plannedWebinarCount functionality
+    // continues to work for Phase 8 and beyond
+    if (phase === 'Phase 7' && result && result.domains) {
+      result.domains = result.domains.map(domain => ({
+        ...domain,
+        planned: 3
+      }));
+    }
+
+    return result || { domains: [] };
   };
 
   const phaseData = getPhaseData(selectedPhase);
@@ -1267,7 +1319,8 @@ function DashboardShell() {
         <i className="fab fa-linkedin"></i> LinkedIn
       </a>
       <a href="#" aria-label="GitHub">
-        <i className="fab fa-github"></i> GitHub
+
+p        <i className="fab fa-github"></i> GitHub
       </a>
     </div>
 

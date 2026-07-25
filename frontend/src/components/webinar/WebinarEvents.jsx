@@ -12,7 +12,10 @@ import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, Align
 import { saveAs } from 'file-saver';
 
 // Add API base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const isLocalDev = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || (isLocalDev ? 'http://localhost:5000' : '/alumnimain')
+).replace(/\/$/, '');
 
 export default function WebinarEvents() {
   const navigate = useNavigate();
@@ -118,16 +121,20 @@ export default function WebinarEvents() {
   };
   
   const getDepartmentFromDomain = (domain) => {
-    const domainMappings = {
-      'Full Stack Development (IT department)': 'IT',
-      'Cloud Computing (CSE department)': 'CSE',
-      'Artificial Intelligence & Data Science (AI & DS department)': 'AI & DS',
-      'Robotic and Automation (MECH department)': 'MECH',
-      'Electrical Power System (EEE department)': 'EEE',
-      'Embedded Systems (ECE department)': 'ECE',
-      'Structural Engineering (CIVIL department)': 'CIVIL'
-    };
-    return domainMappings[domain] || 'TBD';
+    // Domains created before and after the display-name mapping use different
+    // values (for example, "Cloud Computing" and "CLOUD COMPUTING (CSE)").
+    // Resolve by the stable domain/department keywords instead of exact text.
+    const normalizedDomain = String(domain || '').toUpperCase();
+
+    if (/\bCSE\b|CLOUD|CYBER/.test(normalizedDomain)) return 'CSE';
+    if (/\bIT\b|FULL\s*STACK/.test(normalizedDomain)) return 'IT';
+    if (/AI\s*&?\s*DS|ARTIFICIAL\s+INTELLIGENCE|DATA\s+SCIENCE/.test(normalizedDomain)) return 'AI & DS';
+    if (/\bMECH\b|ROBOTIC|AUTOMATION/.test(normalizedDomain)) return 'MECH';
+    if (/\bEEE\b|ELECTRICAL\s+POWER/.test(normalizedDomain)) return 'EEE';
+    if (/\bECE\b|EMBEDDED/.test(normalizedDomain)) return 'ECE';
+    if (/\bCIVIL\b|STRUCTURAL/.test(normalizedDomain)) return 'CIVIL';
+
+    return 'TBD';
   };
 
   const generateCircular = (month) => {
@@ -575,6 +582,46 @@ export default function WebinarEvents() {
     }
   };
 
+  const resolveSpeakerPhotoUrl = (photoValue) => {
+    if (!photoValue) return null;
+
+    const trimmedValue = String(photoValue).trim();
+    if (!trimmedValue) return null;
+
+    // Handle blob: URLs (used in assignment form preview)
+    if (trimmedValue.startsWith('blob:')) {
+      return trimmedValue;
+    }
+
+    // Handle standard absolute URLs and data URIs
+    if (/^https?:\/\//i.test(trimmedValue) || trimmedValue.startsWith('data:')) {
+      return trimmedValue;
+    }
+
+    // Handle application-root paths (e.g., /alumnimain/uploads/photo.jpg)
+    if (trimmedValue.startsWith('/')) {
+      // The path is already root-relative — use it directly as it works
+      // in both dev (localhost) and production (reverse proxy) environments.
+      return trimmedValue;
+    }
+
+    // Handle 'uploads/filename' style paths
+    if (trimmedValue.startsWith('uploads/')) {
+      return `${API_BASE_URL}/${trimmedValue}`;
+    }
+
+    // Default: The database stores just the filename (e.g., "1784865136682.jpeg").
+    // Use the dedicated API speaker-photos endpoint so it works regardless of
+    // whether /uploads is proxied in the deployed /alumnimain application.
+    const photoFileName = trimmedValue.split('/').filter(Boolean).pop();
+    if (photoFileName) {
+      return `${API_BASE_URL}/api/speaker-photos/${encodeURIComponent(photoFileName)}`;
+    }
+
+    // Final fallback: try traditional /uploads/ path
+    return `${API_BASE_URL}/uploads/${trimmedValue}`;
+  };
+
   const fetchWebinars = async () => {
     try {
       setLoading(true);
@@ -616,7 +663,7 @@ export default function WebinarEvents() {
             designation: webinar.speaker?.designation || 'TBD',
             passoutYear: webinar.speaker?.batch || 'TBD',
             department: webinar.speaker?.department || 'TBD',
-            photo: webinar.speaker?.speakerPhoto ? `${API_BASE_URL}/uploads/${webinar.speaker.speakerPhoto}` : null,
+            photo: resolveSpeakerPhotoUrl(webinar.speaker?.speakerPhoto || webinar.speaker?.photo),
             companyName: webinar.speaker?.companyName || 'TBD',
             email: webinar.speaker?.email || null
           },
@@ -783,7 +830,42 @@ export default function WebinarEvents() {
     const isRegistered = registeredWebinars.has(String(webinar._id));
     const isDeadlinePassed = webinar.deadline && new Date() > new Date(webinar.deadline);
     const isWithinOneWeek = webinar.deadline && (new Date(webinar.deadline) - new Date()) <= (7 * 24 * 60 * 60 * 1000) && (new Date(webinar.deadline) - new Date()) > 0;
-    const isFeedbackEnabled = webinar.webinarDate && new Date() > new Date(new Date(webinar.webinarDate).getTime() + 24 * 60 * 60 * 1000);
+    const isFeedbackEnabled = (() => {
+  if (!webinar.webinarDate || !webinar.time) return false;
+
+  try {
+    // Webinar date
+    const webinarStart = new Date(webinar.webinarDate);
+
+    // Parse time (supports "3:00 PM", "10 AM", "15:00")
+    const match = webinar.time.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM|am|pm)?/);
+
+    if (!match) return false;
+
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2] || "0", 10);
+    const period = match[3]?.toUpperCase();
+
+    // Convert to 24-hour format
+    if (period === "PM" && hours !== 12) {
+      hours += 12;
+    } else if (period === "AM" && hours === 12) {
+      hours = 0;
+    }
+
+    webinarStart.setHours(hours, minutes, 0, 0);
+
+    // Webinar duration = 1 hour
+    const webinarEnd = new Date(webinarStart);
+    webinarEnd.setHours(webinarEnd.getHours() + 1);
+
+    // Enable feedback immediately after webinar ends
+    return new Date() >= webinarEnd;
+  } catch (err) {
+    console.error("Feedback time calculation failed:", err);
+    return false;
+  }
+})();
     const isCertificateEnabled = webinar.attendedCount > 0;
     const isCoordinator = coordinators.some(coord => coord.email === userEmail);
     const canUpload = isCoordinator || isAdmin;
