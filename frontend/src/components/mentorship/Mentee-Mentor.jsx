@@ -22,6 +22,8 @@ export default function MenteeMentorAssignment() {
   const [loadingPhase, setLoadingPhase] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [assignmentMessage, setAssignmentMessage] = useState("");
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const navigate = useNavigate();
 
@@ -37,19 +39,40 @@ export default function MenteeMentorAssignment() {
 
   const fetchAllData = async () => {
     setLoading(true);
-    await Promise.all([
-      fetchMentors(),
-      fetchMentees(),
-      fetchCurrentPhase()
-    ]);
-    setLoading(false);
+    try {
+      await Promise.all([
+        fetchMentors(),
+        fetchMentees(),
+        fetchCurrentPhase()
+      ]);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const fetchMentors = async () => {
     try {
       const res = await axios.get(`${API_BASE_URL}/api/mentor-mentee/mentors`);
-      setMentors(res.data || []);
-      console.log("Mentors loaded:", res.data.length);
+      const mentorData = res.data || [];
+      
+      // Sort mentors alphabetically by name
+      const sortedMentors = [...mentorData].sort((a, b) => 
+        a.name.localeCompare(b.name)
+      );
+      
+      setMentors(sortedMentors);
+      console.log("Mentors loaded:", sortedMentors.length);
+      console.log("Mentor data:", sortedMentors);
+      
+      // Update selected mentor info if currently selected
+      if (formData.mentorName) {
+        const updatedMentor = sortedMentors.find(m => m.user_id === formData.mentorName);
+        if (updatedMentor) {
+          console.log("Selected mentor updated:", updatedMentor);
+        }
+      }
     } catch (err) {
       console.error("Error fetching mentors:", err);
       setMentors([]);
@@ -74,8 +97,13 @@ export default function MenteeMentorAssignment() {
         }
       }
       
-      setMentees(Array.isArray(menteesData) ? menteesData : []);
-      console.log("Mentees loaded:", menteesData.length);
+      // Sort mentees alphabetically by name
+      const sortedMentees = Array.isArray(menteesData) 
+        ? [...menteesData].sort((a, b) => a.name.localeCompare(b.name))
+        : [];
+      
+      setMentees(sortedMentees);
+      console.log("Mentees loaded:", sortedMentees.length);
       
     } catch (err) {
       console.error("Error fetching mentees:", err);
@@ -116,14 +144,15 @@ export default function MenteeMentorAssignment() {
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
     
-    // Auto-clear mentee selections if mentor changes
-    if (name === "mentorName") {
-      setFormData(prev => ({
-        ...prev,
-        mentee1: "",
-        mentee2: "",
-        mentee3: ""
-      }));
+    // Update selected mentor slots when mentor changes
+    if (name === "mentorName" && value) {
+      const selectedMentor = mentors.find(m => m.user_id === value);
+      if (selectedMentor) {
+        setAssignmentMessage("");
+        setShowSuccess(false);
+      }
+    } else if (name === "mentorName" && !value) {
+      setAssignmentMessage("");
     }
   };
 
@@ -132,6 +161,15 @@ export default function MenteeMentorAssignment() {
     if (!formData.mentorName) newErrors.mentorName = "Mentor name is required";
     if (!formData.mentee1) newErrors.mentee1 = "At least 1 mentee is mandatory";
     if (!formData.phaseId) newErrors.phase = "No active phase available";
+    
+    // Check if selected mentor has available slots
+    if (formData.mentorName) {
+      const selectedMentor = mentors.find(m => m.user_id === formData.mentorName);
+      if (selectedMentor && selectedMentor.isFullyAssigned) {
+        newErrors.mentorName = "This mentor already has 3 mentees assigned";
+      }
+    }
+    
     return newErrors;
   };
 
@@ -143,9 +181,17 @@ export default function MenteeMentorAssignment() {
     }
 
     setSubmitting(true);
+    setAssignmentMessage("");
+    setShowSuccess(false);
 
     try {
       const menteeIds = [formData.mentee1, formData.mentee2, formData.mentee3].filter(Boolean);
+
+      console.log("Submitting assignment:", {
+        mentor_user_id: formData.mentorName,
+        mentee_user_ids: menteeIds,
+        phaseId: formData.phaseId
+      });
 
       const response = await axios.post(`${API_BASE_URL}/api/mentor-mentee/assign`, {
         mentor_user_id: formData.mentorName,
@@ -153,34 +199,75 @@ export default function MenteeMentorAssignment() {
         phaseId: formData.phaseId
       });
 
+      console.log("Assignment response:", response.data);
+
       if (response.data.success) {
+        const message = response.data.message || "Assignment successful";
+        const totalMentees = response.data.totalMentees || 0;
+        const availableSlots = response.data.availableSlots || 0;
+        const isFullyAssigned = response.data.isFullyAssigned || false;
+        
+        let successMessage = "";
+        if (isFullyAssigned) {
+          successMessage = `✅ Mentor is now fully assigned with 3 mentees.`;
+        } else if (availableSlots > 0) {
+          successMessage = `✅ ${totalMentees}/3 mentees assigned. ${availableSlots} slot(s) remaining for this mentor.`;
+        } else {
+          successMessage = `✅ ${message}`;
+        }
+        
+        // Add status update message
+        if (response.data.mentorStatusUpdated) {
+          successMessage += ` Mentor status updated to "assigned".`;
+        }
+        if (response.data.menteesStatusUpdated && response.data.menteesStatusUpdated.length > 0) {
+          successMessage += ` ${response.data.menteesStatusUpdated.length} mentee(s) status updated to "assigned".`;
+        }
+        
+        setAssignmentMessage(successMessage);
+        setShowSuccess(true);
         setSubmitted(true);
         
-        // Clear the form
+        // Clear mentee fields but KEEP THE MENTOR SELECTED
         setFormData(prev => ({
           ...prev,
-          mentorName: "",
           mentee1: "",
           mentee2: "",
           mentee3: ""
         }));
         
-        // Refresh all data after assignment
-        setTimeout(() => {
-          fetchAllData();
-        }, 500);
+        // IMPORTANT: Refresh mentors data immediately to get updated counts
+        await fetchMentors();
+        await fetchMentees();
+        
+        // After refresh, check if the mentor is still available
+        if (formData.mentorName) {
+          const updatedMentor = mentors.find(m => m.user_id === formData.mentorName);
+          if (updatedMentor) {
+            console.log("Updated mentor count:", updatedMentor.assignedMentees);
+          }
+        }
         
         setTimeout(() => {
           setSubmitted(false);
-        }, 2500);
+          setShowSuccess(false);
+        }, 4000);
       } else {
         alert(response.data.message || "Error assigning mentor");
+        setSubmitted(false);
       }
       
     } catch (err) {
-      console.error(err);
+      console.error("Assignment error:", err);
       const errorMessage = err.response?.data?.message || "Error assigning mentor. Please try again.";
-      alert(errorMessage);
+      
+      // Show more detailed error message if available
+      if (err.response?.data?.availableSlots !== undefined) {
+        alert(`${errorMessage}. Available slots: ${err.response.data.availableSlots}`);
+      } else {
+        alert(errorMessage);
+      }
+      setSubmitted(false);
     } finally {
       setSubmitting(false);
     }
@@ -204,6 +291,9 @@ export default function MenteeMentorAssignment() {
     );
   }
 
+  // Get selected mentor details from the updated mentors list
+  const selectedMentor = formData.mentorName ? mentors.find(m => m.user_id === formData.mentorName) : null;
+
   return (
     <div className="form-wrapper">
       <button className="dashboard-btn" onClick={handleBackClick}>
@@ -213,18 +303,22 @@ export default function MenteeMentorAssignment() {
       <div className="form-container">
         <div className="form-header">
           <h1 className="form-title">Mentee-Mentor Assignment</h1>
-          <p className="form-subtitle">Assign mentees to mentors</p>
+          <p className="form-subtitle">Assign up to 3 mentees per mentor</p>
         </div>
 
         <div className="form-card">
-          {submitted && (
+          {showSuccess && assignmentMessage && (
             <div className="success-message-container">
               <div className="success-message">
                 <div className="success-icon">✓</div>
                 <div className="success-content">
-                  <h3 className="success-title">Assignment Submitted Successfully!</h3>
+                  <h3 className="success-title">Assignment {selectedMentor?.assignedMentees > 1 ? 'Updated' : 'Submitted'} Successfully!</h3>
                   <p className="success-text">
-                    The mentees have been successfully assigned to the mentor.
+                   
+                    <br />
+                    <span style={{ fontSize: '14px', marginTop: '8px', display: 'block' }}>
+                    
+                    </span>
                   </p>
                 </div>
               </div>
@@ -245,15 +339,40 @@ export default function MenteeMentorAssignment() {
                 <option value="">-- Select Mentor --</option>
                 {mentors.map((mentor) => (
                   <option key={mentor.user_id} value={mentor.user_id}>
-                    {mentor.name} ({mentor.email}) - {mentor.areas_of_interest?.join(", ") || "No interests"}
-                    
+                    {mentor.name} ({mentor.email}) - {mentor.areas_of_interest?.join(", ") || "No interests"} 
+                    {mentor.isFullyAssigned ? " (FULL)" : mentor.assignedMentees > 0 ? ` (${mentor.assignedMentees}/3)` : ""}
                   </option>
                 ))}
               </select>
               {errors.mentorName && <span className="error-text">{errors.mentorName}</span>}
+              
+              {/* Show mentor status with assigned status */}
+              {selectedMentor && (
+                <div style={{ marginTop: '8px', fontSize: '14px' }}>
+                  <span style={{ 
+                    color: selectedMentor.isFullyAssigned ? '#dc2626' : '#16a34a',
+                    fontWeight: '500'
+                  }}>
+                    
+                  </span>
+                  {selectedMentor.assignedMentees > 0 && (
+                    <span style={{ 
+                      marginLeft: '12px',
+                      fontSize: '12px',
+                      color: '#6b7280',
+                      backgroundColor: '#f3f4f6',
+                      padding: '2px 8px',
+                      borderRadius: '4px'
+                    }}>
+                      Status: {selectedMentor.status || 'assigned'}
+                    </span>
+                  )}
+                </div>
+              )}
+              
               {mentors.length === 0 && !loadingPhase && (
                 <small className="info-text" style={{ color: "#10b981" }}>
-                  ✓ No mentors found for this phase
+                  ✓ All mentors have been fully assigned for this phase
                 </small>
               )}
             </div>
@@ -281,12 +400,13 @@ export default function MenteeMentorAssignment() {
                   value={formData[`mentee${i}`]}
                   onChange={handleChange}
                   className={`select ${i === 1 && errors.mentee1 ? "input-error" : ""}`}
-                  disabled={submitting || submitted}
+                  disabled={submitting || submitted || selectedMentor?.isFullyAssigned}
                 >
                   <option value="">-- Select Mentee --</option>
                   {mentees.map((mentee) => (
                     <option key={mentee.user_id} value={mentee.user_id}>
                       {mentee.name} ({mentee.email}) - {mentee.area_of_interest}
+                      {mentee.status === 'assigned' ? ' (Assigned)' : ''}
                     </option>
                   ))}
                 </select>
@@ -305,7 +425,7 @@ export default function MenteeMentorAssignment() {
             <button
               onClick={handleSubmit}
               className="submit-btn"
-              disabled={submitting || loadingPhase || submitted || mentors.length === 0 || mentees.length === 0}
+              disabled={submitting || loadingPhase || submitted || mentors.length === 0 || mentees.length === 0 || selectedMentor?.isFullyAssigned}
             >
               {submitting ? (
                 <>
@@ -315,7 +435,7 @@ export default function MenteeMentorAssignment() {
               ) : submitted ? (
                 "Submitted!"
               ) : (
-                "Assign Mentor"
+                selectedMentor?.assignedMentees > 0 ? "Add More Mentees" : "Assign Mentor"
               )}
             </button>
           </div>

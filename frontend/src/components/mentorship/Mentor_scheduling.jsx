@@ -46,6 +46,10 @@ export default function MentorshipSchedulingForm() {
   const [loadingPhase, setLoadingPhase] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [loadingMentor, setLoadingMentor] = useState(false);
+  const [dateValidation, setDateValidation] = useState({
+    commencementDateValid: false,
+    endDateValid: false
+  });
 
   const emailTimeoutRef = useRef(null);
 
@@ -170,17 +174,27 @@ export default function MentorshipSchedulingForm() {
           ...prev, 
           commencementDate: "Commencement date must be today or a future date" 
         }));
+        setDateValidation(prev => ({ ...prev, commencementDateValid: false }));
+      } else {
+        setErrors(prev => ({ ...prev, commencementDate: '' }));
+        setDateValidation(prev => ({ ...prev, commencementDateValid: true }));
       }
     }
     
     if (name === "endDate" && value && formData.commencementDate) {
       const commencementDate = new Date(formData.commencementDate);
       const endDate = new Date(value);
+      commencementDate.setHours(0, 0, 0, 0);
+      endDate.setHours(0, 0, 0, 0);
       if (endDate <= commencementDate) {
         setErrors(prev => ({ 
           ...prev, 
           endDate: "End date must be after commencement date" 
         }));
+        setDateValidation(prev => ({ ...prev, endDateValid: false }));
+      } else {
+        setErrors(prev => ({ ...prev, endDate: '' }));
+        setDateValidation(prev => ({ ...prev, endDateValid: true }));
       }
     }
     
@@ -192,6 +206,8 @@ export default function MentorshipSchedulingForm() {
           ...prev, 
           meetingLink: "Please enter a valid URL (e.g., https://meet.google.com/abc-xyz)" 
         }));
+      } else {
+        setErrors(prev => ({ ...prev, meetingLink: '' }));
       }
     }
 
@@ -408,6 +424,40 @@ export default function MentorshipSchedulingForm() {
     });
 
     return newErrors;
+  };
+
+  // Check if form is valid for submission
+  const isFormValid = () => {
+    // Check if all required fields are filled
+    const requiredFields = [
+      formData.mentorEmail,
+      formData.mentorId,
+      formData.menteeEmails.length > 0,
+      formData.commencementDate,
+      formData.endDate,
+      formData.meetingTime,
+      formData.duration,
+      formData.platform,
+      formData.meetingLink,
+      formData.agenda,
+      formData.preferredDay,
+      formData.numberOfMeetings > 0,
+      formData.phaseId
+    ];
+
+    const allRequiredFilled = requiredFields.every(field => field);
+    
+    // Check if there are any errors
+    const hasErrors = Object.keys(errors).some(key => errors[key] !== '');
+    
+    // Check date validations
+    const isCommencementValid = dateValidation.commencementDateValid || !formData.commencementDate;
+    const isEndDateValid = dateValidation.endDateValid || !formData.endDate;
+    
+    // Check if date fields have errors
+    const hasDateErrors = errors.commencementDate || errors.endDate;
+    
+    return allRequiredFilled && !hasErrors && !hasDateErrors && isCommencementValid && isEndDateValid;
   };
 
   const handleSubmit = async () => {
@@ -825,7 +875,7 @@ export default function MentorshipSchedulingForm() {
           <button 
             onClick={handleSubmit} 
             className="submit-btn"
-            disabled={!formData.phaseId || submitting || submitted}
+            disabled={!isFormValid() || submitting || submitted || !formData.phaseId}
           >
             {submitting ? (
               <>
@@ -836,10 +886,18 @@ export default function MentorshipSchedulingForm() {
               "Redirecting..."
             ) : !formData.phaseId ? (
               "No Active Phase"
+            ) : !isFormValid() ? (
+              "All Fields Required"
             ) : (
               "Schedule Meeting"
             )}
           </button>
+          
+          {!isFormValid() && !submitting && !submitted && formData.phaseId && (
+            <small className="warning-text" style={{ display: 'block', marginTop: '8px', textAlign: 'center' }}>
+              Please fill all required fields
+            </small>
+          )}
         </div>
       </div>
     </div>
