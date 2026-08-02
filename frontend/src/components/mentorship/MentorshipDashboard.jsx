@@ -1,4 +1,4 @@
-// pages/MentorshipDashboard.js - WITH PAGINATION FOR MENTORS, MENTEES, FEEDBACK & CLICKABLE MENTEE COUNT
+// pages/MentorshipDashboard.js - WITH DYNAMIC PAGINATION
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -1765,6 +1765,57 @@ export default function MentorshipDashboard() {
     );
   }
 
+  // ========== PAGINATION HELPER FUNCTION ==========
+  const getPaginationButtons = (currentPage, totalPages) => {
+    const buttons = [];
+    const maxVisible = 5;
+    
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        buttons.push(i);
+      }
+    } else {
+      // Always show first page
+      buttons.push(1);
+      
+      // Calculate start and end of visible pages
+      let start = Math.max(2, currentPage - 1);
+      let end = Math.min(totalPages - 1, currentPage + 1);
+      
+      // Adjust if near the beginning
+      if (currentPage <= 3) {
+        end = Math.min(totalPages - 1, 4);
+      }
+      
+      // Adjust if near the end
+      if (currentPage >= totalPages - 2) {
+        start = Math.max(2, totalPages - 3);
+      }
+      
+      // Add ellipsis after first page if needed
+      if (start > 2) {
+        buttons.push('...');
+      }
+      
+      // Add middle pages
+      for (let i = start; i <= end; i++) {
+        buttons.push(i);
+      }
+      
+      // Add ellipsis before last page if needed
+      if (end < totalPages - 1) {
+        buttons.push('...');
+      }
+      
+      // Always show last page
+      if (totalPages > 1) {
+        buttons.push(totalPages);
+      }
+    }
+    
+    return buttons;
+  };
+
   return (
     <div className="md-dashboard-wrapper">
       <div className="md-animated-bg">
@@ -1874,7 +1925,7 @@ export default function MentorshipDashboard() {
           </div>
         ) : (
           <>
-            {/* MENTORS TAB - WITH PAGINATION */}
+            {/* MENTORS TAB - WITH DYNAMIC PAGINATION */}
             {activeTab === 'mentors' && (
               <div className="md-mentors-tab">
                 <div className="md-section-header-with-filters">
@@ -2080,12 +2131,14 @@ export default function MentorshipDashboard() {
                       </div>
                     </div>
                     
-                    {/* Mentor Pagination */}
+                    {/* Mentor Pagination - DYNAMIC */}
                     {(() => {
                       const totalItems = filteredMentors.length;
                       const totalPages = Math.ceil(totalItems / mentorsPerPage) || 1;
                       
                       if (totalPages <= 1) return null;
+                      
+                      const pageButtons = getPaginationButtons(currentMentorPage, totalPages);
                       
                       return (
                         <div className="md-meeting-pagination md-mentor-pagination">
@@ -2098,14 +2151,18 @@ export default function MentorshipDashboard() {
                           </button>
                           
                           <div className="md-pagination-dots">
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-                              <button
-                                key={pageNum}
-                                className={`md-pagination-dot ${currentMentorPage === pageNum ? 'active' : ''}`}
-                                onClick={() => setCurrentMentorPage(pageNum)}
-                              >
-                                {pageNum}
-                              </button>
+                            {pageButtons.map((page, idx) => (
+                              page === '...' ? (
+                                <span key={`ellipsis-${idx}`} className="md-pagination-ellipsis">…</span>
+                              ) : (
+                                <button
+                                  key={page}
+                                  className={`md-pagination-dot ${currentMentorPage === page ? 'active' : ''}`}
+                                  onClick={() => setCurrentMentorPage(page)}
+                                >
+                                  {page}
+                                </button>
+                              )
                             ))}
                           </div>
                           
@@ -2124,7 +2181,7 @@ export default function MentorshipDashboard() {
               </div>
             )}
 
-            {/* MENTEES TAB - WITH PAGINATION */}
+            {/* MENTEES TAB - WITH DYNAMIC PAGINATION */}
             {activeTab === 'mentees' && (
               <div className="md-mentees-tab">
                 <div className="md-section-header-with-filters">
@@ -2331,12 +2388,14 @@ export default function MentorshipDashboard() {
                       </div>
                     </div>
                     
-                    {/* Mentee Pagination */}
+                    {/* Mentee Pagination - DYNAMIC */}
                     {(() => {
                       const totalItems = filteredMentees.length;
                       const totalPages = Math.ceil(totalItems / menteesPerPage) || 1;
                       
                       if (totalPages <= 1) return null;
+                      
+                      const pageButtons = getPaginationButtons(currentMenteePage, totalPages);
                       
                       return (
                         <div className="md-meeting-pagination md-mentee-pagination">
@@ -2349,14 +2408,18 @@ export default function MentorshipDashboard() {
                           </button>
                           
                           <div className="md-pagination-dots">
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-                              <button
-                                key={pageNum}
-                                className={`md-pagination-dot ${currentMenteePage === pageNum ? 'active' : ''}`}
-                                onClick={() => setCurrentMenteePage(pageNum)}
-                              >
-                                {pageNum}
-                              </button>
+                            {pageButtons.map((page, idx) => (
+                              page === '...' ? (
+                                <span key={`ellipsis-${idx}`} className="md-pagination-ellipsis">…</span>
+                              ) : (
+                                <button
+                                  key={page}
+                                  className={`md-pagination-dot ${currentMenteePage === page ? 'active' : ''}`}
+                                  onClick={() => setCurrentMenteePage(page)}
+                                >
+                                  {page}
+                                </button>
+                              )
                             ))}
                           </div>
                           
@@ -2375,7 +2438,7 @@ export default function MentorshipDashboard() {
               </div>
             )}
 
-            {/* ASSIGNMENTS TAB - WITH CLICKABLE MENTEE COUNT */}
+            {/* ASSIGNMENTS TAB - WITH DYNAMIC PAGINATION */}
             {activeTab === 'assignments' && (
               <div className="md-assignments-tab">
                 <div className="md-section-header-with-filters">
@@ -2532,12 +2595,14 @@ export default function MentorshipDashboard() {
                       </div>
                     </div>
                     
-                    {/* Assignment Pagination */}
+                    {/* Assignment Pagination - DYNAMIC */}
                     {(() => {
                       const totalItems = filteredAssignments.length;
                       const totalPages = Math.ceil(totalItems / assignmentsPerPage) || 1;
                       
                       if (totalPages <= 1) return null;
+                      
+                      const pageButtons = getPaginationButtons(currentAssignmentPage, totalPages);
                       
                       return (
                         <div className="md-meeting-pagination md-assignment-pagination">
@@ -2550,14 +2615,18 @@ export default function MentorshipDashboard() {
                           </button>
                           
                           <div className="md-pagination-dots">
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-                              <button
-                                key={pageNum}
-                                className={`md-pagination-dot ${currentAssignmentPage === pageNum ? 'active' : ''}`}
-                                onClick={() => setCurrentAssignmentPage(pageNum)}
-                              >
-                                {pageNum}
-                              </button>
+                            {pageButtons.map((page, idx) => (
+                              page === '...' ? (
+                                <span key={`ellipsis-${idx}`} className="md-pagination-ellipsis">…</span>
+                              ) : (
+                                <button
+                                  key={page}
+                                  className={`md-pagination-dot ${currentAssignmentPage === page ? 'active' : ''}`}
+                                  onClick={() => setCurrentAssignmentPage(page)}
+                                >
+                                  {page}
+                                </button>
+                              )
                             ))}
                           </div>
                           
@@ -2576,7 +2645,7 @@ export default function MentorshipDashboard() {
               </div>
             )}
 
-            {/* MEETINGS TAB - WITH CLICKABLE SESSIONS COUNT */}
+            {/* MEETINGS TAB - WITH DYNAMIC PAGINATION */}
             {activeTab === 'meetings' && (
               <div className="md-meetings-tab">
                 <div className="md-section-header-with-filters">
@@ -2783,7 +2852,7 @@ export default function MentorshipDashboard() {
                             </div>
                           </div>
 
-                          {/* Meeting Pagination */}
+                          {/* Meeting Pagination - DYNAMIC */}
                           {totalPages > 1 && (
                             <div className="md-meeting-pagination">
                               <button 
@@ -2795,15 +2864,22 @@ export default function MentorshipDashboard() {
                               </button>
                               
                               <div className="md-pagination-dots">
-                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-                                  <button
-                                    key={pageNum}
-                                    className={`md-pagination-dot ${currentMeetingPage === pageNum ? 'active' : ''}`}
-                                    onClick={() => setCurrentMeetingPage(pageNum)}
-                                  >
-                                    {pageNum}
-                                  </button>
-                                ))}
+                                {(() => {
+                                  const pageButtons = getPaginationButtons(currentMeetingPage, totalPages);
+                                  return pageButtons.map((page, idx) => (
+                                    page === '...' ? (
+                                      <span key={`ellipsis-${idx}`} className="md-pagination-ellipsis">…</span>
+                                    ) : (
+                                      <button
+                                        key={page}
+                                        className={`md-pagination-dot ${currentMeetingPage === page ? 'active' : ''}`}
+                                        onClick={() => setCurrentMeetingPage(page)}
+                                      >
+                                        {page}
+                                      </button>
+                                    )
+                                  ));
+                                })()}
                               </div>
                               
                               <button 
@@ -2823,7 +2899,7 @@ export default function MentorshipDashboard() {
               </div>
             )}
 
-            {/* FEEDBACK TAB - WITH PAGINATION */}
+            {/* FEEDBACK TAB - WITH DYNAMIC PAGINATION */}
             {activeTab === 'feedback' && (
               <div className="md-feedback-tab">
                 <div className="md-section-header-with-filters">
@@ -2955,12 +3031,14 @@ export default function MentorshipDashboard() {
                       })()}
                     </div>
                     
-                    {/* Feedback Pagination */}
+                    {/* Feedback Pagination - DYNAMIC */}
                     {(() => {
                       const totalItems = filteredFeedbacks.length;
                       const totalPages = Math.ceil(totalItems / feedbacksPerPage) || 1;
                       
                       if (totalPages <= 1) return null;
+                      
+                      const pageButtons = getPaginationButtons(currentFeedbackPage, totalPages);
                       
                       return (
                         <div className="md-meeting-pagination md-feedback-pagination">
@@ -2973,14 +3051,18 @@ export default function MentorshipDashboard() {
                           </button>
                           
                           <div className="md-pagination-dots">
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-                              <button
-                                key={pageNum}
-                                className={`md-pagination-dot ${currentFeedbackPage === pageNum ? 'active' : ''}`}
-                                onClick={() => setCurrentFeedbackPage(pageNum)}
-                              >
-                                {pageNum}
-                              </button>
+                            {pageButtons.map((page, idx) => (
+                              page === '...' ? (
+                                <span key={`ellipsis-${idx}`} className="md-pagination-ellipsis">…</span>
+                              ) : (
+                                <button
+                                  key={page}
+                                  className={`md-pagination-dot ${currentFeedbackPage === page ? 'active' : ''}`}
+                                  onClick={() => setCurrentFeedbackPage(page)}
+                                >
+                                  {page}
+                                </button>
+                              )
                             ))}
                           </div>
                           
