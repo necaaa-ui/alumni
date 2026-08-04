@@ -16,6 +16,8 @@ const placementSSORoutes = require('./single-sign-on/routes/placement');
 app.use('/api/placement', placementSSORoutes);
 const mentorshipSSORoutes = require('./single-sign-on/routes/mentorShip');
 app.use('/api/mentorship', mentorshipSSORoutes);
+const scholarshipSSORoutes = require('./single-sign-on/routes/scholrship');
+app.use('/api/scholarship', scholarshipSSORoutes);
 
 
 
