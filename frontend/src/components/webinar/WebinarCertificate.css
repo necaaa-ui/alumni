@@ -4,6 +4,7 @@
 }
 
 .certificate-container {
+  box-sizing: border-box;
   width: 900px;
   height: 600px;
   margin: auto;
@@ -74,16 +75,20 @@
 
 .signatures {
   display: flex;
-  justify-content: flex-start;   /* Align to the left */
-  gap: 80px;                      /* Space between items */
-  margin-top: 8px;
-  margin-right: 20px;
+  position: absolute;
+  left: 55px;
+  right: 55px;
+  bottom: 35px;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin: 0;
 }
 
 
 .signature-item {
   text-align: center;
-  margin-left: 30px;
+  width: 180px;
+  margin: 0;
 }
 
 .signature-image {
@@ -181,13 +186,13 @@
   }
 
   .signatures {
-    flex-direction: column;
-    gap: 20px;
-    align-items: center;
+    left: 25px;
+    right: 25px;
+    bottom: 20px;
   }
 
   .signature-item {
-    margin-left: 0;
+    width: 130px;
   }
 
   .signature-image {

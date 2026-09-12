@@ -24,6 +24,7 @@ export default function WebinarStudentFeedbackForm() {
   const [popup, setPopup] = useState({ show: false, message: '', type: 'success' });
   const [errors, setErrors] = useState({});
   const MAX_FEEDBACK_CHARS = 150;
+  const MIN_FEEDBACK_WORDS = 5;
 
   // Keep page scroll but hide vertical scrollbar while this page is open
   useEffect(() => {
@@ -42,8 +43,10 @@ export default function WebinarStudentFeedbackForm() {
     // Check if empty
     if (trimmed === "") return "Feedback is required";
 
-    // Check minimum length (1 character)
-    if (trimmed.length < 1) return "Feedback must be at least 1 character long";
+    const wordCount = trimmed.split(/\s+/).filter(Boolean).length;
+
+    // Check minimum word count
+    if (wordCount < MIN_FEEDBACK_WORDS) return `Feedback must contain at least ${MIN_FEEDBACK_WORDS} words`;
 
     // Check maximum characters
     if (trimmed.length > MAX_FEEDBACK_CHARS) return `Feedback cannot exceed ${MAX_FEEDBACK_CHARS} characters`;

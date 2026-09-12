@@ -61,7 +61,7 @@ const webinarSchema = new mongoose.Schema({
 
   status: {
     type: String,
-    default: "Not Completed",
+    default: "planned",
   },
 
   // Multiple event images uploaded during webinar completion

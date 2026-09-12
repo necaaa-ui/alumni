@@ -175,9 +175,11 @@ const AlumniDashboard = () => {
                 setCurrentPhase(currentPhaseData.displayText);
               } else {
                 const now = new Date();
-                let currentPhaseName = 'Phase 1';
+                let currentPhaseName = 'Phase 7';
                 
-                if (now >= new Date('2025-10-01')) {
+                if (now >= new Date('2026-08-24')) {
+                  currentPhaseName = 'Phase 7';
+                } else if (now >= new Date('2025-10-01')) {
                   currentPhaseName = 'Phase 6';
                 } else if (now >= new Date('2025-07-01')) {
                   currentPhaseName = 'Phase 5';
@@ -206,15 +208,9 @@ const AlumniDashboard = () => {
     };
 
     const generateFallbackPhases = () => {
-      const basePhases = ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4', 'Phase 5'];
+      const basePhases = ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4', 'Phase 5', 'Phase 6', 'Phase 7'];
       const now = new Date();
       
-      if (now >= new Date('2025-10-01')) {
-        basePhases.push('Phase 6');
-      }
-      if (now >= new Date('2026-10-01')) {
-        basePhases.push('Phase 7');
-      }
       if (now >= new Date('2027-10-01')) {
         basePhases.push('Phase 8');
       }
@@ -222,9 +218,11 @@ const AlumniDashboard = () => {
       setPhases(basePhases);
       
       const nowDate = new Date();
-      let currentPhaseName = 'Phase 1';
+      let currentPhaseName = 'Phase 7';
       
-      if (nowDate >= new Date('2025-10-01')) {
+      if (nowDate >= new Date('2026-08-24')) {
+        currentPhaseName = 'Phase 7';
+      } else if (nowDate >= new Date('2025-10-01')) {
         currentPhaseName = 'Phase 6';
       } else if (nowDate >= new Date('2025-07-01')) {
         currentPhaseName = 'Phase 5';

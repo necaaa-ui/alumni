@@ -37,6 +37,9 @@ const WebinarCompletedDetailsForm = () => {
   const [attendanceFile, setAttendanceFile] = useState(null);
   const [attendanceSheetBase64, setAttendanceSheetBase64] = useState('');
   const [attendanceData, setAttendanceData] = useState([]);
+  const [signedReportFile, setSignedReportFile] = useState(null);
+  const [signedReportBase64, setSignedReportBase64] = useState('');
+  const [signedReportName, setSignedReportName] = useState('');
 
   const [canDownloadCertificate, setCanDownloadCertificate] = useState(false);
 
@@ -134,10 +137,10 @@ const WebinarCompletedDetailsForm = () => {
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Check file size (25MB limit)
-      const maxSize = 25 * 1024 * 1024; // 25MB in bytes
+      // Check file size (3MB limit)
+      const maxSize = 3 * 1024 * 1024; // 3MB in bytes
       if (file.size > maxSize) {
-        setErrors(prev => ({ ...prev, attendanceFile: "File size must be less than 25MB" }));
+        setErrors(prev => ({ ...prev, attendanceFile: "File size must be less than 3MB" }));
         setAttendanceFile(null);
         setAttendanceSheetBase64('');
         setAttendanceData([]);
@@ -204,6 +207,36 @@ const WebinarCompletedDetailsForm = () => {
     });
   };
 
+  const handleSignedReportChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setSignedReportFile(null);
+      setSignedReportBase64('');
+      setSignedReportName('');
+      setErrors(prev => ({ ...prev, signedReport: null }));
+      return;
+    }
+
+    const maxSize = 3 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setErrors(prev => ({ ...prev, signedReport: 'File size must be less than 3MB' }));
+      setSignedReportFile(null);
+      setSignedReportBase64('');
+      setSignedReportName('');
+      return;
+    }
+
+    setSignedReportFile(file);
+    setSignedReportName(file.name);
+    setErrors(prev => ({ ...prev, signedReport: null }));
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setSignedReportBase64(event.target.result || '');
+    };
+    reader.readAsDataURL(file);
+  };
+
 
   // Check if prize winner can download certificate
   useEffect(() => {
@@ -252,6 +285,8 @@ const WebinarCompletedDetailsForm = () => {
       newErrors.prizeWinnerEmail = "Enter a registered student email to fetch winner name and mobile number";
     if (!attendanceFile)
       newErrors.attendanceFile = "Attendance Excel file is required";
+    if (!signedReportFile)
+      newErrors.signedReport = "Copy of the signed report is required";
 
     // Event images are optional.
     setErrors(newErrors);
@@ -270,6 +305,8 @@ const WebinarCompletedDetailsForm = () => {
             prizeWinnerMobile: formData.contact,
             attendanceData: attendanceData,
             attendanceSheet: attendanceSheetBase64,
+            signedReport: signedReportBase64,
+            signedReportName: signedReportName,
             eventImages: eventImagePreviews,
           }),
         });
@@ -372,6 +409,26 @@ const WebinarCompletedDetailsForm = () => {
                   </small>
                   {errors.attendanceFile && (
                     <div className="error-text">{errors.attendanceFile}</div>
+                  )}
+                </div>
+
+                {/* Signed Report upload */}
+                <div className="form-group">
+                  <label className="field-label">
+                    <FiUpload className="field-icon" /> Signed Report <span>*</span>
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,image/*"
+                    onChange={handleSignedReportChange}
+                    className="input-field"
+                    required
+                  />
+                  {signedReportName && (
+                    <small className="help-text">Selected file: {signedReportName}</small>
+                  )}
+                  {errors.signedReport && (
+                    <div className="error-text">{errors.signedReport}</div>
                   )}
                 </div>
 

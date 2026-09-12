@@ -72,22 +72,33 @@ router.post('/submit-student-feedback', async (req, res) => {
     if (!email || !name || !webinar || !speaker || !q1 || !q2 || !feedback || !phaseId) {
       return res.status(400).json({ error: 'All fields are required' });
     }
+
+    const trimmedFeedback = String(feedback).trim();
+    const feedbackWordCount = trimmedFeedback.split(/\s+/).filter(Boolean).length;
+    if (feedbackWordCount < 5) {
+      return res.status(400).json({ error: 'Additional feedback must contain at least 5 words' });
+    }
+
     const Member = req.app.locals.Member;
-    const member = await Member.findOne({ "basic.email_id": email });
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const escapedEmail = normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const member = await Member.findOne({
+      "basic.email_id": { $regex: new RegExp(`^${escapedEmail}$`, 'i') },
+    });
     if (!member) {
-      return res.status(404).json({ error: 'Student not found with this email' });
+      return res.status(404).json({ error: 'This email is not present in the member database. Feedback cannot be submitted.' });
     }
     const StudentFeedback = req.app.locals.StudentFeedback;
 
     // Check if feedback already exists for this email and webinar
-    const existingFeedback = await StudentFeedback.findOne({ email, webinar });
+    const existingFeedback = await StudentFeedback.findOne({ email: normalizedEmail, webinar });
     if (existingFeedback) {
       return res.status(400).json({ error: 'Feedback already submitted for this webinar' });
     }
 
     const newFeedback = new StudentFeedback({
       studentId: member._id,
-      email,
+      email: normalizedEmail,
       name,
       webinar,
       speaker,

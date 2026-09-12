@@ -4,6 +4,8 @@ const multer = require('multer');
 const path = require('path');
 const nodemailer = require('nodemailer');
 
+const MAX_SPEAKER_PHOTO_SIZE_BYTES = 200 * 1024;
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -13,7 +15,12 @@ const storage = multer.diskStorage({
     cb(null, Date.now() + path.extname(file.originalname));
   }
 });
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: MAX_SPEAKER_PHOTO_SIZE_BYTES
+  }
+});
 
 // GET route to get member by email
 router.get('/member-by-email', async (req, res) => {
@@ -177,6 +184,21 @@ router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) =
     } catch (error) {
       console.error('Error parsing slots:', error);
       return res.status(400).json({ error: 'Invalid slots data' });
+    }
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const hasInvalidScheduleDate = parsedSlots.some((slot) => {
+      const webinarDate = new Date(`${slot.webinarDate}T00:00:00`);
+      const deadline = new Date(`${slot.deadline}T00:00:00`);
+      return Number.isNaN(webinarDate.getTime()) ||
+        Number.isNaN(deadline.getTime()) ||
+        webinarDate < today ||
+        deadline < today ||
+        deadline >= webinarDate;
+    });
+    if (hasInvalidScheduleDate) {
+      return res.status(400).json({ error: 'Deadline and webinar date must be today or later, and the deadline must be before the webinar date' });
     }
 
     const isOnlineWebinar = webinarType === 'Online';

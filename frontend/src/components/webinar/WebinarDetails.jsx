@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from  'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './Common.css';
 import './WebinarDetails.css';
 import { FiBookOpen } from "react-icons/fi";
-import { Trash2,SquarePen } from "lucide-react";
+import { Trash2, SquarePen } from "lucide-react";
 import * as XLSX from 'xlsx';
 
 import WebinarCompletedDetailsForm from './WebinarCompletedDetailsForm';
@@ -11,7 +11,18 @@ import ConfirmationDialog from './ConfirmationDialog';
 import Popup from './Popup';
 
 // Add API base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const isLocalDev = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || (isLocalDev ? 'http://localhost:5000' : '/alumnimain')
+).replace(/\/$/, '');
+
+const getTodayDateInputValue = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 export default function WebinarDetails() {
   const { id, encodedUserEmail } = useParams();
@@ -27,6 +38,7 @@ export default function WebinarDetails() {
     venue: '',
     meetingLink: '',
     alumniCity: '',
+    status: 'planned',
     speaker: {
       name: '',
       email: '',
@@ -47,6 +59,16 @@ export default function WebinarDetails() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [popup, setPopup] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [speakerPhotoPreview, setSpeakerPhotoPreview] = useState('');
+  const [speakerPhotoFile, setSpeakerPhotoFile] = useState(null);
+  const minimumWebinarDate = getTodayDateInputValue();
+
+  const getSpeakerPhotoUrl = (photo) => {
+    const value = String(photo || '').trim();
+    if (!value) return '';
+    if (/^https?:\/\//i.test(value) || value.startsWith('data:') || value.startsWith('/')) return value;
+    return `${API_BASE_URL}/uploads/${encodeURIComponent(value)}`;
+  };
 
 
   const handleDeleteWebinar = async () => {
@@ -123,10 +145,10 @@ export default function WebinarDetails() {
               <table className="responsive-table">
                 <thead>
                   <tr style={{ backgroundColor: "#eee", paddingTop: "15px", paddingBottom: "15px" }}>
-                    <th style={{  width: "250px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Name</th>
-                    <th style={{  width: "250px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Email</th>
-                    <th style={{  width: "180px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student  Department </th>
-                    <th style={{  width: "180px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Batch</th>
+                    <th style={{ width: "250px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Name</th>
+                    <th style={{ width: "250px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Email</th>
+                    <th style={{ width: "180px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student  Department </th>
+                    <th style={{ width: "180px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Batch</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200 py-12">
@@ -185,11 +207,11 @@ export default function WebinarDetails() {
               <table className="responsive-table">
                 <thead>
                   <tr style={{ backgroundColor: "#eee", paddingTop: "15px", paddingBottom: "15px" }}>
-                    <th style={{  width: "250px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Name</th>
-                    <th style={{  width: "250px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Email</th>
-                    <th style={{  width: "180px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Department</th>
-                    <th style={{  width: "180px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Batch</th>
-                    <th style={{  width: "420px",padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Feedback</th>
+                    <th style={{ width: "250px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Name</th>
+                    <th style={{ width: "250px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Email</th>
+                    <th style={{ width: "180px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Department</th>
+                    <th style={{ width: "180px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Student Batch</th>
+                    <th style={{ width: "420px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Feedback</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -363,12 +385,14 @@ export default function WebinarDetails() {
           </div>
 
           {/* Delete Button */}
-      <div style={{ textAlign: 'right', margin: '20px 20px' }}>
+          <div style={{ textAlign: 'right', margin: '20px 20px' }}>
             {/* Edit Webinar Button (visible on eye/details page) */}
             <button
               className="edit-btn"
               onClick={() => {
                 if (!webinar) return;
+                setSpeakerPhotoFile(null);
+                setSpeakerPhotoPreview(getSpeakerPhotoUrl(webinar.speaker?.speakerPhoto || webinar.speaker?.photo));
                 setEditForm({
                   topic: webinar.topic || '',
                   domain: webinar.domain || '',
@@ -377,6 +401,9 @@ export default function WebinarDetails() {
                   venue: webinar.venue || '',
                   meetingLink: webinar.meetingLink || '',
                   alumniCity: webinar.alumniCity || '',
+                  status: ['cancelled', 'postponed'].includes(String(webinar.status || '').trim().toLowerCase())
+                    ? String(webinar.status).trim().toLowerCase()
+                    : '',
                   speaker: {
                     name: webinar.speaker?.name || '',
                     email: webinar.speaker?.email || '',
@@ -506,7 +533,15 @@ export default function WebinarDetails() {
                     type="date"
                     className="input-field"
                     value={editForm.webinarDate}
-                    onChange={(e) => setEditForm({ ...editForm, webinarDate: e.target.value })}
+                    min={minimumWebinarDate}
+                    onChange={(e) => {
+                      const nextDate = e.target.value;
+                      if (nextDate && nextDate < minimumWebinarDate) {
+                        setPopup({ message: 'Webinar date cannot be earlier than today.', type: 'error' });
+                        return;
+                      }
+                      setEditForm({ ...editForm, webinarDate: nextDate });
+                    }}
                   />
                 </div>
 
@@ -544,6 +579,19 @@ export default function WebinarDetails() {
                     value={editForm.alumniCity}
                     onChange={(e) => setEditForm({ ...editForm, alumniCity: e.target.value })}
                   />
+                </div>
+
+                <div className="form-group">
+                  <label>Status</label>
+                  <select
+                    className="input-field"
+                    value={['cancelled', 'postponed'].includes(editForm.status) ? editForm.status : ''}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                  >
+                    <option value="">AUTO (DERIVED)</option>
+                    <option value="cancelled">DETERRED</option>
+                    <option value="postponed">POSTPONED</option>
+                  </select>
                 </div>
 
                 <div className="form-group" style={{ gridColumn: 'span 2', marginTop: '6px' }}>
@@ -603,68 +651,122 @@ export default function WebinarDetails() {
                     onChange={(e) => setEditForm({ ...editForm, speaker: { ...editForm.speaker, batch: e.target.value } })}
                   />
                 </div>
+
+                <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                  <label>Speaker Photo</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                    {speakerPhotoPreview ? (
+                      <img
+                        src={speakerPhotoPreview}
+                        alt="Current speaker"
+                        onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                        style={{ width: '72px', height: '72px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #7d48b9' }}
+                      />
+                    ) : (
+                      <div style={{ width: '72px', height: '72px', borderRadius: '50%', border: '2px dashed #7d48b9', display: 'grid', placeItems: 'center', color: '#6b7280', fontSize: '0.75rem', textAlign: 'center' }}>
+                        No photo
+                      </div>
+                    )}
+                    <div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="input-field"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] || null;
+                          if (file && file.size > 200 * 1024) {
+                            setPopup({ message: 'Speaker photo must be 200 KB or smaller.', type: 'error' });
+                            event.target.value = '';
+                            return;
+                          }
+                          setSpeakerPhotoFile(file);
+                          if (file) setSpeakerPhotoPreview(URL.createObjectURL(file));
+                        }}
+                      />
+                      <p style={{ marginTop: '4px', color: '#6b7280', fontSize: '0.75rem' }}>Optional replacement; JPG, PNG, or WEBP up to 200 KB.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
-                  <button
-                    className="submit1-btn"
-                    style={{ backgroundColor: '#4b3f91', color: 'white', opacity: savingEdit ? 0.7 : 1 }}
-                    onClick={async () => {
-                      try {
-                        setSavingEdit(true);
-                        if (!webinar?._id) {
-                          setPopup({ message: 'Webinar id missing.', type: 'error' });
-                          return;
-                        }
-
-                        const payload = {
-                          topic: editForm.topic,
-                          domain: editForm.domain,
-                          webinarDate: editForm.webinarDate,
-                          time: editForm.time,
-                          venue: editForm.venue,
-                          meetingLink: editForm.meetingLink,
-                          alumniCity: editForm.alumniCity,
-                          speaker: {
-                            name: editForm.speaker.name,
-                            email: editForm.speaker.email,
-                            designation: editForm.speaker.designation,
-                            companyName: editForm.speaker.companyName,
-                            department: editForm.speaker.department,
-                            batch: editForm.speaker.batch,
-                          }
-                        };
-
-                        console.log('PUT /api/webinars/:id/main payload:', payload);
-
-                        const res = await fetch(`${API_BASE_URL}/api/webinars/${webinar._id}/main`, {
-                          method: 'PUT',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(payload)
-                        });
-
-                        const data = await res.json().catch(() => ({}));
-
-                        if (!res.ok) {
-                          setPopup({ message: data?.error || 'Failed to save changes', type: 'error' });
-                          return;
-                        }
-
-                        setPopup({ message: 'Webinar updated successfully!', type: 'success' });
-                        // Update local webinar state so UI reflects changes
-                        setWebinar(data?.data || webinar);
-                        setShowEditDialog(false);
-                      } catch (e) {
-                        console.error('Save webinar error:', e);
-                        setPopup({ message: 'Failed to save changes', type: 'error' });
-                      } finally {
-                        setSavingEdit(false);
+                <button
+                  className="submit1-btn"
+                  style={{ backgroundColor: '#4b3f91', color: 'white', opacity: savingEdit ? 0.7 : 1 }}
+                  onClick={async () => {
+                    try {
+                      setSavingEdit(true);
+                      if (!webinar?._id) {
+                        setPopup({ message: 'Webinar id missing.', type: 'error' });
+                        return;
                       }
-                    }}
-                    disabled={savingEdit}
-                  >
-                    {savingEdit ? 'Saving...' : 'Save Changes'}
-                  </button>
+
+                      if (!editForm.webinarDate || editForm.webinarDate < minimumWebinarDate) {
+                        setPopup({ message: 'Webinar date must be today or a future date.', type: 'error' });
+                        return;
+                      }
+
+                      const payload = {
+                        topic: editForm.topic,
+                        domain: editForm.domain,
+                        webinarDate: editForm.webinarDate,
+                        time: editForm.time,
+                        venue: editForm.venue,
+                        meetingLink: editForm.meetingLink,
+                        alumniCity: editForm.alumniCity,
+                        speaker: {
+                          name: editForm.speaker.name,
+                          email: editForm.speaker.email,
+                          designation: editForm.speaker.designation,
+                          companyName: editForm.speaker.companyName,
+                          department: editForm.speaker.department,
+                          batch: editForm.speaker.batch,
+                        }
+                      };
+
+                      // Send the empty AUTO value so the API clears a previous manual override.
+                      payload.status = String(editForm.status || '').trim();
+
+                      const requestBody = speakerPhotoFile ? new FormData() : JSON.stringify(payload);
+                      const requestHeaders = speakerPhotoFile ? {} : { 'Content-Type': 'application/json' };
+
+                      if (speakerPhotoFile) {
+                        Object.entries(payload).forEach(([key, value]) => {
+                          requestBody.append(key, key === 'speaker' ? JSON.stringify(value) : String(value));
+                        });
+                        requestBody.append('speakerPhoto', speakerPhotoFile);
+                      }
+
+                      const res = await fetch(`${API_BASE_URL}/api/webinars/${webinar._id}/main`, {
+                        method: 'PUT',
+                        headers: requestHeaders,
+                        body: requestBody
+                      });
+
+                      const data = await res.json().catch(() => ({}));
+
+                      if (!res.ok) {
+                        setPopup({ message: data?.error || 'Failed to save changes', type: 'error' });
+                        return;
+                      }
+
+                      setPopup({ message: 'Webinar updated successfully!', type: 'success' });
+                      setWebinar(data?.data || webinar);
+                      setShowEditDialog(false);
+                      setTimeout(() => {
+                        window.location.reload();
+                      }, 150);
+                    } catch (e) {
+                      console.error('Save webinar error:', e);
+                      setPopup({ message: 'Failed to save changes', type: 'error' });
+                    } finally {
+                      setSavingEdit(false);
+                    }
+                  }}
+                  disabled={savingEdit}
+                >
+                  {savingEdit ? 'Saving...' : 'Save Changes'}
+                </button>
 
 
                 <button

@@ -97,14 +97,8 @@ const PhaseContext = createContext();
 export const usePhase = () => useContext(PhaseContext);
 
 const generatePhases = () => {
-  const basePhases = ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4', 'Phase 5'];
+  const basePhases = ['Phase 1', 'Phase 2', 'Phase 3', 'Phase 4', 'Phase 5', 'Phase 6', 'Phase 7'];
   const now = new Date();
-  if (now >= new Date('2025-10-01')) {
-    basePhases.push('Phase 6');
-  }
-  if (now >= new Date('2026-10-01')) {
-    basePhases.push('Phase 7');
-  }
   if (now >= new Date('2027-10-01')) {
     basePhases.push('Phase 8');
   }
