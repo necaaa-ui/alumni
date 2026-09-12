@@ -4,10 +4,8 @@ import './Common.css';
 import './WebinarSpeakerAssignmentForm.css';
 import Popup from './Popup';
 
-const isLocalDev = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
-const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL || (isLocalDev ? 'http://localhost:5000' : '/alumnimain')
-).replace(/\/$/, '');
+// Add API base URL
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const typeOptions = [
   { value: "Full Stack Development", label: "FULL STACK DEVELOPMENT" },
@@ -18,6 +16,11 @@ const typeOptions = [
   { value: "Embedded Systems", label: "EMBEDDED SYSTEMS" },
   { value: "Structural Engineering", label: "STRUCTURAL ENGINEERING" }
 ];
+
+const getLocalToday = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
 
 export default function WebinarSpeakerAssignmentForm() {
   const [formData, setFormData] = useState({
@@ -274,6 +277,15 @@ useEffect(() => {
 
     let newValue = files ? files[0] : value;
 
+    if (name === 'speakerPhoto' && newValue) {
+      if (newValue.size > MAX_SPEAKER_PHOTO_SIZE_BYTES) {
+        setErrors(prev => ({ ...prev, speakerPhoto: 'Speaker photo must be 100 KB or less' }));
+        e.target.value = '';
+        return;
+      }
+      setErrors(prev => ({ ...prev, speakerPhoto: '' }));
+    }
+
     if (!files && typeof value === "string") {
       // Filter input for alphabetic fields to only allow English letters and spaces
       if (['designation', 'companyName', 'alumniCity'].includes(name)) {
@@ -293,6 +305,16 @@ useEffect(() => {
   };
 
   const handleSlotChange = (index, field, value) => {
+    if (field === 'webinarDate' && value && value < getLocalToday()) {
+      setPopup({ show: true, message: 'Webinar date must be today or a future date.', type: 'error' });
+      return;
+    }
+
+    if (field === 'deadline' && value && value < getLocalToday()) {
+      setPopup({ show: true, message: 'Deadline must be today or a future date.', type: 'error' });
+      return;
+    }
+
     const updated = [...slots];
     updated[index][field] = value;
 
@@ -384,7 +406,13 @@ useEffect(() => {
       hasErrors = true;
       if (!firstErrorField) firstErrorField = 'speakerPhoto';
     } else {
-      setErrors(prev => ({ ...prev, speakerPhoto: "" }));
+      if (formData.speakerPhoto.size > MAX_SPEAKER_PHOTO_SIZE_BYTES) {
+        setErrors(prev => ({ ...prev, speakerPhoto: "Speaker photo must be 100 KB or less" }));
+        hasErrors = true;
+        if (!firstErrorField) firstErrorField = 'speakerPhoto';
+      } else {
+        setErrors(prev => ({ ...prev, speakerPhoto: "" }));
+      }
     }
 
     if (hasErrors) {
@@ -399,6 +427,16 @@ useEffect(() => {
         !formData.companyName || !formData.alumniPhoneNumber || !formData.speakerPhoto || !formData.domain || !formData.topic ||
         (formData.webinarType === 'Online' && !formData.meetingLink) || slots.some(s => !s.deadline || !s.webinarDate || !s.time)) {
       setPopup({ show: true, message: 'Please fill all required fields', type: 'error' });
+      return;
+    }
+
+    if (slots.some((slot) => slot.webinarDate < getLocalToday())) {
+      setPopup({ show: true, message: 'Webinar date must be today or a future date.', type: 'error' });
+      return;
+    }
+
+    if (slots.some((slot) => slot.deadline < getLocalToday() || slot.deadline >= slot.webinarDate)) {
+      setPopup({ show: true, message: 'Deadline must be today or a future date and before the webinar date.', type: 'error' });
       return;
     }
 
@@ -752,7 +790,7 @@ useEffect(() => {
                       onChange={e => handleSlotChange(i, "webinarDate", e.target.value)}
                       placeholder="Select date"
                       className="input-field"
-                      min={new Date().toISOString().split('T')[0]}
+                      min={getLocalToday()}
                     />
                   </div>
                   <div className="form-group">
@@ -765,7 +803,7 @@ useEffect(() => {
                       onChange={e => handleSlotChange(i, "deadline", e.target.value)}
                       placeholder="Select date"
                       className="input-field"
-                      min={new Date().toISOString().split('T')[0]}
+                      min={getLocalToday()}
                       max={slot.webinarDate || undefined}
                     />
                   </div>
@@ -807,6 +845,7 @@ useEffect(() => {
                 alumniCity={formData.alumniCity}
                 alumniBatch={formData.batch}
                 alumniDepartment={formData.department}
+                webinarDomain={formData.department}
               />
             </div>
           )}

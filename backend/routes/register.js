@@ -11,16 +11,38 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Email, webinarId, and phaseId are required' });
     }
 
+    const Member = req.app.locals.Member;
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const member = await Member.findOne({
+      'basic.email_id': { $regex: new RegExp(`^${normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+    });
+    if (!member) {
+      return res.status(404).json({ error: 'This email is not present in the member database. Registration is not allowed.' });
+    }
+
+    const Webinar = req.app.locals.Webinar;
+    const webinar = await Webinar.findById(webinarId).select('deadline').lean();
+    if (!webinar) {
+      return res.status(404).json({ error: 'Webinar not found' });
+    }
+    if (webinar.deadline) {
+      const deadlineEnd = new Date(webinar.deadline);
+      deadlineEnd.setHours(23, 59, 59, 999);
+      if (new Date() > deadlineEnd) {
+        return res.status(400).json({ error: 'Registration deadline has passed' });
+      }
+    }
+
     // Check if already registered
     const Register = req.app.locals.Register;
-    const existingRegistration = await Register.findOne({ email, webinarId });
+    const existingRegistration = await Register.findOne({ email: normalizedEmail, webinarId });
     if (existingRegistration) {
       return res.status(400).json({ error: 'Already registered for this webinar' });
     }
 
     // Create new registration
     const newRegistration = new Register({
-      email,
+      email: normalizedEmail,
       webinarId,
       phaseId
     });

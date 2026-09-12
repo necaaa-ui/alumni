@@ -20,6 +20,17 @@ const completedWebinarDetailsSchema = new mongoose.Schema(
       default: '',
     },
 
+    // Signed report copy (uploaded as base64 string)
+    signedReport: {
+      type: String,
+      default: '',
+    },
+
+    signedReportName: {
+      type: String,
+      default: '',
+    },
+
     // Event images thumbnails/paths (stored as array of strings for now)
     eventImages: {
       type: [String],
@@ -45,6 +56,16 @@ const completedWebinarDetailsSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+
+    prizeWinnerDepartment: {
+      type: String,
+      default: '',
+    },
+
+    prizeWinnerBatch: {
+      type: String,
+      default: '',
+    },
   },
   { timestamps: true }
 );
@@ -54,4 +75,3 @@ const CompletedWebinarDetails =
   mongoose.model('CompletedWebinarDetails', completedWebinarDetailsSchema);
 
 module.exports = CompletedWebinarDetails;
-

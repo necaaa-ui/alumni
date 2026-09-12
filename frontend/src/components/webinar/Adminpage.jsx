@@ -13,7 +13,7 @@ const validateDomain = (value) => {
   if (trimmed.length < 3) return "Domain must be at least 3 characters.";
   if (trimmed.length > 50) return "Domain cannot exceed 50 characters.";
   if (!/^[A-Za-z0-9 ()\[\]{}.,'"\-_&+#@!?;:\/\\]+$/.test(trimmed))
-     return "Domain must contain only English letters, numbers, spaces, and standard punctuation.";
+    return "Domain must contain only English letters, numbers, spaces, and standard punctuation.";
 
   return "";
 };
@@ -896,6 +896,7 @@ const Adminpage = ({ userEmail }) => {
     const exportData = filteredCompletedDocsRows.map((row, idx) => {
       const registeredCount = row.registeredCount ?? row.reg_count ?? 'N/A';
       const attendedCount = row.attendedCount ?? row.attended ?? 'N/A';
+      const absenteeCount = row.absenteeCount ?? 'NIL';
       const docsAvailable = row.hasDocuments ?? row.documentsAvailable ?? false;
 
       return {
@@ -906,6 +907,7 @@ const Adminpage = ({ userEmail }) => {
         'Webinar Date': row.webinarDate ? new Date(row.webinarDate).toLocaleDateString() : 'N/A',
         'Registered Count': registeredCount,
         'Attended Count': attendedCount,
+        'Absentees Count': absenteeCount,
         'Documents Available': docsAvailable ? 'Yes' : 'No',
       };
     });
@@ -918,62 +920,6 @@ const Adminpage = ({ userEmail }) => {
     XLSX.writeFile(workbook, fileName);
   };
 
-  // -------------------------
-  // Prize Winners helpers
-  // -------------------------
-  const getPrizeWinnerMonthKey = (value) => {
-    if (!value) return '';
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return '';
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  };
-
-  const prizeWinnerDomainOptions = Array.from(
-    new Set((prizeWinners || []).map((w) => w.domain).filter(Boolean))
-  ).sort();
-
-  const prizeWinnerMonthOptions = Array.from(
-    new Set((prizeWinners || []).map((w) => getPrizeWinnerMonthKey(w.webinarDate)).filter(Boolean))
-  )
-    .sort()
-    .map((value) => ({ value, label: getMonthLabel(value) }));
-
-  const filteredPrizeWinners = (prizeWinners || []).filter((w) => {
-    const phaseId = String(w.phaseId ?? '');
-    const domain = w.domain ?? '';
-    const month = getPrizeWinnerMonthKey(w.webinarDate);
-
-    return (
-      (!selectedFilters.phaseId || phaseId === String(selectedFilters.phaseId)) &&
-      (!selectedFilters.domain || domain === selectedFilters.domain) &&
-      (!selectedFilters.month || month === selectedFilters.month)
-    );
-  });
-
-  const exportFilteredPrizeWinners = () => {
-    if (!filteredPrizeWinners.length) {
-      alert('No prize winners available to export for the selected filters.');
-      return;
-    }
-
-    const exportData = filteredPrizeWinners.map((w, idx) => ({
-      'Serial Number': idx + 1,
-      'Phase': w.phaseId ?? 'N/A',
-      'Webinar Domain': w.domain ?? 'N/A',
-      'Webinar Topic': w.topic ?? 'N/A',
-      'Webinar Date': w.webinarDate ? new Date(w.webinarDate).toLocaleDateString() : 'N/A',
-      'Prize Winner Name': w.prizeWinnerName ?? 'N/A',
-      'Prize Winner Email': w.prizeWinnerEmail ?? 'N/A',
-      'Prize Winner Mobile': w.prizeWinnerMobile ?? 'N/A',
-    }));
-
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Prize Winners');
-
-    const fileName = `prize_winners_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
-  };
 
   useEffect(() => {
     if (activeView !== 'webinarDocs') return;
@@ -995,183 +941,186 @@ const Adminpage = ({ userEmail }) => {
     fetchRows();
   }, [activeView]);
 
-const renderContent = () => {
-  switch (activeView) {
-    case 'webinarDocs':
-      return (
-        <div className="form-card filter-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-            <div style={{ flex: '1 1 auto', minWidth: '220px' }}>
-              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Webinar Details Active Page</h2>
+  const renderContent = () => {
+    switch (activeView) {
+      case 'webinarDocs':
+        return (
+          <div className="form-card filter-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{ flex: '1 1 auto', minWidth: '220px' }}>
+                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Webinar Details Active Page</h2>
+              </div>
+
+              <button
+                type="button"
+                className="submit1-btn"
+                style={{
+                  backgroundColor: '#16a34a',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '10px 18px',
+                  borderRadius: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+                onClick={exportFilteredWebinarDocs}
+              >
+                Export Completed Docs
+              </button>
             </div>
 
-            <button
-              type="button"
-              className="submit1-btn"
+            <div className="filters webinar-filters">
+              <select
+                className="input-field"
+                value={webinarDocsFilters.phaseId}
+                onChange={(e) => setWebinarDocsFilters({ ...webinarDocsFilters, phaseId: e.target.value })}
+              >
+                <option value="">All Phases</option>
+                {webinarDocsPhaseOptions.map((p) => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+
+              <select
+                className="input-field"
+                value={webinarDocsFilters.department}
+                onChange={(e) => setWebinarDocsFilters({ ...webinarDocsFilters, department: e.target.value })}
+              >
+                <option value="">All Departments</option>
+                {webinarDocsDepartmentOptions.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+
+              <select
+                className="input-field"
+                value={webinarDocsFilters.month}
+                onChange={(e) => setWebinarDocsFilters({ ...webinarDocsFilters, month: e.target.value })}
+              >
+                <option value="">All Months</option>
+                {webinarDocsMonthOptions.map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+
+              <select
+                className="input-field"
+                value={webinarDocsFilters.topic}
+                onChange={(e) => setWebinarDocsFilters({ ...webinarDocsFilters, topic: e.target.value })}
+              >
+                <option value="">All Topics</option>
+                {webinarDocsTopicOptions.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="table-scroll-wrap webinar-table-desktop" style={{ overflowX: 'auto', width: '100%', marginTop: '1rem' }}>
+              <table className="admin-data-table webinar-table" style={{ minWidth: '1210px', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#eee' }}>
+                    <th style={{ minWidth: '90px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Phase ID</th>
+                    <th style={{ minWidth: '170px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Department</th>
+                    <th style={{ minWidth: '250px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Webinar Topic</th>
+                    <th style={{ minWidth: '160px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Webinar Date</th>
+                    <th style={{ minWidth: '130px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Registered Count</th>
+                    <th style={{ minWidth: '110px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Attended Count</th>
+                    <th style={{ minWidth: '130px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Absentees Count</th>
+                    <th style={{ minWidth: '160px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Documents</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {completedDocsLoading ? (
+                    <tr>
+                      <td colSpan={8} style={{ textAlign: 'center', padding: '20px' }}>Loading completed docs...</td>
+                    </tr>
+                  ) : filteredCompletedDocsRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} style={{ textAlign: 'center', padding: '20px' }}>No completed webinar documents found for the selected filters.</td>
+                    </tr>
+                  ) : (
+                    filteredCompletedDocsRows.map((row, idx) => {
+                      const webinarId = row.webinarId;
+                      const registeredCount = row.registeredCount ?? row.reg_count ?? 'N/A';
+                      const attendedCount = row.attendedCount ?? row.attended ?? 'N/A';
+                      const absenteeCount = row.absenteeCount ?? 'NIL';
+                      const docsAvailable = row.hasDocuments ?? row.documentsAvailable ?? false;
+
+                      return (
+                        <tr key={webinarId || idx}>
+                          <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{row.phaseId ?? 'N/A'}</td>
+                          <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{row.department ?? 'N/A'}</td>
+                          <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{row.topic ?? row.webinarTopic ?? 'N/A'}</td>
+                          <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{row.webinarDate ? new Date(row.webinarDate).toLocaleDateString() : 'N/A'}</td>
+                          <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{registeredCount}</td>
+                          <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{attendedCount}</td>
+                          <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{absenteeCount}</td>
+                          <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                            {docsAvailable ? (
+                              <a
+                                href={`${API_BASE_URL}/api/admin/webinars/${webinarId}/completed-documents/download`}
+                                style={{ color: '#16a34a', fontWeight: 700, textDecoration: 'none' }}
+                              >
+                                Download
+                              </a>
+                            ) : (
+                              'Not Available'
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+
+
+      case 'phase':
+        return (
+          <div className="form-card">
+            <h2
+              className="form-title"
               style={{
-                backgroundColor: '#16a34a',
-                color: '#ffffff',
-                border: 'none',
-                padding: '10px 18px',
-                borderRadius: '12px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
+                fontSize: "1.5rem",
+                marginBottom: "1rem",
+                textAlign: "center",
               }}
-              onClick={exportFilteredWebinarDocs}
             >
-              Export Completed Docs
-            </button>
-          </div>
+              Phase Management
+            </h2>
 
-          <div className="filters webinar-filters">
-            <select
-              className="input-field"
-              value={webinarDocsFilters.phaseId}
-              onChange={(e) => setWebinarDocsFilters({ ...webinarDocsFilters, phaseId: e.target.value })}
-            >
-              <option value="">All Phases</option>
-              {webinarDocsPhaseOptions.map((p) => (
-                <option key={p} value={p}>{p}</option>
-              ))}
-            </select>
-
-            <select
-              className="input-field"
-              value={webinarDocsFilters.department}
-              onChange={(e) => setWebinarDocsFilters({ ...webinarDocsFilters, department: e.target.value })}
-            >
-              <option value="">All Departments</option>
-              {webinarDocsDepartmentOptions.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-
-            <select
-              className="input-field"
-              value={webinarDocsFilters.month}
-              onChange={(e) => setWebinarDocsFilters({ ...webinarDocsFilters, month: e.target.value })}
-            >
-              <option value="">All Months</option>
-              {webinarDocsMonthOptions.map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
-
-            <select
-              className="input-field"
-              value={webinarDocsFilters.topic}
-              onChange={(e) => setWebinarDocsFilters({ ...webinarDocsFilters, topic: e.target.value })}
-            >
-              <option value="">All Topics</option>
-              {webinarDocsTopicOptions.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="table-scroll-wrap webinar-table-desktop" style={{ overflowX: 'auto', width: '100%', marginTop: '1rem' }}>
-            <table className="admin-data-table webinar-table" style={{ minWidth: '1100px', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#eee' }}>
-                  <th style={{ minWidth: '90px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Phase ID</th>
-                  <th style={{ minWidth: '170px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Department</th>
-                  <th style={{ minWidth: '250px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Webinar Topic</th>
-                  <th style={{ minWidth: '160px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Webinar Date</th>
-                  <th style={{ minWidth: '130px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Registered Count</th>
-                  <th style={{ minWidth: '110px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Attended Count</th>
-                  <th style={{ minWidth: '160px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Documents</th>
-                </tr>
-              </thead>
-              <tbody>
-                {completedDocsLoading ? (
-                  <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '20px' }}>Loading completed docs...</td>
-                  </tr>
-                ) : filteredCompletedDocsRows.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '20px' }}>No completed webinar documents found for the selected filters.</td>
-                  </tr>
-                ) : (
-                  filteredCompletedDocsRows.map((row, idx) => {
-                    const webinarId = row.webinarId;
-                    const registeredCount = row.registeredCount ?? row.reg_count ?? 'N/A';
-                    const attendedCount = row.attendedCount ?? row.attended ?? 'N/A';
-                    const docsAvailable = row.hasDocuments ?? row.documentsAvailable ?? false;
-
-                    return (
-                      <tr key={webinarId || idx}>
-                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{row.phaseId ?? 'N/A'}</td>
-                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{row.department ?? 'N/A'}</td>
-                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{row.topic ?? row.webinarTopic ?? 'N/A'}</td>
-                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{row.webinarDate ? new Date(row.webinarDate).toLocaleDateString() : 'N/A'}</td>
-                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{registeredCount}</td>
-                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{attendedCount}</td>
-                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
-                          {docsAvailable ? (
-                            <a
-                              href={`${API_BASE_URL}/api/admin/webinars/${webinarId}/completed-documents/download`}
-                              style={{ color: '#16a34a', fontWeight: 700, textDecoration: 'none' }}
-                            >
-                              Download
-                            </a>
-                          ) : (
-                            'Not Available'
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
+            <div className="form-fields">
+              <div className="form-group">
+                <label>Phase ID</label>
+                <input
+                  type="number"
+                  placeholder="e.g., 1"
+                  className="input-field"
+                  min="1"
+                  value={phaseId}
+                  onChange={(e) => setPhaseId(e.target.value)}
+                />
+                {errors.phaseId && (
+                  <div className="error-text">{errors.phaseId}</div>
                 )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      );
+              </div>
 
-
-    case 'phase':
-      return (
-        <div className="form-card">
-          <h2
-            className="form-title"
-            style={{
-              fontSize: "1.5rem",
-              marginBottom: "1rem",
-              textAlign: "center",
-            }}
-          >
-            Phase Management
-          </h2>
-
-          <div className="form-fields">
-            <div className="form-group">
-              <label>Phase ID</label>
-              <input
-                type="number"
-                placeholder="e.g., 1"
-                className="input-field"
-                min="1"
-                value={phaseId}
-                onChange={(e) => setPhaseId(e.target.value)}
-              />
-              {errors.phaseId && (
-                <div className="error-text">{errors.phaseId}</div>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label>Starting Date</label>
-              <input
-                type="date"
-                className="input-field"
-                value={startingDate}
-                onChange={(e) => setStartingDate(e.target.value)}
-              />
-              {errors.startingDate && (
-                <div className="error-text">{errors.startingDate}</div>
-              )}
-            </div>
+              <div className="form-group">
+                <label>Starting Date</label>
+                <input
+                  type="date"
+                  className="input-field"
+                  value={startingDate}
+                  onChange={(e) => setStartingDate(e.target.value)}
+                />
+                {errors.startingDate && (
+                  <div className="error-text">{errors.startingDate}</div>
+                )}
+              </div>
 
             <div className="form-group">
               <label>Ending Date</label>
@@ -1192,7 +1141,7 @@ const renderContent = () => {
                   className="submit1-btn"
                   onClick={() => {
                     if (window.confirm('This will replace current domain details with last phase domains. Continue?')) {
-                      setDomains(lastPhaseDomains.map(d => ({ department: d.department, domain: d.domain, plannedWebinarCount: d.plannedWebinarCount ?? 1 })));
+                      setDomains(lastPhaseDomains.map(d => ({ department: d.department, domain: d.domain })));
                     }
                   }}
                   style={{ fontSize: '14px', padding: '8px 16px' }}
@@ -1201,127 +1150,99 @@ const renderContent = () => {
                 </button>
               )}
             </div>
-            <div style={{ overflowX: 'auto', marginBottom: '1rem' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#f3f4f6' }}>
-                    <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', minWidth: '240px' }}>Department</th>
-                    <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', minWidth: '620px' }}>Domain</th>
-                    <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', minWidth: '20px' }}>Planned Webinar Count</th>
-                    <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center', width: '90px' }}>✕</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {domains.map((domain, index) => (
-                    <tr key={index}>
-                      <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                        <select
-                          className="input-field"
-                          style={{ width: '100%' }}
-                          value={domain.department}
-                          onChange={(e) => {
-                            const newDomains = [...domains];
-                            newDomains[index].department = e.target.value;
-                            setDomains(newDomains);
-                          }}
-                        >
-                          <option value="">Select</option>
-                          <option value="IT">IT</option>
-                          <option value="CSE">CSE</option>
-                          <option value="EEE">EEE</option>
-                          <option value="ECE">ECE</option>
-                          <option value="MECH">MECH</option>
-                          <option value="CIVIL">CIVIL</option>
-                          <option value="AI & DS">AI & DS</option>
-                        </select>
-                      </td>
-                      <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                        <input
-                          type="text"
-                          placeholder="Domain"
-                          className="input-field"
-                          maxLength={50}
-                          value={domain.domain}
-                          onChange={(e) => {
-                            const newDomains = [...domains];
-                            newDomains[index].domain = e.target.value;
-                            setDomains(newDomains);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                            }
-                          }}
-                          onPaste={(e) => {
-                            e.preventDefault();
-                            const paste = e.clipboardData.getData('text');
-                            const newDomains = [...domains];
-                            newDomains[index].domain = paste;
-                            setDomains(newDomains);
-                          }}
-                          onBlur={(e) => {
-                            const newDomains = [...domains];
-                            newDomains[index].domain = e.target.value.trim();
-                            setDomains(newDomains);
-                          }}
-                        />
-                        {errors[`domain_${index}`] && (
-                          <div className="error-text">{errors[`domain_${index}`]}</div>
-                        )}
-                      </td>
-                      <td style={{ padding: '10px', border: '1px solid #ddd' }}>
-                        <input
-                          type="number"
-                          min="1"
-                          step="1"
-                          className="input-field"
-                          value={domain.plannedWebinarCount ?? 1}
-                          onChange={(e) => {
-                            const newDomains = [...domains];
-                            newDomains[index].plannedWebinarCount = e.target.value;
-                            setDomains(newDomains);
-                          }}
-                        />
-                        {errors[`plannedCount_${index}`] && (
-                          <div className="error-text">{errors[`plannedCount_${index}`]}</div>
-                        )}
-                      </td>
-                      <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
-                        <button
-                          className="submit1-btn"
-                          onClick={() => {
-                            if (domains.length > 1) {
-                              const newDomains = domains.filter((_, i) => i !== index);
-                              setDomains(newDomains);
-                            }
-                          }}
-                          disabled={domains.length <= 1}
-                          style={{
-                            fontSize: '16px',
-                            padding: '6px 12px',
-                            minWidth: '40px',
-                            backgroundColor: domains.length <= 1 ? '#ccc' : '#dc3545',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: domains.length <= 1 ? 'not-allowed' : 'pointer'
-                          }}
-                          title="Remove this domain"
-                        >
-                          ×
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <button
-              className="submit1-btn"
-              onClick={() => setDomains([...domains, { department: '', domain: '', plannedWebinarCount: 1 }])}
-            >
-              +
-            </button>
+            {domains.map((domain, index) => (
+                <div key={index} className="domain-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', gap: '1rem' }}>
+                    <div className="form-group" style={{ flex: "0.5 1 0%" }}>
+                      <label>Department</label>
+                      <select
+                        className="input-field"
+                        style={{ width: "100%" }}
+                        value={domain.department}
+                        onChange={(e) => {
+                          const newDomains = [...domains];
+                          newDomains[index].department = e.target.value;
+                          setDomains(newDomains);
+                        }}
+                      >
+                        <option value="">Select</option>
+                        <option value="IT">IT</option>
+                        <option value="CSE">CSE</option>
+                        <option value="EEE">EEE</option>
+                        <option value="ECE">ECE</option>
+                        <option value="MECH">MECH</option>
+                        <option value="CIVIL">CIVIL</option>
+                        <option value="AI & DS">AI & DS</option>
+                      </select>
+                    </div>
+
+                  <div className="form-group" style={{ flex: '2 1 0%' }}>
+                    <label>Domain </label>
+                    <input
+                      type="text"
+                      placeholder="Domain"
+                      className="input-field"
+                      maxLength={50}
+                      value={domain.domain}
+                      onChange={(e) => {
+                        const newDomains = [...domains];
+                        newDomains[index].domain = e.target.value;
+                        setDomains(newDomains);
+                      }}
+                      onKeyDown={(e) => {
+                        if ( e.key === 'Enter') {
+                          e.preventDefault();
+                        }
+                      }}
+                      onPaste={(e) => {
+                        e.preventDefault();
+                        const paste = e.clipboardData.getData('text');
+                        const newDomains = [...domains];
+                        newDomains[index].domain = paste;
+                        setDomains(newDomains);
+                      }}
+                      onBlur={(e) => {
+                        const newDomains = [...domains];
+                        newDomains[index].domain = e.target.value.trim();
+                        setDomains(newDomains);
+                      }}
+                    />
+                    {errors[`domain_${index}`] && (
+                      <div className="error-text">{errors[`domain_${index}`]}</div>
+                    )}
+                  </div>
+                  <div className="domain-row-action" style={{ display: 'flex', alignItems: 'center', marginTop: '1.5rem' }}>
+                    <button
+                      className="submit1-btn"
+                      onClick={() => {
+                        if (domains.length > 1) {
+                          const newDomains = domains.filter((_, i) => i !== index);
+                          setDomains(newDomains);
+                        }
+                      }}
+                      disabled={domains.length <= 1}
+                      style={{
+                        fontSize: '16px',
+                        padding: '6px 12px',
+                        minWidth: '40px',
+                        backgroundColor: domains.length <= 1 ? '#ccc' : '#dc3545',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: domains.length <= 1 ? 'not-allowed' : 'pointer'
+                      }}
+                      title="Remove this domain"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button
+                className="submit1-btn"
+                onClick={() => setDomains([...domains, { department: '', domain: '' }])}
+              >
+                +
+              </button>
             </div>
             {message && (
               <div style={{
@@ -1344,7 +1265,7 @@ const renderContent = () => {
             </button>
           </div>
         );
-     case 'webinar':
+      case 'webinar':
         return (
           <div className="form-card filter-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
@@ -1419,21 +1340,21 @@ const renderContent = () => {
                 ))}
               </select>
             </div>
-        <div className="table-scroll-wrap webinar-table-desktop" style={{ overflowX: 'auto', width: '100%', marginTop: '1rem' }}>
+            <div className="table-scroll-wrap webinar-table-desktop" style={{ overflowX: 'auto', width: '100%', marginTop: '1rem' }}>
               <table className="admin-data-table webinar-table" style={{ minWidth: "1200px", borderCollapse: "collapse", tableLayout: "fixed" }}>
-    <thead>
-      <tr style={{ backgroundColor: "#eee", paddingTop: "15px", paddingBottom: "15px" }}>
-        <th style={{ minWidth: "100px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Phase ID</th>
-        <th style={{ minWidth: "150px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Domain</th>
-        <th style={{ minWidth: "200px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Webinar Topic</th>
-        <th style={{ minWidth: "150px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Name</th>
-        <th style={{ minWidth: "400px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Email</th>
-        <th style={{ minWidth: "120px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Phone Number</th>
-        <th style={{ minWidth: "150px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Batch & Dept</th>
-        <th style={{ minWidth: "180px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Designation & Company</th>
-        <th style={{ minWidth: "100px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>City</th>
-      </tr>
-    </thead>
+                <thead>
+                  <tr style={{ backgroundColor: "#eee", paddingTop: "15px", paddingBottom: "15px" }}>
+                    <th style={{ minWidth: "100px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Phase ID</th>
+                    <th style={{ minWidth: "150px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Domain</th>
+                    <th style={{ minWidth: "200px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Webinar Topic</th>
+                    <th style={{ minWidth: "150px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Name</th>
+                    <th style={{ minWidth: "400px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Email</th>
+                    <th style={{ minWidth: "120px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Phone Number</th>
+                    <th style={{ minWidth: "150px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Batch & Dept</th>
+                    <th style={{ minWidth: "180px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>Speaker Designation & Company</th>
+                    <th style={{ minWidth: "100px", padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>City</th>
+                  </tr>
+                </thead>
 
     <tbody>
       {webinarsLoading ? (
@@ -1456,7 +1377,7 @@ const renderContent = () => {
             <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>{webinar.topic}</td>
             <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>{webinar.speaker?.name || 'N/A'}</td>
             <td className="email-scroll-cell" style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center", overflowX: "auto", whiteSpace: "nowrap" }}>{webinar.speaker?.email || 'N/A'}</td>
-            <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>{webinar.speaker?.phoneNumber || webinar.speaker?.alumniPhoneNumber || 'N/A'}</td>
+            <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>{webinar.speaker?.phoneNumber || 'N/A'}</td>
             <td style={{ padding: "10px", border: "1px solid #ddd", textAlign: "center" }}>
               {webinar.speaker?.batch ? `${webinar.speaker.batch} & ${webinar.speaker.department || 'N/A'}` : 'N/A'}
             </td>
@@ -1484,7 +1405,7 @@ const renderContent = () => {
                 <div><strong>Topic:</strong> {webinar.topic || 'N/A'}</div>
                 <div><strong>Speaker:</strong> {webinar.speaker?.name || 'N/A'}</div>
                 <div className="mobile-email"><strong>Email:</strong> {webinar.speaker?.email || 'N/A'}</div>
-                <div><strong>Phone:</strong> {webinar.speaker?.phoneNumber || webinar.speaker?.alumniPhoneNumber || 'N/A'}</div>
+                <div><strong>Phone:</strong> {webinar.speaker?.phoneNumber || 'N/A'}</div>
                 <div><strong>Batch & Dept:</strong> {webinar.speaker?.batch ? `${webinar.speaker.batch} & ${webinar.speaker.department || 'N/A'}` : 'N/A'}</div>
                 <div><strong>Designation & Company:</strong> {webinar.speaker?.designation ? `${webinar.speaker.designation} & ${webinar.speaker.companyName || 'N/A'}` : 'N/A'}</div>
                 <div><strong>City:</strong> {webinar.alumniCity || 'N/A'}</div>
@@ -1499,587 +1420,591 @@ const renderContent = () => {
           <div className="form-card">
             <h2 className="form-title" style={{ fontSize: '1.5rem', marginBottom: '1rem', textAlign: 'center' }}>Coordinators Management</h2>
             <div className="admin-buttons coord-switch-buttons" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
-                <button className={`submit1-btn ${activeCoordinatorView === 'student' ? 'active' : ''}`} onClick={() => { setActiveCoordinatorView('student'); setShowAddDepartmentForm(false); setShowAddStudentForm(false); setShowAddAdminForm(false); }}>Student Coordinators</button>
-                <button className={`submit1-btn ${activeCoordinatorView === 'department' ? 'active' : ''}`} onClick={() => { setActiveCoordinatorView('department'); setShowAddStudentForm(false); setShowAddDepartmentForm(false); setShowAddAdminForm(false); }}>Department Coordinators</button>
-                <button className={`submit1-btn ${activeCoordinatorView === 'admin' ? 'active' : ''}`} onClick={() => { setActiveCoordinatorView('admin'); setShowAddStudentForm(false); setShowAddDepartmentForm(false); setShowAddAdminForm(false); }}>Admin Management</button>
+              <button className={`submit1-btn ${activeCoordinatorView === 'student' ? 'active' : ''}`} onClick={() => { setActiveCoordinatorView('student'); setShowAddDepartmentForm(false); setShowAddStudentForm(false); setShowAddAdminForm(false); }}>Student Coordinators</button>
+              <button className={`submit1-btn ${activeCoordinatorView === 'department' ? 'active' : ''}`} onClick={() => { setActiveCoordinatorView('department'); setShowAddStudentForm(false); setShowAddDepartmentForm(false); setShowAddAdminForm(false); }}>Department Coordinators</button>
+              <button className={`submit1-btn ${activeCoordinatorView === 'admin' ? 'active' : ''}`} onClick={() => { setActiveCoordinatorView('admin'); setShowAddStudentForm(false); setShowAddDepartmentForm(false); setShowAddAdminForm(false); }}>Admin Management</button>
             </div>
             {activeCoordinatorView === 'student' && (
-                <div>
-                    <div className="coordinator-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h3 className="coordinator-title" style={{fontWeight: "bold" , fontSize: '30px' ,margin: 0}}>Student Coordinators</h3>
-                        <button className="submit2-btn" onClick={() => setShowAddStudentForm(!showAddStudentForm)}>Add Coordinator</button>
-                    </div>
+              <div>
+                <div className="coordinator-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h3 className="coordinator-title" style={{ fontWeight: "bold", fontSize: '30px', margin: 0 }}>Student Coordinators</h3>
+                  <button className="submit2-btn" onClick={() => setShowAddStudentForm(!showAddStudentForm)}>Add Coordinator</button>
+                </div>
 
-                    {showAddStudentForm && (
-                        <div className="form-fields" style={{ background: '#f0f0f0', padding: '1rem', borderRadius: '8px' }}>
-                            <div className="form-group">
-                                <label>Student Email</label>
-                                <input
-                                    type="email"
-                                    placeholder="Enter student email to fetch details"
-                                    className={`input-field ${studentEmailError ? 'error' : ''}`}
-                                    value={studentEmail}
-                                    onChange={(e) => handleStudentEmailChange(e.target.value)}
-                                    disabled={studentCoordinatorLoading}
-                                />
-                                {studentEmailError && (
-                                    <div className="error-text">{studentEmailError}</div>
-                                )}
-                                {studentCoordinatorLoading && (
-                                    <span style={{ marginLeft: '10px', color: '#666' }}>Fetching student details...</span>
-                                )}
-                            </div>
-
-                            {studentCoordinatorData.name && (
-                                <div className="form-group">
-                                    <label>Student Name</label>
-                                    <input
-                                        type="text"
-                                        className="input-field"
-                                        value={studentCoordinatorData.name}
-                                        readOnly
-                                        style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
-                                    />
-                                </div>
-                            )}
-
-                            {studentCoordinatorData.department && (
-                                <div className="form-group">
-                                    <label>Department</label>
-                                    <input
-                                        type="text"
-                                        className="input-field"
-                                        value={studentCoordinatorData.department}
-                                        readOnly
-                                        style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
-                                    />
-                                </div>
-                            )}
-
-                            {studentCoordinatorData.phoneNumber && (
-                                <div className="form-group">
-                                    <label>Phone Number</label>
-                                    <input
-                                        type="text"
-                                        className="input-field"
-                                        value={studentCoordinatorData.phoneNumber}
-                                        readOnly
-                                        style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
-                                    />
-                                </div>
-                            )}
-
-                            <button
-                                className="submit-btn"
-                                onClick={handleAddStudentCoordinator}
-                                disabled={studentCoordinatorLoading || !!studentEmailError || !studentCoordinatorData.name}
-                            >
-                                Add
-                            </button>
-                        </div>
-                    )}
-
-                    <div className="table-scroll-wrap coordinator-table-desktop">
-                    <table className="admin-data-table coordinator-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
-                        <thead>
-                            <tr style={{ backgroundColor: '#eee' }}>
-                                <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>Student Name</th>
-                                <th style={{ padding: '15px', border: '1px solid #ddd', textAlign: 'center' }}>Email</th>
-                                <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Department</th>
-                                <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Phone Number</th>
-                                <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {coordinatorsLoading ? (
-                                <tr>
-                                    <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
-                                        Loading coordinators...
-                                    </td>
-                                </tr>
-                            ) : coordinators.filter(coord => coord.role === 'student').length === 0 ? (
-                                <tr>
-                                    <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
-                                        No student coordinators found
-                                    </td>
-                                </tr>
-                            ) : (
-                                coordinators.filter(coord => coord.role === 'student').map((coord, index) => (
-                                    <tr key={index}>
-                                        <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.name || 'N/A'}</td>
-                                        <td style={{ padding: '15px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.email || 'N/A'}</td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.department || 'N/A'}</td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.phoneNumber || 'N/A'}</td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
-                                            <button
-                                                className="coordinator-delete-btn"
-                                                onClick={() => handleDeleteCoordinator(coord._id, coord.name)}
-                                            >
-                                                Delete
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                    </div>
-
-                    <div className="coordinator-mobile-cards">
-                      {coordinatorsLoading ? (
-                        <div className="coordinator-mobile-empty">Loading coordinators...</div>
-                      ) : coordinators.filter(coord => coord.role === 'student').length === 0 ? (
-                        <div className="coordinator-mobile-empty">No student coordinators found</div>
-                      ) : (
-                        coordinators.filter(coord => coord.role === 'student').map((coord, index) => (
-                          <div key={index} className="coordinator-mobile-card">
-                            <div><strong>Student Name:</strong> {coord.name || 'N/A'}</div>
-                            <div><strong>Email:</strong> {coord.email || 'N/A'}</div>
-                            <div><strong>Department:</strong> {coord.department || 'N/A'}</div>
-                            <div><strong>Phone Number:</strong> {coord.phoneNumber || 'N/A'}</div>
-                            <button
-                              className="coordinator-delete-btn"
-                              onClick={() => handleDeleteCoordinator(coord._id, coord.name)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        ))
+                {showAddStudentForm && (
+                  <div className="form-fields" style={{ background: '#f0f0f0', padding: '1rem', borderRadius: '8px' }}>
+                    <div className="form-group">
+                      <label>Student Email</label>
+                      <input
+                        type="email"
+                        placeholder="Enter student email to fetch details"
+                        className={`input-field ${studentEmailError ? 'error' : ''}`}
+                        value={studentEmail}
+                        onChange={(e) => handleStudentEmailChange(e.target.value)}
+                        disabled={studentCoordinatorLoading}
+                      />
+                      {studentEmailError && (
+                        <div className="error-text">{studentEmailError}</div>
+                      )}
+                      {studentCoordinatorLoading && (
+                        <span style={{ marginLeft: '10px', color: '#666' }}>Fetching student details...</span>
                       )}
                     </div>
+
+                    {studentCoordinatorData.name && (
+                      <div className="form-group">
+                        <label>Student Name</label>
+                        <input
+                          type="text"
+                          className="input-field"
+                          value={studentCoordinatorData.name}
+                          readOnly
+                          style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
+                        />
+                      </div>
+                    )}
+
+                    {studentCoordinatorData.department && (
+                      <div className="form-group">
+                        <label>Department</label>
+                        <input
+                          type="text"
+                          className="input-field"
+                          value={studentCoordinatorData.department}
+                          readOnly
+                          style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
+                        />
+                      </div>
+                      )}
+
+                    {studentCoordinatorData.phoneNumber && (
+                      <div className="form-group">
+                        <label>Phone Number</label>
+                        <input
+                          type="text"
+                          className="input-field"
+                          value={studentCoordinatorData.phoneNumber}
+                          readOnly
+                          style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      className="submit-btn"
+                      onClick={handleAddStudentCoordinator}
+                      disabled={studentCoordinatorLoading || !!studentEmailError || !studentCoordinatorData.name}
+                    >
+                      Add
+                    </button>
+                  </div>
+                )}
+
+                <div className="table-scroll-wrap coordinator-table-desktop">
+                  <table className="admin-data-table coordinator-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#eee' }}>
+                        <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>Student Name</th>
+                        <th style={{ padding: '15px', border: '1px solid #ddd', textAlign: 'center' }}>Email</th>
+                        <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Department</th>
+                        <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Phone Number</th>
+                        <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {coordinatorsLoading ? (
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
+                            Loading coordinators...
+                          </td>
+                        </tr>
+                      ) : coordinators.filter(coord => coord.role === 'student').length === 0 ? (
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
+                            No student coordinators found
+                          </td>
+                        </tr>
+                      ) : (
+                        coordinators.filter(coord => coord.role === 'student').map((coord, index) => (
+                          <tr key={index}>
+                            <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.name || 'N/A'}</td>
+                            <td style={{ padding: '15px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.email || 'N/A'}</td>
+                            <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.department || 'N/A'}</td>
+                            <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.phoneNumber || 'N/A'}</td>
+                            <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                              <button
+                                className="coordinator-delete-btn"
+                                onClick={() => handleDeleteCoordinator(coord._id, coord.name)}
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
+
+                <div className="coordinator-mobile-cards">
+                  {coordinatorsLoading ? (
+                    <div className="coordinator-mobile-empty">Loading coordinators...</div>
+                  ) : coordinators.filter(coord => coord.role === 'student').length === 0 ? (
+                    <div className="coordinator-mobile-empty">No student coordinators found</div>
+                  ) : (
+                    coordinators.filter(coord => coord.role === 'student').map((coord, index) => (
+                      <div key={index} className="coordinator-mobile-card">
+                        <div><strong>Student Name:</strong> {coord.name || 'N/A'}</div>
+                        <div><strong>Email:</strong> {coord.email || 'N/A'}</div>
+                        <div><strong>Department:</strong> {coord.department || 'N/A'}</div>
+                        <div><strong>Phone Number:</strong> {coord.phoneNumber || 'N/A'}</div>
+                        <button
+                          className="coordinator-delete-btn"
+                          onClick={() => handleDeleteCoordinator(coord._id, coord.name)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             )}
 
             {activeCoordinatorView === 'department' && (
-                <div>
-                    <div className="coordinator-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h3 className="coordinator-title" style={{fontWeight: "bold" , fontSize: '30px' ,margin: 0}}>Department Coordinators</h3>
-                        <button className="submit2-btn" onClick={() => setShowAddDepartmentForm(!showAddDepartmentForm)}>Add Coordinator</button>
-                    </div>
+              <div>
+                <div className="coordinator-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h3 className="coordinator-title" style={{ fontWeight: "bold", fontSize: '30px', margin: 0 }}>Department Coordinators</h3>
+                  <button className="submit2-btn" onClick={() => setShowAddDepartmentForm(!showAddDepartmentForm)}>Add Coordinator</button>
+                </div>
 
-                    {showAddDepartmentForm && (
-                        <div className="form-fields" style={{ background: '#f0f0f0', padding: '1rem', borderRadius: '8px' }}>
-                            <div className="form-group">
-                                <label>Name</label>
-                                <input
-                                    type="text"
-                                    placeholder="Name"
-                                    className={`input-field ${deptCoordinatorErrors.name ? 'error' : ''}`}
-                                    value={deptCoordinator.name}
-                                    onChange={(e) => {
-                                        const value = e.target.value.replace(/[^A-Za-z]/g, '');
-                                        setDeptCoordinator({ ...deptCoordinator, name: value });
-                                        if (e.target.value !== value) {
-                                            setDeptCoordinatorErrors({ ...deptCoordinatorErrors, name: 'Only English letters are allowed.' });
-                                        } else {
-                                            setDeptCoordinatorErrors({ ...deptCoordinatorErrors, name: '' });
-                                        }
-                                    }}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); } }}
-                                    onPaste={(e) => { e.preventDefault(); const paste = e.clipboardData.getData('text').replace(/[^A-Za-z]/g, ''); setDeptCoordinator({ ...deptCoordinator, name: paste }); setDeptCoordinatorErrors({ ...deptCoordinatorErrors, name: '' }); }}
-                                    onBlur={(e) => setDeptCoordinator({ ...deptCoordinator, name: e.target.value.trim() })}
-                                />
-                                {deptCoordinatorErrors.name && (
-                                    <div className="error-text">{deptCoordinatorErrors.name}</div>
-                                )}
-                            </div>
-                            <div className="form-group">
-                                <label>Email</label>
-                                <input
-                                    type="email"
-                                    placeholder="Enter email to auto-fetch details"
-                                    className={`input-field ${deptCoordinatorErrors.email ? 'error' : ''}`}
-                                    value={deptCoordinator.email}
-                                    onChange={(e) => handleDeptCoordinatorEmailChange(e.target.value.replace(/[^A-Za-z0-9@._+\-]/g, ''))}
-                                    onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') e.preventDefault(); }}
-                                    onPaste={(e) => { e.preventDefault(); const paste = e.clipboardData.getData('text').replace(/[^A-Za-z0-9@._+\-]/g, ''); handleDeptCoordinatorEmailChange(paste); }}
-                                    onBlur={(e) => setDeptCoordinator({ ...deptCoordinator, email: e.target.value.trim() })}
-                                    disabled={deptCoordinatorLoading}
-                                />
-                                {deptCoordinatorErrors.email && (
-                                    <div className="error-text">{deptCoordinatorErrors.email}</div>
-                                )}
-                                {deptCoordinatorLoading && <span style={{ marginLeft: '10px', color: '#666' }}>Fetching details...</span>}
-                            </div>
-                            <div className="form-group">
-                                <label>Department</label>
-                                <input
-                                    type="text"
-                                    placeholder="Department"
-                                    className={`input-field ${deptCoordinatorErrors.department ? 'error' : ''}`}
-                                    value={deptCoordinator.department}
-                                    onChange={(e) => {
-                                        const value = e.target.value.replace(/[^A-Za-z]/g, '');
-                                        setDeptCoordinator({ ...deptCoordinator, department: value });
-                                        if (e.target.value !== value) {
-                                            setDeptCoordinatorErrors({ ...deptCoordinatorErrors, department: 'Only English letters are allowed.' });
-                                        } else {
-                                            setDeptCoordinatorErrors({ ...deptCoordinatorErrors, department: '' });
-                                        }
-                                    }}
-                                    onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') e.preventDefault(); }}
-                                    onPaste={(e) => { e.preventDefault(); const paste = e.clipboardData.getData('text').replace(/[^A-Za-z]/g, ''); setDeptCoordinator({ ...deptCoordinator, department: paste }); setDeptCoordinatorErrors({ ...deptCoordinatorErrors, department: '' }); }}
-                                    onBlur={(e) => setDeptCoordinator({ ...deptCoordinator, department: e.target.value.trim() })}
-                                />
-                                {deptCoordinatorErrors.department && (
-                                    <div className="error-text">{deptCoordinatorErrors.department}</div>
-                                )}
-                            </div>
-                            <div className="form-group">
-                                <label>Phone Number</label>
-                                <input
-                                    type="text"
-                                    placeholder="Phone Number"
-                                    className={`input-field ${deptCoordinatorErrors.phoneNumber ? 'error' : ''}`}
-                                    value={deptCoordinator.phoneNumber}
-                                    onChange={(e) => setDeptCoordinator({ ...deptCoordinator, phoneNumber: e.target.value.replace(/[^0-9]/g, '') })}
-                                    onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') e.preventDefault(); }}
-                                    onPaste={(e) => { e.preventDefault(); const paste = e.clipboardData.getData('text').replace(/[^0-9]/g, ''); setDeptCoordinator({ ...deptCoordinator, phoneNumber: paste }); }}
-                                    onBlur={(e) => setDeptCoordinator({ ...deptCoordinator, phoneNumber: e.target.value.trim() })}
-                                />
-                                {deptCoordinatorErrors.phoneNumber && (
-                                    <div className="error-text">{deptCoordinatorErrors.phoneNumber}</div>
-                                )}
-                            </div>
-                            <button className="submit-btn" onClick={handleAddDepartmentCoordinator}>Add</button>
-                        </div>
-                    )}
-
-                    <div className="table-scroll-wrap coordinator-table-desktop">
-                    <table className="admin-data-table coordinator-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
-                        <thead>
-                            <tr style={{ backgroundColor: '#eee' }}>
-                                <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>Faculty Name</th>
-                                <th style={{ padding: '15px', border: '1px solid #ddd', textAlign: 'center' }}>Email</th>
-                                <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Department</th>
-                                <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Phone Number</th>
-                                <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {coordinatorsLoading ? (
-                                <tr>
-                                    <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
-                                        Loading coordinators...
-                                    </td>
-                                </tr>
-                            ) : coordinators.filter(coord => coord.role === 'department').length === 0 ? (
-                                <tr>
-                                    <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
-                                        No department coordinators found
-                                    </td>
-                                </tr>
-                            ) : (
-                                coordinators.filter(coord => coord.role === 'department').map((coord, index) => (
-                                    <tr key={index}>
-                                        <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.name || 'N/A'}</td>
-                                        <td style={{ padding: '15px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.email || 'N/A'}</td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.department || 'N/A'}</td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.phoneNumber || 'N/A'}</td>
-                                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
-                                            <button
-                                                className="coordinator-delete-btn"
-                                                onClick={() => handleDeleteCoordinator(coord._id, coord.name)}
-                                            >
-                                                Delete
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                    </div>
-
-                    <div className="coordinator-mobile-cards">
-                      {coordinatorsLoading ? (
-                        <div className="coordinator-mobile-empty">Loading coordinators...</div>
-                      ) : coordinators.filter(coord => coord.role === 'department').length === 0 ? (
-                        <div className="coordinator-mobile-empty">No department coordinators found</div>
-                      ) : (
-                        coordinators.filter(coord => coord.role === 'department').map((coord, index) => (
-                          <div key={index} className="coordinator-mobile-card">
-                            <div><strong>Faculty Name:</strong> {coord.name || 'N/A'}</div>
-                            <div><strong>Email:</strong> {coord.email || 'N/A'}</div>
-                            <div><strong>Department:</strong> {coord.department || 'N/A'}</div>
-                            <div><strong>Phone Number:</strong> {coord.phoneNumber || 'N/A'}</div>
-                            <button
-                              className="coordinator-delete-btn"
-                              onClick={() => handleDeleteCoordinator(coord._id, coord.name)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        ))
+                {showAddDepartmentForm && (
+                  <div className="form-fields" style={{ background: '#f0f0f0', padding: '1rem', borderRadius: '8px' }}>
+                    <div className="form-group">
+                      <label>Name</label>
+                      <input
+                        type="text"
+                        placeholder="Name"
+                        className={`input-field ${deptCoordinatorErrors.name ? 'error' : ''}`}
+                        value={deptCoordinator.name}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^A-Za-z]/g, '');
+                          setDeptCoordinator({ ...deptCoordinator, name: value });
+                          if (e.target.value !== value) {
+                            setDeptCoordinatorErrors({ ...deptCoordinatorErrors, name: 'Only English letters are allowed.' });
+                          } else {
+                            setDeptCoordinatorErrors({ ...deptCoordinatorErrors, name: '' });
+                          }
+                        }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); } }}
+                        onPaste={(e) => { e.preventDefault(); const paste = e.clipboardData.getData('text').replace(/[^A-Za-z]/g, ''); setDeptCoordinator({ ...deptCoordinator, name: paste }); setDeptCoordinatorErrors({ ...deptCoordinatorErrors, name: '' }); }}
+                        onBlur={(e) => setDeptCoordinator({ ...deptCoordinator, name: e.target.value.trim() })}
+                      />
+                      {deptCoordinatorErrors.name && (
+                        <div className="error-text">{deptCoordinatorErrors.name}</div>
                       )}
                     </div>
+                    <div className="form-group">
+                      <label>Email</label>
+                      <input
+                        type="email"
+                        placeholder="Enter email to auto-fetch details"
+                        className={`input-field ${deptCoordinatorErrors.email ? 'error' : ''}`}
+                        value={deptCoordinator.email}
+                        onChange={(e) => handleDeptCoordinatorEmailChange(e.target.value.replace(/[^A-Za-z0-9@._+\-]/g, ''))}
+                        onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') e.preventDefault(); }}
+                        onPaste={(e) => { e.preventDefault(); const paste = e.clipboardData.getData('text').replace(/[^A-Za-z0-9@._+\-]/g, ''); handleDeptCoordinatorEmailChange(paste); }}
+                        onBlur={(e) => setDeptCoordinator({ ...deptCoordinator, email: e.target.value.trim() })}
+                        disabled={deptCoordinatorLoading}
+                      />
+                      {deptCoordinatorErrors.email && (
+                        <div className="error-text">{deptCoordinatorErrors.email}</div>
+                      )}
+                      {deptCoordinatorLoading && <span style={{ marginLeft: '10px', color: '#666' }}>Fetching details...</span>}
+                    </div>
+                    <div className="form-group">
+                      <label>Department</label>
+                      <input
+                        type="text"
+                        placeholder="Department"
+                        className={`input-field ${deptCoordinatorErrors.department ? 'error' : ''}`}
+                        value={deptCoordinator.department}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/[^A-Za-z]/g, '');
+                          setDeptCoordinator({ ...deptCoordinator, department: value });
+                          if (e.target.value !== value) {
+                            setDeptCoordinatorErrors({ ...deptCoordinatorErrors, department: 'Only English letters are allowed.' });
+                          } else {
+                            setDeptCoordinatorErrors({ ...deptCoordinatorErrors, department: '' });
+                          }
+                        }}
+                        onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') e.preventDefault(); }}
+                        onPaste={(e) => { e.preventDefault(); const paste = e.clipboardData.getData('text').replace(/[^A-Za-z]/g, ''); setDeptCoordinator({ ...deptCoordinator, department: paste }); setDeptCoordinatorErrors({ ...deptCoordinatorErrors, department: '' }); }}
+                        onBlur={(e) => setDeptCoordinator({ ...deptCoordinator, department: e.target.value.trim() })}
+                      />
+                      {deptCoordinatorErrors.department && (
+                        <div className="error-text">{deptCoordinatorErrors.department}</div>
+                      )}
+                    </div>
+                    <div className="form-group">
+                      <label>Phone Number</label>
+                      <input
+                        type="text"
+                        placeholder="Phone Number"
+                        className={`input-field ${deptCoordinatorErrors.phoneNumber ? 'error' : ''}`}
+                        value={deptCoordinator.phoneNumber}
+                        onChange={(e) => setDeptCoordinator({ ...deptCoordinator, phoneNumber: e.target.value.replace(/[^0-9]/g, '') })}
+                        onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') e.preventDefault(); }}
+                        onPaste={(e) => { e.preventDefault(); const paste = e.clipboardData.getData('text').replace(/[^0-9]/g, ''); setDeptCoordinator({ ...deptCoordinator, phoneNumber: paste }); }}
+                        onBlur={(e) => setDeptCoordinator({ ...deptCoordinator, phoneNumber: e.target.value.trim() })}
+                      />
+                      {deptCoordinatorErrors.phoneNumber && (
+                        <div className="error-text">{deptCoordinatorErrors.phoneNumber}</div>
+                      )}
+                    </div>
+                    <button className="submit-btn" onClick={handleAddDepartmentCoordinator}>Add</button>
+                  </div>
+                )}
+
+                <div className="table-scroll-wrap coordinator-table-desktop">
+                  <table className="admin-data-table coordinator-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#eee' }}>
+                        <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>Faculty Name</th>
+                        <th style={{ padding: '15px', border: '1px solid #ddd', textAlign: 'center' }}>Email</th>
+                        <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Department</th>
+                        <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Phone Number</th>
+                        <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {coordinatorsLoading ? (
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
+                            Loading coordinators...
+                          </td>
+                        </tr>
+                      ) : coordinators.filter(coord => coord.role === 'department').length === 0 ? (
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
+                            No department coordinators found
+                          </td>
+                        </tr>
+                      ) : (
+                        coordinators.filter(coord => coord.role === 'department').map((coord, index) => (
+                          <tr key={index}>
+                            <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.name || 'N/A'}</td>
+                            <td style={{ padding: '15px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.email || 'N/A'}</td>
+                            <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.department || 'N/A'}</td>
+                            <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.phoneNumber || 'N/A'}</td>
+                            <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                              <button
+                                className="coordinator-delete-btn"
+                                onClick={() => handleDeleteCoordinator(coord._id, coord.name)}
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
+
+                <div className="coordinator-mobile-cards">
+                  {coordinatorsLoading ? (
+                    <div className="coordinator-mobile-empty">Loading coordinators...</div>
+                  ) : coordinators.filter(coord => coord.role === 'department').length === 0 ? (
+                    <div className="coordinator-mobile-empty">No department coordinators found</div>
+                  ) : (
+                    coordinators.filter(coord => coord.role === 'department').map((coord, index) => (
+                      <div key={index} className="coordinator-mobile-card">
+                        <div><strong>Faculty Name:</strong> {coord.name || 'N/A'}</div>
+                        <div><strong>Email:</strong> {coord.email || 'N/A'}</div>
+                        <div><strong>Department:</strong> {coord.department || 'N/A'}</div>
+                        <div><strong>Phone Number:</strong> {coord.phoneNumber || 'N/A'}</div>
+                        <button
+                          className="coordinator-delete-btn"
+                          onClick={() => handleDeleteCoordinator(coord._id, coord.name)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             )}
 
             {activeCoordinatorView === 'admin' && (
-                <div>
-                    <div className="coordinator-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                        <h3 className="coordinator-title" style={{fontWeight: "bold" , fontSize: '30px' ,margin: 0}}>Admin Users</h3>
-                        <button className="submit2-btn" onClick={() => setShowAddAdminForm(!showAddAdminForm)}>Add Admin</button>
-                    </div>
+              <div>
+                <div className="coordinator-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h3 className="coordinator-title" style={{ fontWeight: "bold", fontSize: '30px', margin: 0 }}>Admin Users</h3>
+                  <button className="submit2-btn" onClick={() => setShowAddAdminForm(!showAddAdminForm)}>Add Admin</button>
+                </div>
 
-                    {showAddAdminForm && (
-                        <div className="form-fields" style={{ background: '#f0f0f0', padding: '1rem', borderRadius: '8px' }}>
-                            <div className="form-group">
-                                <label>Admin Email</label>
-                                <input
-                                    type="email"
-                                    placeholder="Enter admin email to fetch details"
-                                    className={`input-field ${adminEmailError ? 'error' : ''}`}
-                                    value={adminEmail}
-                                    onChange={(e) => handleAdminEmailChange(e.target.value)}
-                                    disabled={adminCoordinatorLoading}
-                                />
-                                {adminEmailError && (
-                                    <div className="error-text">{adminEmailError}</div>
-                                )}
-                                {adminCoordinatorLoading && (
-                                    <span style={{ marginLeft: '10px', color: '#666' }}>Fetching admin details...</span>
-                                )}
-                            </div>
-
-                            {adminCoordinatorData.name && (
-                                <div className="form-group">
-                                    <label>Admin Name</label>
-                                    <input
-                                        type="text"
-                                        className="input-field"
-                                        value={adminCoordinatorData.name}
-                                        readOnly
-                                        style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
-                                    />
-                                </div>
-                            )}
-
-                            {adminCoordinatorData.department && (
-                                <div className="form-group">
-                                    <label>Department</label>
-                                    <input
-                                        type="text"
-                                        className="input-field"
-                                        value={adminCoordinatorData.department}
-                                        readOnly
-                                        style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
-                                    />
-                                </div>
-                            )}
-
-                            {adminCoordinatorData.phoneNumber && (
-                                <div className="form-group">
-                                    <label>Phone Number</label>
-                                    <input
-                                        type="text"
-                                        className="input-field"
-                                        value={adminCoordinatorData.phoneNumber}
-                                        readOnly
-                                        style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
-                                    />
-                                </div>
-                            )}
-
-                            <button
-                                className="submit-btn"
-                                onClick={handleAddAdminCoordinator}
-                                disabled={adminCoordinatorLoading || !!adminEmailError || !adminCoordinatorData.name}
-                            >
-                                Add
-                            </button>
-                        </div>
-                    )}
-
-                    <div className="table-scroll-wrap coordinator-table-desktop">
-                      <table className="admin-data-table coordinator-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
-                          <thead>
-                              <tr style={{ backgroundColor: '#eee' }}>
-                                  <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>Admin Name</th>
-                                  <th style={{ padding: '15px', border: '1px solid #ddd', textAlign: 'center' }}>Email</th>
-                                  <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Department</th>
-                                  <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Phone Number</th>
-                                  <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Actions</th>
-                              </tr>
-                          </thead>
-                          <tbody>
-                              {coordinatorsLoading ? (
-                                  <tr>
-                                      <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
-                                          Loading admins...
-                                      </td>
-                                  </tr>
-                              ) : coordinators.filter(coord => coord.role === 'admin').length === 0 ? (
-                                  <tr>
-                                      <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
-                                          No admins found
-                                      </td>
-                                  </tr>
-                              ) : (
-                                  coordinators.filter(coord => coord.role === 'admin').map((coord, index) => (
-                                      <tr key={index}>
-                                          <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.name || 'N/A'}</td>
-                                          <td style={{ padding: '15px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.email || 'N/A'}</td>
-                                          <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.department || 'N/A'}</td>
-                                          <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.phoneNumber || 'N/A'}</td>
-                                          <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
-                                              <button
-                                                  className="coordinator-delete-btn"
-                                                  onClick={() => handleDeleteCoordinator(coord._id, coord.name)}
-                                              >
-                                                  Delete
-                                              </button>
-                                          </td>
-                                      </tr>
-                                  ))
-                              )}
-                          </tbody>
-                      </table>
-                    </div>
-
-                    <div className="coordinator-mobile-cards">
-                      {coordinatorsLoading ? (
-                        <div className="coordinator-mobile-empty">Loading admins...</div>
-                      ) : coordinators.filter(coord => coord.role === 'admin').length === 0 ? (
-                        <div className="coordinator-mobile-empty">No admins found</div>
-                      ) : (
-                        coordinators.filter(coord => coord.role === 'admin').map((coord, index) => (
-                          <div key={index} className="coordinator-mobile-card">
-                            <div><strong>Admin Name:</strong> {coord.name || 'N/A'}</div>
-                            <div><strong>Email:</strong> {coord.email || 'N/A'}</div>
-                            <div><strong>Department:</strong> {coord.department || 'N/A'}</div>
-                            <div><strong>Phone Number:</strong> {coord.phoneNumber || 'N/A'}</div>
-                            <button
-                              className="coordinator-delete-btn"
-                              onClick={() => handleDeleteCoordinator(coord._id, coord.name)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        ))
+                {showAddAdminForm && (
+                  <div className="form-fields" style={{ background: '#f0f0f0', padding: '1rem', borderRadius: '8px' }}>
+                    <div className="form-group">
+                      <label>Admin Email</label>
+                      <input
+                        type="email"
+                        placeholder="Enter admin email to fetch details"
+                        className={`input-field ${adminEmailError ? 'error' : ''}`}
+                        value={adminEmail}
+                        onChange={(e) => handleAdminEmailChange(e.target.value)}
+                        disabled={adminCoordinatorLoading}
+                      />
+                      {adminEmailError && (
+                        <div className="error-text">{adminEmailError}</div>
+                      )}
+                      {adminCoordinatorLoading && (
+                        <span style={{ marginLeft: '10px', color: '#666' }}>Fetching admin details...</span>
                       )}
                     </div>
+
+                    {adminCoordinatorData.name && (
+                      <div className="form-group">
+                        <label>Admin Name</label>
+                        <input
+                          type="text"
+                          className="input-field"
+                          value={adminCoordinatorData.name}
+                          readOnly
+                          style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
+                        />
+                      </div>
+                    )}
+
+                    {adminCoordinatorData.department && (
+                      <div className="form-group">
+                        <label>Department</label>
+                        <input
+                          type="text"
+                          className="input-field"
+                          value={adminCoordinatorData.department}
+                          readOnly
+                          style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
+                        />
+                      </div>
+                    )}
+
+                    {adminCoordinatorData.phoneNumber && (
+                      <div className="form-group">
+                        <label>Phone Number</label>
+                        <input
+                          type="text"
+                          className="input-field"
+                          value={adminCoordinatorData.phoneNumber}
+                          readOnly
+                          style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
+                        />
+                      </div>
+                    )}
+
+                    <button
+                      className="submit-btn"
+                      onClick={handleAddAdminCoordinator}
+                      disabled={adminCoordinatorLoading || !!adminEmailError || !adminCoordinatorData.name}
+                    >
+                      Add
+                    </button>
+                  </div>
+                )}
+
+                <div className="table-scroll-wrap coordinator-table-desktop">
+                  <table className="admin-data-table coordinator-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#eee' }}>
+                        <th style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>Admin Name</th>
+                        <th style={{ padding: '15px', border: '1px solid #ddd', textAlign: 'center' }}>Email</th>
+                        <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Department</th>
+                        <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Phone Number</th>
+                        <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {coordinatorsLoading ? (
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
+                            Loading admins...
+                          </td>
+                        </tr>
+                      ) : coordinators.filter(coord => coord.role === 'admin').length === 0 ? (
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: 'center', padding: '20px' }}>
+                            No admins found
+                          </td>
+                        </tr>
+                      ) : (
+                        coordinators.filter(coord => coord.role === 'admin').map((coord, index) => (
+                          <tr key={index}>
+                            <td style={{ padding: '8px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.name || 'N/A'}</td>
+                            <td style={{ padding: '15px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.email || 'N/A'}</td>
+                            <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.department || 'N/A'}</td>
+                            <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{coord.phoneNumber || 'N/A'}</td>
+                            <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                              <button
+                                className="coordinator-delete-btn"
+                                onClick={() => handleDeleteCoordinator(coord._id, coord.name)}
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
+
+                <div className="coordinator-mobile-cards">
+                  {coordinatorsLoading ? (
+                    <div className="coordinator-mobile-empty">Loading admins...</div>
+                  ) : coordinators.filter(coord => coord.role === 'admin').length === 0 ? (
+                    <div className="coordinator-mobile-empty">No admins found</div>
+                  ) : (
+                    coordinators.filter(coord => coord.role === 'admin').map((coord, index) => (
+                      <div key={index} className="coordinator-mobile-card">
+                        <div><strong>Admin Name:</strong> {coord.name || 'N/A'}</div>
+                        <div><strong>Email:</strong> {coord.email || 'N/A'}</div>
+                        <div><strong>Department:</strong> {coord.department || 'N/A'}</div>
+                        <div><strong>Phone Number:</strong> {coord.phoneNumber || 'N/A'}</div>
+                        <button
+                          className="coordinator-delete-btn"
+                          onClick={() => handleDeleteCoordinator(coord._id, coord.name)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             )}
           </div>
         );
-    case 'prizeWinners':
-      return (
-        <div className="form-card filter-card admin-prize-winners">
-          <div className="mobile-compact-filters">
-            <button
-              type="button"
-              className="mobile-export-btn"
-              onClick={exportFilteredPrizeWinners}
-            >
-              Export
-            </button>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-            <div style={{ flex: '1 1 auto', minWidth: '220px' }}>
-              <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Prize Winners Details</h2>
+      case 'prizeWinners':
+        return (
+          <div className="form-card filter-card admin-prize-winners">
+            <div className="mobile-compact-filters">
+              <button
+                type="button"
+                className="mobile-export-btn"
+                onClick={exportFilteredPrizeWinners}
+              >
+                Export
+              </button>
             </div>
-            <button
-              type="button"
-              className="submit1-btn desktop-export-btn"
-              style={{
-                backgroundColor: '#16a34a',
-                color: '#ffffff',
-                border: 'none',
-                padding: '10px 18px',
-                borderRadius: '12px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-              onClick={exportFilteredPrizeWinners}
-            >
-              Export Prize Winners
-            </button>
-          </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{ flex: '1 1 auto', minWidth: '220px' }}>
+                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Prize Winners Details</h2>
+              </div>
+              <button
+                type="button"
+                className="submit1-btn desktop-export-btn"
+                style={{
+                  backgroundColor: '#16a34a',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '10px 18px',
+                  borderRadius: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap'
+                }}
+                onClick={exportFilteredPrizeWinners}
+              >
+                Export Prize Winners
+              </button>
+            </div>
 
-          <div className="filters webinar-filters">
-            <select
-              className="input-field"
-              value={selectedFilters.phaseId}
-              onChange={(e) => setSelectedFilters({ ...selectedFilters, phaseId: e.target.value, domain: '', month: '' })}
-            >
-              <option value="">All Phases</option>
-              {filterOptions.phases?.map((phase) => (
-                <option key={phase.id} value={phase.id}>{phase.name}</option>
-              ))}
-            </select>
+            <div className="filters webinar-filters">
+              <select
+                className="input-field"
+                value={selectedFilters.phaseId}
+                onChange={(e) => setSelectedFilters({ ...selectedFilters, phaseId: e.target.value, domain: '', month: '' })}
+              >
+                <option value="">All Phases</option>
+                {filterOptions.phases?.map((phase) => (
+                  <option key={phase.id} value={phase.id}>{phase.name}</option>
+                ))}
+              </select>
 
-            <select
-              className="input-field"
-              value={selectedFilters.domain}
-              onChange={(e) => setSelectedFilters({ ...selectedFilters, domain: e.target.value })}
-            >
-              <option value="">All Domains</option>
-              {prizeWinnerDomainOptions.map((domain) => (
-                <option key={domain} value={domain}>{domain}</option>
-              ))}
-            </select>
+              <select
+                className="input-field"
+                value={selectedFilters.domain}
+                onChange={(e) => setSelectedFilters({ ...selectedFilters, domain: e.target.value })}
+              >
+                <option value="">All Domains</option>
+                {prizeWinnerDomainOptions.map((domain) => (
+                  <option key={domain} value={domain}>{domain}</option>
+                ))}
+              </select>
 
-            <select
-              className="input-field"
-              value={selectedFilters.month}
-              onChange={(e) => setSelectedFilters({ ...selectedFilters, month: e.target.value })}
-            >
-              <option value="">All Months</option>
-              {prizeWinnerMonthOptions.map((month) => (
-                <option key={month.value} value={month.value}>{month.label}</option>
-              ))}
-            </select>
-          </div>
+              <select
+                className="input-field"
+                value={selectedFilters.month}
+                onChange={(e) => setSelectedFilters({ ...selectedFilters, month: e.target.value })}
+              >
+                <option value="">All Months</option>
+                {prizeWinnerMonthOptions.map((month) => (
+                  <option key={month.value} value={month.value}>{month.label}</option>
+                ))}
+              </select>
+            </div>
 
-          <div className="table-scroll-wrap webinar-table-desktop" style={{ overflowX: 'auto', width: '100%', marginTop: '1rem' }}>
-            <table className="admin-data-table webinar-table" style={{ minWidth: '1100px', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-              <thead>
-                <tr style={{ backgroundColor: '#eee' }}>
-                  <th style={{ minWidth: '100px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Phase</th>
-                  <th style={{ minWidth: '180px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Webinar Domain</th>
-                  <th style={{ minWidth: '220px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Webinar Topic</th>
-                  <th style={{ minWidth: '160px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Webinar Date</th>
-                  <th style={{ minWidth: '200px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Prize Winner Name</th>
-                  <th style={{ minWidth: '250px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Prize Winner Email</th>
-                  <th style={{ minWidth: '160px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Prize Winner Mobile</th>
-                </tr>
-              </thead>
-              <tbody>
-                {prizeWinnersLoading ? (
-                  <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '20px' }}>Loading prize winners...</td>
+            <div className="table-scroll-wrap webinar-table-desktop" style={{ overflowX: 'auto', width: '100%', marginTop: '1rem' }}>
+              <table className="admin-data-table webinar-table" style={{ minWidth: '1100px', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#eee' }}>
+                    <th style={{ minWidth: '100px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Phase</th>
+                    <th style={{ minWidth: '180px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Webinar Domain</th>
+                    <th style={{ minWidth: '220px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Webinar Topic</th>
+                    <th style={{ minWidth: '160px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Webinar Date</th>
+                    <th style={{ minWidth: '200px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Prize Winner Name</th>
+                    <th style={{ minWidth: '150px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Department</th>
+                    <th style={{ minWidth: '120px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Batch</th>
+                    <th style={{ minWidth: '250px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Prize Winner Email</th>
+                    <th style={{ minWidth: '160px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Prize Winner Mobile</th>
                   </tr>
-                ) : filteredPrizeWinners.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '20px' }}>No prize winners found.</td>
-                  </tr>
-                ) : (
-                  filteredPrizeWinners.map((w, idx) => (
-                    <tr key={idx}>
-                      <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.phaseId ?? 'N/A'}</td>
-                      <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.domain ?? 'N/A'}</td>
-                      <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.topic ?? 'N/A'}</td>
-                      <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.webinarDate ? new Date(w.webinarDate).toLocaleDateString() : 'N/A'}</td>
-                      <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.prizeWinnerName ?? 'N/A'}</td>
-                      <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.prizeWinnerEmail ?? 'N/A'}</td>
-                      <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.prizeWinnerMobile ?? 'N/A'}</td>
+                </thead>
+                <tbody>
+                  {prizeWinnersLoading ? (
+                    <tr>
+                      <td colSpan={9} style={{ textAlign: 'center', padding: '20px' }}>Loading prize winners...</td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  ) : filteredPrizeWinners.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} style={{ textAlign: 'center', padding: '20px' }}>No prize winners found.</td>
+                    </tr>
+                  ) : (
+                    filteredPrizeWinners.map((w, idx) => (
+                      <tr key={idx}>
+                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.phaseId ?? 'N/A'}</td>
+                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.domain ?? 'N/A'}</td>
+                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.topic ?? 'N/A'}</td>
+                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.webinarDate ? new Date(w.webinarDate).toLocaleDateString() : 'N/A'}</td>
+                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.prizeWinnerName ?? 'N/A'}</td>
+                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.prizeWinnerDepartment ?? 'N/A'}</td>
+                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.prizeWinnerBatch ?? 'N/A'}</td>
+                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.prizeWinnerEmail ?? 'N/A'}</td>
+                        <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{w.prizeWinnerMobile ?? 'N/A'}</td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      );
-    default:
-      return null;
-  }
-};
+        );
+      default:
+        return null;
+    }
+  };
 
-return (
+  return (
     <div className="student-form-page admin-page-scroll">
       <div className="background-orbs">
         <div className="orb orb-purple"></div>
@@ -2100,11 +2025,11 @@ return (
             >
               ☰
             </button>
-         
+          
             <h1 className="text-2xl font-bold text-[#7d48b9] mb-4 tracking-wider">
               <br></br>
               Webinar Coordinator Dashboard</h1>
-           
+            
         </div>
             {/* Current Phase Display */}
             {!phaseLoading && (

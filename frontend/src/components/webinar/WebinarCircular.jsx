@@ -8,12 +8,12 @@ export default function WebinarCircular({ date = " ", data = [], month = "", onC
         <h2>NATIONAL ENGINEERING COLLEGE</h2>
         <p>(An Autonomous Institution, Affiliated to Anna University - Chennai)</p>
         <p>K.R. NAGAR, KOVILPATTI – 628 503</p>
-        <h3>NEC ALUMNI ASSOCIATION</h3>
+        <h2>NEC ALUMNI ASSOCIATION</h2>
         <p className="date-field">[Date: {date}]</p>
       </div>
 
       <p className="intro">
-        In association with the coordination of webinar series the following speakers are
+        In association with the conduction of webinar series the following speakers are
         identified for the month of {month}.
       </p>
 

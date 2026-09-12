@@ -21,8 +21,25 @@ export default function WebinarPoster({
   alumniCity,
   alumniBatch,
   alumniDepartment,
+  webinarDomain = '',
   desktopPreview = false
 }) {
+
+  const departmentText = `${webinarDomain} ${alumniDepartment}`.toUpperCase();
+  const hasDepartment = (pattern) => new RegExp(`(?:^|[^A-Z])${pattern}(?:$|[^A-Z])`).test(departmentText);
+  const posterBackgroundColor = hasDepartment('AIDS') || departmentText.includes('ARTIFICIAL INTELLIGENCE') || departmentText.includes('AI & DS')
+    ? '#C026D3'
+    : hasDepartment('CSE') || departmentText.includes('COMPUTER SCIENCE')
+      ? '#064E3B'
+      : hasDepartment('MECH') || departmentText.includes('MECHANICAL')
+      ? '#B8860B'
+      : hasDepartment('ECE') || departmentText.includes('ELECTRONICS')
+        ? '#EA580C'
+        : hasDepartment('EEE') || departmentText.includes('ELECTRICAL')
+            ? '#0F766E'
+            : hasDepartment('CIVIL')
+              ? '#7F1D3D'
+              : '#06204A';
 
   // ---------- FUNCTION TO GET WEEKDAY ----------
   const getDayFromDate = (dateString) => {
@@ -88,11 +105,14 @@ export default function WebinarPoster({
     .join('');
 
   return (
-    <div className={`webinar-poster w-[900px] h-[1200px] mx-auto bg-[#06204A] relative text-white overflow-hidden shadow-2xl rounded-xl ${desktopPreview ? 'desktop-preview' : ''}`}>
+    <div
+      className={`webinar-poster w-[900px] h-[1200px] mx-auto relative text-white overflow-hidden shadow-2xl rounded-xl ${desktopPreview ? 'desktop-preview' : ''}`}
+      style={{ backgroundColor: posterBackgroundColor }}
+    >
 
       {/* -------------------- TOP HEADER -------------------- */}
       <div className="text-center pt-6">
-        <h1 className="text-5xl font-extrabold text-purple-300 drop-shadow-lg mt-4">
+        <h1 className="text-5xl font-extrabold text-white drop-shadow-lg mt-4">
           NATIONAL ENGINEERING COLLEGE
         </h1>
         <p className="text-xl mt-2">
@@ -106,8 +126,10 @@ export default function WebinarPoster({
         <img src={necLogo} alt="NEC Logo" className="w-30 h-30 object-contain" />
 
         <div className="flex justify-center mt-4">
-          <div className="bg-white text-[#06204A] font-extrabold  flex justify-center text-3xl px-5 h-[55px] w-[450px] rounded-sm shadow-md flex items-center">
-            NEC ALUMNI ASSOCIATION
+          <div className="bg-white text-[#06204A] font-extrabold flex justify-center text-3xl px-5 h-[55px] w-[450px] rounded-sm shadow-md flex items-center">
+            <span className="association-title" style={{ position: 'relative', top: '-1px', lineHeight: 1 }}>
+              NEC ALUMNI ASSOCIATION
+            </span>
           </div>
         </div>
 
@@ -130,10 +152,8 @@ export default function WebinarPoster({
         ))}
       </div>
 
-      {/* -------------------- ANGLED WHITE AREA -------------------- */}
-      <div className="absolute top-[320px] left-[-300px] w-[180%] h-[850px] bg-gray-200 rotate-[745deg] origin-left shadow-2xl"></div>
       {/* -------------------- TOPIC -------------------- */}
-      <h1 className="text-center text-4xl font-bold text-blue-300 mt-4 drop-shadow-md px-10">
+      <h1 className="absolute top-[400px] left-10 w-[820px] text-center text-4xl font-bold leading-tight text-cyan-200 drop-shadow-lg px-10">
         {webinarTopic}
       </h1>
 
@@ -183,7 +203,7 @@ export default function WebinarPoster({
             📍 VENUE
           </p>
 
-          <p className="text-black text-3xl font-bold mt-3 mb-2 group-hover:text-[#0a2a57] transition-all duration-300">
+          <p className="ml-5 text-black text-3xl font-bold mt-2 mb-2 leading-tight break-words group-hover:text-[#0a2a57] transition-all duration-300">
             {webinarVenue}
           </p>
         </div>
@@ -191,29 +211,23 @@ export default function WebinarPoster({
 
       {/* -------------------- ALUMNI PHOTO -------------------- */}
       <div className="absolute top-[540px] right-15">
-        {resolvedAlumniPhoto ? (
-          <img
-            src={resolvedAlumniPhoto}
-            alt="Alumni"
-            className="w-80 h-85 rounded-full object-cover border-4 border-white shadow-xl"
-          />
-        ) : (
-          <div className="w-80 h-85 rounded-full border-4 border-white shadow-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-5xl font-bold text-white">
-            {photoInitials || 'A'}
-          </div>
-        )}
+        <img
+          src={alumniPhoto}
+          alt="Alumni"
+          className="w-80 h-85 rounded-full object-cover border-4 border-white shadow-xl"
+        />
       </div>
 
       {/* -------------------- ALUMNI DETAILS -------------------- */}
-      <div className="absolute top-[880px] right-10 bg-black/95 h-[250px] w-[370px]  p-6 rounded-xl text-center ">
-        <h2 className="text-3xl font-bold mt-2">{alumniName}</h2>
+      <div className="absolute top-[900px] right-10 bg-black/95 h-[250px] w-[370px] p-5 rounded-xl text-center">
+        <h2 className="text-3xl font-bold mt-1 leading-tight">{alumniName}</h2>
 
-        <p className="text-green-400 text-2xl mt-1 leading-snug">
+        <p className="text-green-400 text-2xl mt-2 leading-snug">
           {alumniDesignation} <br />
           {alumniCompany}, {alumniCity}
         </p>
 
-        <p className="text-lg mt-3">
+        <p className="text-lg mt-3 leading-tight">
           ( BATCH {alumniBatch} – {alumniDepartment})
         </p>
       </div>

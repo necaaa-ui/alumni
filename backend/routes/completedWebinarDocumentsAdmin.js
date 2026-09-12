@@ -16,36 +16,28 @@ router.get('/admin/webinars/completed-documents', async (req, res) => {
       return res.status(500).json({ error: 'Required models not available' });
     }
 
-    // Include webinars that have uploaded completed docs in either the new documents collection
-    // or the older completed-details collection, so the Download link appears correctly.
+    // For now, just return all webinars with completed docs OR completed legacy details.
+    // Admin can filter further client-side if required.
     const docs = await CompletedWebinarDocuments.find({}).lean();
-    const legacyDocs = await CompletedWebinarDetails.find({}).lean();
-
     const docByWebinarId = Object.fromEntries(docs.map(d => [String(d.webinarId), d]));
-    const legacyDocByWebinarId = Object.fromEntries(legacyDocs.map(d => [String(d.webinarId), d]));
-
-    const webinarIdsWithDocs = new Set([
-      ...Object.keys(docByWebinarId),
-      ...Object.keys(legacyDocByWebinarId),
-    ]);
 
     // Join with Webinar to get phaseId/topic/webinarDate/domain (as department mapping handled in frontend or server)
     const webinars = await Webinar.find({
       $or: [
-        { _id: { $in: Array.from(webinarIdsWithDocs) } },
+        { _id: { $in: Object.keys(docByWebinarId) } },
         { status: 'Completed' },
       ],
     })
       .select('phaseId domain topic webinarDate attendedCount status')
       .lean();
 
-    // Registered count from Register collection
     const rows = await Promise.all(
       webinars.map(async (w) => {
         const registeredCount = await WebinarRegister.countDocuments({ webinarId: w._id });
         const attendedCount = w.attendedCount ?? 0;
+        const absenteeCount = registeredCount > attendedCount ? registeredCount - attendedCount : null;
 
-        const d = docByWebinarId[String(w._id)] || legacyDocByWebinarId[String(w._id)] || {};
+        const d = docByWebinarId[String(w._id)] || {};
         const hasDocs = Boolean((d.attendanceSheet && String(d.attendanceSheet).length > 0) || (Array.isArray(d.eventImages) && d.eventImages.length > 0));
 
         return {
@@ -56,6 +48,8 @@ router.get('/admin/webinars/completed-documents', async (req, res) => {
           webinarDate: w.webinarDate ?? null,
           registeredCount,
           attendedCount,
+          absenteeCount,
+          hasSignedReport,
           hasDocuments: hasDocs,
         };
       })
@@ -69,4 +63,3 @@ router.get('/admin/webinars/completed-documents', async (req, res) => {
 });
 
 module.exports = router;
-

@@ -140,6 +140,12 @@ const webinarConnection = mongoose.createConnection(webinarMongoURI);
 webinarConnection.on('connected', () => console.log('✅ Connected to webinar database'));
 webinarConnection.on('error', (err) => console.error('❌ Webinar DB connection error:', err));
 
+const WebinarCompletedWebinarDocuments = webinarConnection.model(
+  'CompletedWebinarDocuments',
+  CompletedWebinarDocuments.schema,
+  'completedwebinardocuments'
+);
+
 // Create models for main connection (test database)
 const Member = mongoose.model('Member', MemberSchema, 'members');
 
@@ -237,7 +243,7 @@ app.use('/api', require('./routes/completedWebinarDocuments'));
 console.log('✅ completedWebinarDocuments routes mounted at /api');
 
 // Provide documents model for routes
-app.locals.CompletedWebinarDocuments = CompletedWebinarDocuments;
+app.locals.CompletedWebinarDocuments = WebinarCompletedWebinarDocuments;
 
 // ========== COMPLETED WEBINAR DOCUMENTS ADMIN ========== 
 app.use('/api', require('./routes/completedWebinarDocumentsAdmin'));
@@ -351,12 +357,22 @@ app.get('/api/webinars', async (req, res) => {
     const webinarsWithCount = await Promise.all(
       webinars.map(async (webinar) => {
         const registrationCount = await WebinarRegister.countDocuments({ webinarId: webinar._id });
+        const feedbackCount = await WebinarStudentFeedback.countDocuments({ webinar: webinar.topic });
+        const completedDoc = await CompletedWebinarDocuments.findOne({ webinarId: webinar._id }).lean();
+        const hasUploads = Boolean(
+          (completedDoc?.attendanceSheet && String(completedDoc.attendanceSheet).length > 0) ||
+          (completedDoc?.signedReport && String(completedDoc.signedReport).length > 0) ||
+          (Array.isArray(completedDoc?.eventImages) && completedDoc.eventImages.length > 0)
+        );
         const webinarObj = webinar.toObject();
         // Map domain to full name for display
         webinarObj.domain = domainMappings[webinarObj.domain] || webinarObj.domain;
         return {
           ...webinarObj,
-          registeredCount: registrationCount
+          registeredCount: registrationCount,
+          feedbackCount,
+          hasUploads,
+          uploadsComplete: hasUploads
         };
       })
     );
@@ -429,11 +445,14 @@ app.put('/api/webinars/:id/complete', async (req, res) => {
 
     // For this completion-details table (separate collection), we also accept:
     // - attendanceSheet (base64 string)
+    // - signedReport (base64 string)
     // - prizeWinnerMobile
     // - eventImages (array)
     // Since current frontend sends only attendance count + prizeWinnerEmail + eventImages base64 previews,
     // we derive missing fields as empty for now.
     const attendanceSheet = req.body.attendanceSheet ?? '';
+    const signedReport = req.body.signedReport ?? '';
+    const signedReportName = req.body.signedReportName ?? '';
     const normalizedPrizeWinnerEmail = (prizeWinnerEmail ?? '').trim();
     let prizeWinnerName = req.body.prizeWinnerName ?? req.body.name ?? '';
     let prizeWinnerMobile = req.body.prizeWinnerMobile ?? req.body.prizeWinnerMobileNumber ?? req.body.contact ?? '';
@@ -475,6 +494,8 @@ app.put('/api/webinars/:id/complete', async (req, res) => {
       { webinarId: req.params.id },
       {
         attendanceSheet,
+        signedReport,
+        signedReportName,
         eventImages: Array.isArray(eventImages) ? eventImages : [],
         attendanceCount: attendedCount ?? 0,
         prizeWinnerEmail: normalizedPrizeWinnerEmail,
@@ -486,16 +507,14 @@ app.put('/api/webinars/:id/complete', async (req, res) => {
 
 // Store uploaded files in new collection CompletedWebinarDocuments (WEBINAR DB)
     const normalizedEventImages = Array.isArray(eventImages) ? eventImages : [];
-    const CompletedWebinarDocumentsWebinar = webinarConnection.model(
-      'CompletedWebinarDocuments',
-      CompletedWebinarDocuments.schema,
-      'completedwebinardocuments'
-    );
+    const CompletedWebinarDocumentsWebinar = req.app.locals.CompletedWebinarDocuments || WebinarCompletedWebinarDocuments;
 
     await CompletedWebinarDocumentsWebinar.findOneAndUpdate(
       { webinarId: req.params.id },
       {
         attendanceSheet: attendanceSheet ?? '',
+        signedReport: signedReport ?? '',
+        signedReportName: signedReportName ?? '',
         eventImages: normalizedEventImages,
         attendanceCount: attendedCount ?? 0,
       },
@@ -542,14 +561,20 @@ app.get('/api/check-certificate-eligibility', async (req, res) => {
       return res.status(400).json({ error: 'Email and webinarId are required' });
     }
     // Check if user has attendedStatus = "yes" in register collection
-    const normalizedEmail = normalizeEmail(email);
-    const escapedEmail = normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const registration = await WebinarRegister.findOne({
       email: { $regex: new RegExp(`^${escapedEmail}$`, 'i') },
       webinarId: webinarId,
       attendedStatus: 'yes'
     });
-    res.json({ eligible: !!registration });
+    const webinar = await WebinarWebinar.findById(webinarId).select('topic').lean();
+    const feedback = webinar
+      ? await WebinarStudentFeedback.findOne({
+          email: { $regex: new RegExp(`^${escapedEmail}$`, 'i') },
+          webinar: webinar.topic,
+        }).lean()
+      : null;
+
+    res.json({ eligible: Boolean(registration && feedback) });
   } catch (error) {
     console.error('Error checking certificate eligibility:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -564,8 +589,6 @@ app.post('/api/download-certificate', async (req, res) => {
       return res.status(400).json({ error: 'Email and webinarId are required' });
     }
     // Check if user is eligible for certificate
-    const normalizedEmail = normalizeEmail(email);
-    const escapedEmail = normalizedEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const registration = await WebinarRegister.findOne({
       email: { $regex: new RegExp(`^${escapedEmail}$`, 'i') },
       webinarId: webinarId,
@@ -580,7 +603,9 @@ app.post('/api/download-certificate', async (req, res) => {
       return res.status(404).json({ error: 'Webinar not found' });
     }
     // Get user name from Member collection
-    const member = await app.locals.Member.findOne({ 'basic.email_id': email });
+    const member = await app.locals.Member.findOne({
+      'basic.email_id': { $regex: new RegExp(`^${escapedEmail}$`, 'i') },
+    });
     const userName = member?.basic?.name || email; // Fallback to email if name not found
     // Generate PDF certificate
     const PDFDocument = require('pdfkit');
@@ -1144,12 +1169,14 @@ app.get('/api/current-phase', async (req, res) => {
     const currentDate = new Date();
 
     // Find the phase where current date falls between starting and ending dates
-    const currentPhase = await WebinarPhaseModel.findOne({
+    let currentPhase = await WebinarPhaseModel.findOne({
       startingDate: { $lte: currentDate },
       endingDate: { $gte: currentDate }
     }).sort({ startingDate: -1 }); // Get the most recent if multiple match
 
-    if (!currentPhase) {
+    const phaseUsed = currentPhase || await WebinarPhaseModel.findOne({}).sort({ startingDate: -1, phaseId: -1 });
+
+    if (!phaseUsed) {
       return res.json({
         found: false,
         message: 'No active phase found for the current date'
@@ -1157,12 +1184,13 @@ app.get('/api/current-phase', async (req, res) => {
     }
 
     res.json({
-      found: true,
-      phaseId: currentPhase.phaseId,
-      startingDate: currentPhase.startingDate,
-      endingDate: currentPhase.endingDate,
-      domains: currentPhase.domains,
-      displayText: `Phase ${currentPhase.phaseId} (${new Date(currentPhase.startingDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - ${new Date(currentPhase.endingDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })})`
+      found: !!currentPhase,
+      fallback: !currentPhase,
+      phaseId: phaseUsed.phaseId,
+      startingDate: phaseUsed.startingDate,
+      endingDate: phaseUsed.endingDate,
+      domains: phaseUsed.domains,
+      displayText: `Phase ${phaseUsed.phaseId} (${new Date(phaseUsed.startingDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })} - ${new Date(phaseUsed.endingDate).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })})`
     });
   } catch (error) {
     console.error('Error fetching current phase:', error);

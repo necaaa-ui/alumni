@@ -16,6 +16,17 @@ const completedWebinarDocumentsSchema = new mongoose.Schema(
       default: '',
     },
 
+    // Signed report copy (uploaded file as base64 string)
+    signedReport: {
+      type: String,
+      default: '',
+    },
+
+    signedReportName: {
+      type: String,
+      default: '',
+    },
+
     // Event images (array of base64 strings)
     eventImages: {
       type: [String],
@@ -35,4 +46,3 @@ const CompletedWebinarDocuments =
   mongoose.model('CompletedWebinarDocuments', completedWebinarDocumentsSchema);
 
 module.exports = CompletedWebinarDocuments;
-
