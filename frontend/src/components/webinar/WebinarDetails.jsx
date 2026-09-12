@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import './Common.css';
 import './WebinarDetails.css';
 import { FiBookOpen } from "react-icons/fi";
-import { Trash2, SquarePen } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import * as XLSX from 'xlsx';
 
 import WebinarCompletedDetailsForm from './WebinarCompletedDetailsForm';
@@ -11,18 +11,7 @@ import ConfirmationDialog from './ConfirmationDialog';
 import Popup from './Popup';
 
 // Add API base URL
-const isLocalDev = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
-const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL || (isLocalDev ? 'http://localhost:5000' : '/alumnimain')
-).replace(/\/$/, '');
-
-const getTodayDateInputValue = () => {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 export default function WebinarDetails() {
   const { id, encodedUserEmail } = useParams();

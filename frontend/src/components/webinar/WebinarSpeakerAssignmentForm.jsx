@@ -6,7 +6,6 @@ import Popup from './Popup';
 
 // Add API base URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-const MAX_SPEAKER_PHOTO_SIZE_BYTES = 100 * 1024;
 
 const typeOptions = [
   { value: "Full Stack Development", label: "FULL STACK DEVELOPMENT" },
@@ -25,7 +24,7 @@ const getLocalToday = () => {
 
 export default function WebinarSpeakerAssignmentForm() {
   const [formData, setFormData] = useState({
-    email: '', name: '', department: '', batch: '', designation: '', companyName: '', speakerPhoto: null, domain: '', topic: '', webinarVenue: '', alumniCity: '', webinarType: 'In Person', meetingLink: ''
+    email: '', name: '', department: '', batch: '', designation: '', companyName: '', speakerPhoto: null, domain: '', topic: '', webinarVenue: '', alumniPhoneNumber: '', alumniCity: '', webinarType: 'In Person', meetingLink: ''
   });
   const [slots, setSlots] = useState([{ deadline: '', webinarDate: '', time: '9:30-10:30' }]);
   const [showPoster, setShowPoster] = useState(false);
@@ -40,6 +39,7 @@ export default function WebinarSpeakerAssignmentForm() {
   const [manualEntry, setManualEntry] = useState(false);
   const designationRef = useRef(null);
   const companyNameRef = useRef(null);
+  const alumniPhoneNumberRef = useRef(null);
   const alumniCityRef = useRef(null);
   const webinarVenueRef = useRef(null);
   const meetingLinkRef = useRef(null);
@@ -48,6 +48,7 @@ export default function WebinarSpeakerAssignmentForm() {
   const refs = {
     designation: designationRef,
     companyName: companyNameRef,
+    alumniPhoneNumber: alumniPhoneNumberRef,
     alumniCity: alumniCityRef,
     webinarVenue: webinarVenueRef,
     meetingLink: meetingLinkRef,
@@ -207,6 +208,18 @@ useEffect(() => {
     return "";
   };
 
+  const validateVenueField = (value) => {
+    const cleaned = sanitizeText(value);
+    const venueRegex = /^[A-Za-z0-9#.,/&()\- ]+$/;
+
+    if (!cleaned) return "This field is required";
+    if (!venueRegex.test(cleaned)) return "Only letters, numbers, spaces, and basic punctuation are allowed";
+    if (cleaned.length < 2) return "Minimum 2 characters required";
+    if (cleaned.length > 80) return "Maximum 80 characters allowed";
+
+    return "";
+  };
+
   const validateMeetingLink = (value) => {
     const cleaned = value.trim();
     const urlRegex = /^(https:\/\/)[^\s]+$/i;
@@ -217,6 +230,18 @@ useEffect(() => {
     return "";
   };
 
+  const validatePhoneNumber = (value) => {
+    const cleaned = value.trim();
+    const phoneRegex = /^(\+?\d{1,3}[-.\s]?)?(\(?\d{2,4}\)?[-.\s]?)?\d{3,4}[-.\s]?\d{3,4}$/;
+
+    if (!cleaned) return "Phone number is required";
+    if (!phoneRegex.test(cleaned)) return "Enter a valid phone number";
+    if (cleaned.replace(/\D/g, "").length < 10 || cleaned.replace(/\D/g, "").length > 15) {
+      return "Phone number must contain 10 to 15 digits";
+    }
+    return "";
+  };
+
   const validateField = (field, value) => {
     let error = "";
 
@@ -224,8 +249,15 @@ useEffect(() => {
       case "designation":
       case "companyName":
       case "alumniCity":
-      case "webinarVenue":
         error = validateAlphabeticField(field, value);
+        break;
+
+      case "webinarVenue":
+        error = validateVenueField(value);
+        break;
+
+      case "alumniPhoneNumber":
+        error = validatePhoneNumber(value);
         break;
 
       case "meetingLink":
@@ -256,8 +288,12 @@ useEffect(() => {
 
     if (!files && typeof value === "string") {
       // Filter input for alphabetic fields to only allow English letters and spaces
-      if (['designation', 'companyName', 'alumniCity', 'webinarVenue'].includes(name)) {
+      if (['designation', 'companyName', 'alumniCity'].includes(name)) {
         newValue = value.replace(/[^A-Za-z\s]/g, '').replace(/\s+/g, " ");
+      } else if (name === 'webinarVenue') {
+        newValue = value.replace(/[^A-Za-z0-9#.,/&()\-\s]/g, '').replace(/\s+/g, " ");
+      } else if (name === 'alumniPhoneNumber') {
+        newValue = value.replace(/[^0-9+().\s-]/g, '');
       } else {
         newValue = value.replace(/\s+/g, " ");
       }
@@ -348,7 +384,7 @@ useEffect(() => {
 
   const handleSubmit = async () => {
     // Validate all fields
-    const fieldsToValidate = ['designation', 'companyName', 'alumniCity', 'webinarVenue'];
+    const fieldsToValidate = ['designation', 'companyName', 'alumniPhoneNumber', 'alumniCity', 'webinarVenue'];
     let hasErrors = false;
     let firstErrorField = null;
 
@@ -388,7 +424,7 @@ useEffect(() => {
     }
 
     if (!formData.email || !formData.name || !formData.department || !formData.batch || !formData.designation ||
-        !formData.companyName || !formData.speakerPhoto || !formData.domain || !formData.topic ||
+        !formData.companyName || !formData.alumniPhoneNumber || !formData.speakerPhoto || !formData.domain || !formData.topic ||
         (formData.webinarType === 'Online' && !formData.meetingLink) || slots.some(s => !s.deadline || !s.webinarDate || !s.time)) {
       setPopup({ show: true, message: 'Please fill all required fields', type: 'error' });
       return;
@@ -415,6 +451,7 @@ useEffect(() => {
       formDataToSend.append('batch', formData.batch.trim());
       formDataToSend.append('designation', formData.designation.trim());
       formDataToSend.append('companyName', formData.companyName.trim());
+      formDataToSend.append('alumniPhoneNumber', formData.alumniPhoneNumber.trim());
       formDataToSend.append('alumniCity', formData.alumniCity.trim());
       formDataToSend.append('domain', formData.domain);
       formDataToSend.append('topic', formData.topic);
@@ -450,7 +487,7 @@ useEffect(() => {
 
   const handleGeneratePoster = () => {
     if (!formData.name || !formData.department || !formData.batch || !formData.designation ||
-        !formData.companyName || !formData.speakerPhoto || !formData.domain || !formData.topic ||
+        !formData.companyName || !formData.alumniPhoneNumber || !formData.speakerPhoto || !formData.domain || !formData.topic ||
         slots.some(s => !s.deadline || !s.webinarDate || !s.time)) {
       alert("Please fill all required fields before generating the poster");
       return;
@@ -585,10 +622,26 @@ useEffect(() => {
               </div>
               
 
-              {/* Company + Photo */}
+              {/* Contact and Photo */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="form-group">
-                <label className="field-label">
+                <div className="form-group">
+                  <label className="field-label">
+                    <Globe className="field-icon" /> Alumni Phone Number <span className="required">*</span>
+                  </label>
+                  <input
+                    ref={alumniPhoneNumberRef}
+                    type="tel"
+                    name="alumniPhoneNumber"
+                    value={formData.alumniPhoneNumber}
+                    onChange={handleChange}
+                    onBlur={(e) => validateField("alumniPhoneNumber", e.target.value)}
+                    placeholder="Enter phone number"
+                    className={`input-field ${errors.alumniPhoneNumber ? 'border-red-500' : ''}`}
+                  />
+                  {errors.alumniPhoneNumber && <p className="text-red-500 text-sm mt-1">{errors.alumniPhoneNumber}</p>}
+                </div>
+                <div className="form-group">
+                  <label className="field-label">
                     <Globe className="field-icon" /> Alumni City <span className="required">*</span>
                   </label>
                   <input
@@ -604,8 +657,11 @@ useEffect(() => {
                   />
                   {errors.alumniCity && <p className="text-red-500 text-sm mt-1">{errors.alumniCity}</p>}
                 </div>
-              <div className="form-group">
-                <label className="field-label">
+              </div>
+
+              <div className="grid grid-cols-1 gap-6 mt-2">
+                <div className="form-group">
+                  <label className="field-label">
                     <Upload className="field-icon" /> Speaker Photo <span className="required">*</span>
                   </label>
                   <input type="file" name="speakerPhoto" id="speaker-photo-upload" accept="image/*" className="input-field hidden" onChange={handleChange} />
@@ -614,7 +670,6 @@ useEffect(() => {
                     htmlFor="speaker-photo-upload"
                     className={`field-label input-field cursor-pointer flex items-center gap-2 ${errors.speakerPhoto ? 'border-red-500' : ''}`}
                   >
-                    {/* <Upload className="field-icon" /> */}
                     {formData.speakerPhoto ? formData.speakerPhoto.name : "Choose photo or drag here"}
                   </label>
                   {errors.speakerPhoto && <p className="text-red-500 text-sm mt-1">{errors.speakerPhoto}</p>}

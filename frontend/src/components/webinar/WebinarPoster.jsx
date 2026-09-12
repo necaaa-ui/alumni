@@ -4,8 +4,10 @@ import posterFooter from "../../assets/poster-footer.jpg";
 import founderLogo from "../../assets/rigth - Founder-Logo.png";
 import "./WebinarPoster.css";
 
-// Add API base URL - even though not used in this component
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const isLocalDev = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || (isLocalDev ? 'http://localhost:5000' : '/alumnimain')
+).replace(/\/$/, '');
 
 export default function WebinarPoster({
   alumniPhoto,
@@ -55,6 +57,52 @@ export default function WebinarPoster({
   };
 
   const dayName = getDayFromDate(webinarDate);
+
+  const resolveImageUrl = (value) => {
+    if (!value) return null;
+
+    const trimmedValue = String(value).trim();
+    if (!trimmedValue) return null;
+
+    // Handle blob URLs (used by file input preview in speaker assignment form)
+    if (trimmedValue.startsWith('blob:')) {
+      return trimmedValue;
+    }
+
+    // Handle standard absolute URLs (http/https) and data URIs
+    if (/^https?:\/\//i.test(trimmedValue) || trimmedValue.startsWith('data:')) {
+      return trimmedValue;
+    }
+
+    // Handle application-root paths such as /alumnimain/uploads/photo.jpg
+    if (trimmedValue.startsWith('/')) {
+      return trimmedValue;
+    }
+
+    // Resolve "uploads/filename" relative to the API base
+    if (trimmedValue.startsWith('uploads/')) {
+      return `${API_BASE_URL}/${trimmedValue}`;
+    }
+
+    // Use the API speaker-photos endpoint for raw filenames.
+    // This is the default resolution when the parent component passes a plain
+    // filename without a path prefix (e.g., "1784865136682.jpeg").
+    const photoFileName = trimmedValue.split('/').filter(Boolean).pop();
+    if (photoFileName) {
+      return `${API_BASE_URL}/api/speaker-photos/${encodeURIComponent(photoFileName)}`;
+    }
+
+    // Final fallback: try the traditional /uploads/ path with the raw value
+    return `${API_BASE_URL}/uploads/${trimmedValue}`;
+  };
+
+  const resolvedAlumniPhoto = resolveImageUrl(alumniPhoto);
+  const photoInitials = (alumniName || 'ALUMNI')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('');
 
   return (
     <div
@@ -162,18 +210,12 @@ export default function WebinarPoster({
       </div>
 
       {/* -------------------- ALUMNI PHOTO -------------------- */}
-      <div className="absolute top-[620px] right-15">
-        <div className="speaker-photo-placeholder relative w-80 h-85 rounded-full border-4 border-white">
-          {alumniPhoto && (
-          <img
-            src={alumniPhoto}
-            alt="Alumni"
-            crossOrigin="anonymous"
-            onError={(event) => { event.currentTarget.style.display = 'none'; }}
-            className="absolute inset-0 w-full h-full rounded-full object-cover"
-          />
-          )}
-        </div>
+      <div className="absolute top-[540px] right-15">
+        <img
+          src={alumniPhoto}
+          alt="Alumni"
+          className="w-80 h-85 rounded-full object-cover border-4 border-white shadow-xl"
+        />
       </div>
 
       {/* -------------------- ALUMNI DETAILS -------------------- */}

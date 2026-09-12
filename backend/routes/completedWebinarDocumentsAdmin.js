@@ -16,21 +16,15 @@ router.get('/admin/webinars/completed-documents', async (req, res) => {
       return res.status(500).json({ error: 'Required models not available' });
     }
 
+    // For now, just return all webinars with completed docs OR completed legacy details.
+    // Admin can filter further client-side if required.
     const docs = await CompletedWebinarDocuments.find({}).lean();
-    const legacyDocs = CompletedWebinarDetails ? await CompletedWebinarDetails.find({}).lean() : [];
-
     const docByWebinarId = Object.fromEntries(docs.map(d => [String(d.webinarId), d]));
-    legacyDocs.forEach((d) => {
-      const key = String(d.webinarId);
-      if (!docByWebinarId[key]) {
-        docByWebinarId[key] = d;
-      }
-    });
 
-    const webinarIds = Object.keys(docByWebinarId);
+    // Join with Webinar to get phaseId/topic/webinarDate/domain (as department mapping handled in frontend or server)
     const webinars = await Webinar.find({
       $or: [
-        { _id: { $in: webinarIds } },
+        { _id: { $in: Object.keys(docByWebinarId) } },
         { status: 'Completed' },
       ],
     })
@@ -44,12 +38,7 @@ router.get('/admin/webinars/completed-documents', async (req, res) => {
         const absenteeCount = registeredCount > attendedCount ? registeredCount - attendedCount : null;
 
         const d = docByWebinarId[String(w._id)] || {};
-        const hasSignedReport = Boolean(d.signedReport && String(d.signedReport).length > 0);
-        const hasDocs = Boolean(
-          (d.attendanceSheet && String(d.attendanceSheet).length > 0) ||
-          hasSignedReport ||
-          (Array.isArray(d.eventImages) && d.eventImages.length > 0)
-        );
+        const hasDocs = Boolean((d.attendanceSheet && String(d.attendanceSheet).length > 0) || (Array.isArray(d.eventImages) && d.eventImages.length > 0));
 
         return {
           webinarId: w._id,
