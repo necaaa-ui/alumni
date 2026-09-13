@@ -1,7 +1,7 @@
 # TODO - Webinar Coordinator Dashboard UI Fix
 
 ## Completed
-- (none yet)
+- (none yet
 
 ## Next steps
 1. Update `frontend/src/components/webinar/Adminpage.jsx`:
