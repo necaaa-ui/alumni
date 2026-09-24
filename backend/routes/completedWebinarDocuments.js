@@ -26,6 +26,7 @@ router.get('/admin/webinars/:webinarId/completed-documents/download', async (req
     if (!webinarId) return res.status(400).json({ error: 'webinarId is required' });
 
     const CompletedWebinarDocuments = req.app.locals.CompletedWebinarDocuments;
+    const CompletedWebinarDetails = req.app.locals.CompletedWebinarDetails;
     if (!CompletedWebinarDocuments) return res.status(500).json({ error: 'Documents model not configured' });
 
     let doc = await CompletedWebinarDocuments.findOne({ webinarId }).lean();
@@ -110,4 +111,3 @@ router.get('/admin/webinars/:webinarId/completed-documents/download', async (req
 });
 
 module.exports = router;
-

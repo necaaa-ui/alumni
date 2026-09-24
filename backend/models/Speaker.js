@@ -25,6 +25,10 @@ const speakerSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  phoneNumber: {
+    type: String,
+    required: true
+  },
   speakerPhoto: {
     type: String, // Path to uploaded photo
     required: true

@@ -10,11 +10,28 @@
   margin: auto;
   border: 6px double #003e7e;
   padding: 30px;
-  background: url('../assets/webinarcertificategreen.jpg') no-repeat center center;
-  background-size: cover;
+  /* The background is rendered by the imported <img> in WebinarCertificate.jsx.
+     Keeping a second CSS URL here makes html2canvas request the non-existent
+     /assets/webinarcertificategreen.jpg path during PDF generation. */
+  background: #ffffff;
   font-family: "Times New Roman", serif;
   position: relative;
   color: #000;
+}
+
+.certificate-background {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.certificate-container > :not(.certificate-background) {
+  position: relative;
+  z-index: 1;
 }
 
 .certificate-header {

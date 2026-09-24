@@ -155,21 +155,9 @@ router.get('/member-by-email', async (req, res) => {
 router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) => {
   try {
     const {
-  email,
-  name,
-  department,
-  batch,
-  designation,
-  companyName,
-  alumniCity,
-  domain,
-  topic,
-  webinarVenue,
-  meetingLink,
-  webinarType,
-  slots,
-  phaseId
-} = req.body;
+      email, designation, companyName, alumniCity, domain, topic,
+      webinarVenue, meetingLink, webinarType, slots, phaseId
+    } = req.body;
 
     console.log('Received data:', { email, designation, companyName, alumniCity, domain, topic, webinarVenue, meetingLink, webinarType, slots });
 
@@ -207,7 +195,9 @@ router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) =
       : 'In Person';
 
     // Validate required fields
-    if (!email || !designation || !companyName || !alumniCity || !domain || !topic || !webinarVenue || !speakerPhoto) {
+    const normalizedPhoneNumber = (phoneNumber || alumniPhoneNumber || '').trim();
+
+    if (!email || !designation || !companyName || !normalizedPhoneNumber || !alumniCity || !domain || !topic || !webinarVenue || !speakerPhoto) {
       return res.status(400).json({ error: 'All required fields must be provided' });
     }
 
@@ -377,21 +367,21 @@ if (!speakerBatch) {
 
     // Create speaker
     const speakerData = {
-  email,
-  name: speakerName,
-  department: speakerDepartment,
-  batch: speakerBatch,
-  designation,
-  companyName,
-  speakerPhoto,
-  domain,
-  topic,
-  webinarVenue,
-  alumniCity,
-  meetingLink: normalizedMeetingLink,
-  phaseId,
-  slots: parsedSlots
-};
+      email,
+      name,
+      department: department || '',
+      batch: batch || '',
+      designation,
+      companyName,
+      speakerPhoto,
+      domain,
+      topic,
+      webinarVenue,
+      alumniCity,
+      meetingLink: normalizedMeetingLink,
+      phaseId,
+      slots: parsedSlots
+    };
 
     console.log('Creating speaker with data:', speakerData);
 

@@ -46,4 +46,3 @@ const CompletedWebinarDocuments =
   mongoose.model('CompletedWebinarDocuments', completedWebinarDocumentsSchema);
 
 module.exports = CompletedWebinarDocuments;
-
