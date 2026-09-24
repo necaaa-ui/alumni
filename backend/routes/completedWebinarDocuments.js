@@ -29,7 +29,23 @@ router.get('/admin/webinars/:webinarId/completed-documents/download', async (req
     const CompletedWebinarDetails = req.app.locals.CompletedWebinarDetails;
     if (!CompletedWebinarDocuments) return res.status(500).json({ error: 'Documents model not configured' });
 
-    const doc = await CompletedWebinarDocuments.findOne({ webinarId });
+    let doc = await CompletedWebinarDocuments.findOne({ webinarId }).lean();
+    if (!doc) {
+      const LegacyCompletedWebinarDetails = req.app.locals.CompletedWebinarDetails;
+      if (LegacyCompletedWebinarDetails) {
+        const legacyDoc = await LegacyCompletedWebinarDetails.findOne({ webinarId }).lean();
+        if (legacyDoc) {
+          doc = {
+            ...legacyDoc,
+            attendanceSheet: legacyDoc.attendanceSheet || '',
+            signedReport: legacyDoc.signedReport || '',
+            signedReportName: legacyDoc.signedReportName || 'SignedReport.pdf',
+            eventImages: Array.isArray(legacyDoc.eventImages) ? legacyDoc.eventImages : [],
+          };
+        }
+      }
+    }
+
     if (!doc) return res.status(404).json({ error: 'Completed documents not found for this webinar' });
 
     const webinarTopic = (req.app.locals.Webinar?.topic || 'webinar').toString().trim();

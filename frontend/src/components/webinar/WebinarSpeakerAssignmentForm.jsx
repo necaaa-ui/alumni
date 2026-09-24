@@ -6,6 +6,7 @@ import Popup from './Popup';
 
 // Add API base URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const MAX_SPEAKER_PHOTO_SIZE_BYTES = 100 * 1024;
 
 const typeOptions = [
   { value: "Full Stack Development", label: "FULL STACK DEVELOPMENT" },

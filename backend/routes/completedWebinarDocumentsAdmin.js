@@ -16,29 +16,69 @@ router.get('/admin/webinars/completed-documents', async (req, res) => {
       return res.status(500).json({ error: 'Required models not available' });
     }
 
-    // For now, just return all webinars with completed docs OR completed legacy details.
-    // Admin can filter further client-side if required.
-    const docs = await CompletedWebinarDocuments.find({}).lean();
-    const docByWebinarId = Object.fromEntries(docs.map(d => [String(d.webinarId), d]));
+    // Project only presence flags. Attendance sheets and reports can contain
+    // large base64 payloads; loading those blobs just to render this table is
+    // needlessly slow.
+    const documentPresencePipeline = [
+      {
+        $project: {
+          webinarId: 1,
+          hasAttendanceSheet: { $ne: [{ $ifNull: ['$attendanceSheet', ''] }, ''] },
+          hasSignedReport: { $ne: [{ $ifNull: ['$signedReport', ''] }, ''] },
+          hasEventImages: { $gt: [{ $size: { $ifNull: ['$eventImages', []] } }, 0] },
+        },
+      },
+    ];
+    const [docs, legacyDocs] = await Promise.all([
+      CompletedWebinarDocuments.aggregate(documentPresencePipeline),
+      CompletedWebinarDetails
+        ? CompletedWebinarDetails.aggregate(documentPresencePipeline)
+        : Promise.resolve([]),
+    ]);
 
-    // Join with Webinar to get phaseId/topic/webinarDate/domain (as department mapping handled in frontend or server)
+    const presenceByWebinarId = new Map();
+    [...docs, ...legacyDocs].forEach((doc) => {
+      const key = String(doc.webinarId);
+      const existing = presenceByWebinarId.get(key) || {};
+      presenceByWebinarId.set(key, {
+        hasAttendanceSheet: existing.hasAttendanceSheet || doc.hasAttendanceSheet,
+        hasSignedReport: existing.hasSignedReport || doc.hasSignedReport,
+        hasEventImages: existing.hasEventImages || doc.hasEventImages,
+      });
+    });
+
+    const webinarIds = [...presenceByWebinarId.keys()];
     const webinars = await Webinar.find({
       $or: [
-        { _id: { $in: Object.keys(docByWebinarId) } },
+        { _id: { $in: webinarIds } },
         { status: 'Completed' },
       ],
     })
       .select('phaseId domain topic webinarDate attendedCount status')
       .lean();
 
-    const rows = await Promise.all(
-      webinars.map(async (w) => {
-        const registeredCount = await WebinarRegister.countDocuments({ webinarId: w._id });
+    const registrationCounts = webinars.length
+      ? await WebinarRegister.aggregate([
+          { $match: { webinarId: { $in: webinars.map((webinar) => webinar._id) } } },
+          { $group: { _id: '$webinarId', count: { $sum: 1 } } },
+        ])
+      : [];
+    const registrationCountByWebinarId = new Map(
+      registrationCounts.map((item) => [String(item._id), item.count])
+    );
+
+    const rows = webinars.map((w) => {
+        const registeredCount = registrationCountByWebinarId.get(String(w._id)) || 0;
         const attendedCount = w.attendedCount ?? 0;
         const absenteeCount = registeredCount > attendedCount ? registeredCount - attendedCount : null;
 
-        const d = docByWebinarId[String(w._id)] || {};
-        const hasDocs = Boolean((d.attendanceSheet && String(d.attendanceSheet).length > 0) || (Array.isArray(d.eventImages) && d.eventImages.length > 0));
+        const documentPresence = presenceByWebinarId.get(String(w._id)) || {};
+        const hasSignedReport = Boolean(documentPresence.hasSignedReport);
+        const hasDocs = Boolean(
+          documentPresence.hasAttendanceSheet ||
+          hasSignedReport ||
+          documentPresence.hasEventImages
+        );
 
         return {
           webinarId: w._id,
@@ -52,8 +92,7 @@ router.get('/admin/webinars/completed-documents', async (req, res) => {
           hasSignedReport,
           hasDocuments: hasDocs,
         };
-      })
-    );
+      });
 
     res.json({ success: true, data: rows });
   } catch (err) {
@@ -63,3 +102,4 @@ router.get('/admin/webinars/completed-documents', async (req, res) => {
 });
 
 module.exports = router;
+

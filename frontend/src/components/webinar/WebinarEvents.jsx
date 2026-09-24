@@ -13,9 +13,268 @@ import { saveAs } from 'file-saver';
 import html2canvas from 'html2canvas';
 
 // Add API base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+const isLocalDev = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL || (
+    isLocalDev
+      ? 'http://localhost:5000'
+      : (typeof window !== 'undefined' ? `${window.location.origin}/alumnimain` : '/alumnimain')
+  )
+).replace(/\/$/, '');
 
-export default function WebinarEvents() {
+const POSTER_TARGET_BYTES = 200 * 1024;
+
+const decodeWebinarUserEmail = (value) => {
+  const candidate = String(value || '').trim();
+  if (!candidate) return '';
+  if (candidate.includes('@')) return candidate;
+
+  try {
+    const decoded = decodeURIComponent(atob(decodeURIComponent(candidate)));
+    return decoded.includes('@') ? decoded : '';
+  } catch {
+    return '';
+  }
+};
+
+const canvasToBlob = (canvas, quality) => new Promise((resolve) => {
+  canvas.toBlob(resolve, 'image/jpeg', quality);
+});
+
+const createPosterJpeg = async (canvas) => {
+  let sourceCanvas = canvas;
+
+  // A single conversion is normally enough for the mostly-text poster. This
+  // avoids dozens of expensive canvas encodes before the browser can start
+  // downloading the file.
+  for (let resizeAttempt = 0; resizeAttempt < 3; resizeAttempt += 1) {
+    const blob = await canvasToBlob(sourceCanvas, 0.72);
+    if (blob && blob.size <= POSTER_TARGET_BYTES) return blob;
+
+    const resizedCanvas = document.createElement('canvas');
+    resizedCanvas.width = Math.floor(sourceCanvas.width * 0.8);
+    resizedCanvas.height = Math.floor(sourceCanvas.height * 0.8);
+    const context = resizedCanvas.getContext('2d');
+    context.drawImage(sourceCanvas, 0, 0, resizedCanvas.width, resizedCanvas.height);
+    sourceCanvas = resizedCanvas;
+  }
+
+  return canvasToBlob(sourceCanvas, 0.65);
+};
+
+const normalizePosterBackground = (canvas, backgroundColor) => {
+  const colorMatch = String(backgroundColor || '').match(/\d+(?:\.\d+)?/g);
+  if (!colorMatch || colorMatch.length < 3) return;
+
+  const [red, green, blue] = colorMatch.slice(0, 3).map(Number);
+  const targetMagnitude = Math.hypot(red, green, blue);
+  if (!targetMagnitude) return;
+
+  const context = canvas.getContext('2d');
+  const image = context.getImageData(0, 0, canvas.width, canvas.height);
+  const { data } = image;
+
+  for (let index = 0; index < data.length; index += 4) {
+    const sourceRed = data[index];
+    const sourceGreen = data[index + 1];
+    const sourceBlue = data[index + 2];
+    const sourceMagnitude = Math.hypot(sourceRed, sourceGreen, sourceBlue);
+
+    // html2canvas occasionally paints translucent background layers as a
+    // darker shade of the poster color. Match only that same hue, leaving
+    // black panels, white cards, text, and photos untouched.
+    if (sourceMagnitude < 35 || sourceMagnitude >= targetMagnitude * 0.93) continue;
+
+    const similarity = (
+      (sourceRed * red) + (sourceGreen * green) + (sourceBlue * blue)
+    ) / (sourceMagnitude * targetMagnitude);
+
+    if (similarity > 0.985) {
+      data[index] = red;
+      data[index + 1] = green;
+      data[index + 2] = blue;
+    }
+  }
+
+  context.putImageData(image, 0, 0);
+};
+
+const getDeadlineEnd = (deadline) => {
+  if (!deadline) return null;
+  const deadlineEnd = new Date(deadline);
+  if (Number.isNaN(deadlineEnd.getTime())) return null;
+  deadlineEnd.setHours(23, 59, 59, 999);
+  return deadlineEnd;
+};
+
+const normalizeWebinarStatusKey = (status) => {
+  const normalizedStatus = String(status || '').trim().toLowerCase();
+
+  if (['completed', 'conducted', 'completed fully', 'completedfully'].includes(normalizedStatus)) return 'completed';
+  if (['feedback to be filled', 'feedback-to-be-filled', 'feedbacktobefilled', 'feedback yet to be filled', 'feedback-yet-to-be-filled'].includes(normalizedStatus)) return 'feedback-to-be-filled';
+  if (['in progress', 'in-progress', 'inprogress', 'in_progress'].includes(normalizedStatus)) return 'in-progress';
+  if (['cancelled', 'cancelled / deterred', 'cancelled / deferred', 'cancelled/deterred', 'cancelled/deferred', 'deferred', 'deterred'].includes(normalizedStatus)) return 'cancelled';
+  if (['postponed', 'postpone'].includes(normalizedStatus)) return 'postponed';
+  return 'planned';
+};
+
+const getStatusCssKey = (statusKey) => {
+  if (statusKey === 'cancelled') return 'deterred';
+  if (statusKey === 'feedback-to-be-filled') return 'feedback-yet-to-be-filled';
+  return statusKey;
+};
+
+const getDerivedWebinarStatus = (webinar) => {
+  const statusValue = String(webinar?.status || '').trim();
+  const normalizedStoredStatus = normalizeWebinarStatusKey(statusValue);
+
+  // Only Deterred and Postponed are valid manual overrides.
+  if (normalizedStoredStatus === 'cancelled') {
+    return { key: 'deterred', label: 'DETERRED' };
+  }
+
+  if (normalizedStoredStatus === 'postponed') {
+    return { key: 'postponed', label: 'POSTPONED' };
+  }
+
+  if (!webinar?.webinarDate || !webinar?.time) {
+    return { key: 'planned', label: 'PLANNED' };
+  }
+
+  try {
+    const webinarStart = new Date(webinar.webinarDate);
+    const match = String(webinar.time).match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM|am|pm)?/);
+
+    if (match) {
+      let hours = parseInt(match[1], 10);
+      const minutes = parseInt(match[2] || '0', 10);
+      const period = match[3]?.toUpperCase();
+
+      if (period === 'PM' && hours !== 12) {
+        hours += 12;
+      } else if (period === 'AM' && hours === 12) {
+        hours = 0;
+      }
+
+      webinarStart.setHours(hours, minutes, 0, 0);
+      const webinarEnd = new Date(webinarStart);
+      webinarEnd.setHours(webinarEnd.getHours() + 1);
+
+      const feedbackCount = Number(webinar.feedbackCount || 0);
+      const registeredCount = Number(webinar.registeredCount || 0);
+      const requiredFeedbackCount = registeredCount > 0 ? Math.ceil(registeredCount / 2) : 0;
+      const hasUploads = Boolean(webinar.hasUploads || webinar.uploadsComplete);
+      const feedbackComplete = feedbackCount >= requiredFeedbackCount;
+      const isPastWebinar = new Date() >= webinarEnd;
+
+      if (new Date() < webinarStart) {
+        return { key: 'planned', label: 'PLANNED' };
+      }
+
+      if (isPastWebinar && registeredCount > 0 && feedbackComplete && hasUploads) {
+        return { key: 'completed', label: 'COMPLETED' };
+      }
+
+      if (isPastWebinar && registeredCount > 0 && !feedbackComplete && feedbackCount < requiredFeedbackCount) {
+        return { key: 'feedback-to-be-filled', label: 'FEEDBACK TO BE FILLED' };
+      }
+
+      if (isPastWebinar && registeredCount > 0 && feedbackComplete && !hasUploads) {
+        return { key: 'in-progress', label: 'IN PROGRESS' };
+      }
+
+      return { key: 'planned', label: 'PLANNED' };
+    }
+  } catch (error) {
+    console.error('Error deriving webinar status:', error);
+  }
+
+  return { key: 'planned', label: 'PLANNED' };
+};
+
+const WebinarDetail = ({ webinar, onClose, registrationEmail, onRegistrationEmailChange, registeredWebinars, onRegister }) => {
+  const isRegistered = registeredWebinars.has(String(webinar._id));
+  const deadlineEnd = getDeadlineEnd(webinar.deadline);
+  const isDeadlinePassed = deadlineEnd && new Date() > deadlineEnd;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-5 z-50">
+      <div className="webinar-registration-modal bg-gradient-to-br from-purple-50/70 via-pink-50/70 to-blue-50/70 rounded-2xl max-w-4xl w-full shadow-2xl relative overflow-y-auto max-h-[90vh] webinar-modal-scroll-hidden p-8">
+        <div className="flex justify-end">
+          <button onClick={onClose} className="text-purple-900 hover:text-purple-800 text-2xl font-bold">X</button>
+        </div>
+        <div className="form-header">
+          <div className="icon-wrapper"><FiBookOpen className="header-icon" /></div>
+          <h1 className="text-2xl font-bold text-[#7d48b9]">Webinar Details</h1>
+          <p className="webinar-subtitle">{webinar.title}</p>
+        </div>
+
+        <div className="form-card">
+          <div className="form-fields">
+            <div className="form-group">
+              <label><Mail className="field-icon" /> Email <span className="required">*</span></label>
+              <input
+                type="email"
+                name="email"
+                value={registrationEmail}
+                onChange={(event) => onRegistrationEmailChange(event.target.value)}
+                placeholder="Enter your email"
+                className={`input-field ${(isRegistered || isDeadlinePassed) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={isRegistered || isDeadlinePassed}
+              />
+            </div>
+            <div className="form-group">
+              <label>Date & Time</label>
+              <input type="text" value={webinar.slot} disabled className="input-field" />
+            </div>
+            <div className="form-group">
+              <label>Domain</label>
+              <input type="text" value={webinar.domain} disabled className="input-field" />
+            </div>
+            <div className="form-group">
+              <label>Registered Count</label>
+              <input type="text" value={webinar.registered} disabled className="input-field" />
+            </div>
+            <div className="form-group">
+              <label>Webinar Poster</label>
+              <div className="webinar-registration-poster mt-6 flex justify-center">
+                <div className="webinar-registration-poster-scale">
+                  <WebinarPoster
+                    desktopPreview
+                    alumniPhoto={webinar.speaker?.photo || null}
+                    webinarTopic={webinar.title}
+                    webinarDate={new Date(webinar.webinarDate).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    webinarTime={webinar.time}
+                    webinarVenue={webinar.venue}
+                    alumniName={webinar.speaker.name}
+                    alumniDesignation={webinar.speaker.designation}
+                    alumniCompany={webinar.speaker?.companyName || 'TBD'}
+                    alumniCity={webinar.alumniCity}
+                    alumniBatch={webinar.speaker.passoutYear}
+                    alumniDepartment={webinar.speaker.department}
+                    webinarDomain={webinar.domain}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <button
+                onClick={onRegister}
+                className={`submit-btn ${(isRegistered || isDeadlinePassed) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={isRegistered || isDeadlinePassed}
+              >
+                {isRegistered ? 'Already Registered' : isDeadlinePassed ? 'Deadline Passed' : 'Register Now'}
+              </button>
+            </div>
+          </div>
+        </div>
+        <p className="form-footer">Designed with 💜 for Alumni Network</p>
+      </div>
+    </div>
+  );
+};
+
+export default function WebinarEvents({ email: emailParam = '' }) {
   const navigate = useNavigate();
   const [selectedWebinar, setSelectedWebinar] = useState(null);
   const [popup, setPopup] = useState({ show: false, message: '', type: 'success' });
@@ -36,8 +295,13 @@ export default function WebinarEvents() {
   const [phases, setPhases] = useState([]);
   const [selectedPhase, setSelectedPhase] = useState(null);
   const [phaseLoading, setPhaseLoading] = useState(true);
-  const [userEmail, setUserEmail] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
+  const routeEmail = decodeWebinarUserEmail(emailParam);
+  const storedEmail = localStorage.getItem('userEmail') || '';
+  const [userEmail, setUserEmail] = useState(routeEmail || storedEmail);
+  const [isAdmin, setIsAdmin] = useState(() => (
+    localStorage.getItem('isAdmin') === 'true' &&
+    (!routeEmail || routeEmail.trim().toLowerCase() === storedEmail.trim().toLowerCase())
+  ));
   const [coordinators, setCoordinators] = useState([]);
   const isAnyModalOpen =
     !!selectedWebinar ||
@@ -116,16 +380,52 @@ export default function WebinarEvents() {
   };
   
   const getDepartmentFromDomain = (domain) => {
-    const domainMappings = {
-      'Full Stack Development (IT department)': 'IT',
-      'Cloud Computing (CSE department)': 'CSE',
-      'Artificial Intelligence & Data Science (AI & DS department)': 'AI & DS',
-      'Robotic and Automation (MECH department)': 'MECH',
-      'Electrical Power System (EEE department)': 'EEE',
-      'Embedded Systems (ECE department)': 'ECE',
-      'Structural Engineering (CIVIL department)': 'CIVIL'
-    };
-    return domainMappings[domain] || 'TBD';
+    // Domains created before and after the display-name mapping use different
+    // values (for example, "Cloud Computing" and "CLOUD COMPUTING (CSE)").
+    // Resolve by the stable domain/department keywords instead of exact text.
+    const normalizedDomain = String(domain || '').toUpperCase();
+
+    if (/\bCSE\b|CLOUD|CYBER/.test(normalizedDomain)) return 'CSE';
+    if (/\bIT\b|FULL\s*STACK/.test(normalizedDomain)) return 'IT';
+    if (/AI\s*&?\s*DS|ARTIFICIAL\s+INTELLIGENCE|DATA\s+SCIENCE/.test(normalizedDomain)) return 'AI & DS';
+    if (/\bMECH\b|ROBOTIC|AUTOMATION/.test(normalizedDomain)) return 'MECH';
+    if (/\bEEE\b|ELECTRICAL\s+POWER/.test(normalizedDomain)) return 'EEE';
+    if (/\bECE\b|EMBEDDED/.test(normalizedDomain)) return 'ECE';
+    if (/\bCIVIL\b|STRUCTURAL/.test(normalizedDomain)) return 'CIVIL';
+
+    return 'TBD';
+  };
+
+  const getSpeakerHonorific = (speaker = {}) => {
+    const rawGender = String(
+      speaker.gender ?? speaker.sex ?? speaker.genderType ?? speaker.maritalStatus ?? ''
+    ).trim().toLowerCase();
+
+    const normalizedName = String(speaker.name || 'TBD').trim();
+    const isMarried = ['married', 'mrs', 'mrs.', 'wife', 'yes', 'true', '1'].includes(rawGender)
+      || ['married', 'married woman', 'wife'].includes(String(speaker.maritalStatus || '').trim().toLowerCase())
+      || speaker.isMarried === true
+      || speaker.married === true;
+
+    if (!normalizedName || normalizedName === 'TBD') {
+      return 'TBD';
+    }
+
+    if (['male', 'm', 'man', 'boy'].includes(rawGender) || speaker.gender === 'Male') {
+      return `Mr. ${normalizedName}`;
+    }
+
+    if (['female', 'f', 'woman', 'girl'].includes(rawGender)) {
+      return isMarried ? `Mrs. ${normalizedName}` : `Ms. ${normalizedName}`;
+    }
+
+    if (speaker.maritalStatus) {
+      const maritalStatus = String(speaker.maritalStatus).trim().toLowerCase();
+      if (maritalStatus === 'married') return `Mrs. ${normalizedName}`;
+      if (maritalStatus === 'unmarried') return `Ms. ${normalizedName}`;
+    }
+
+    return normalizedName;
   };
 
   const generateCircular = (month) => {
@@ -611,56 +911,104 @@ export default function WebinarEvents() {
   const fetchWebinars = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/webinars`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch webinars');
+      setError(null);
+
+      const apiUrls = [];
+      const configuredApi = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '');
+
+      if (configuredApi) {
+        apiUrls.push(`${configuredApi}/api/webinars`);
       }
-      const data = await response.json();
 
-      // Group webinars by month
+      apiUrls.push(`${API_BASE_URL}/api/webinars`);
+
+      if (typeof window !== 'undefined') {
+        apiUrls.push(`${window.location.origin}/api/webinars`);
+      }
+
+      const uniqueUrls = [...new Set(apiUrls)];
+      let response = null;
+      let lastError = null;
+
+      for (const url of uniqueUrls) {
+        try {
+          console.log('Trying webinar API:', url);
+          const candidateResponse = await fetch(url, {
+            method: 'GET',
+            headers: { Accept: 'application/json' },
+          });
+
+          if (candidateResponse.ok) {
+            response = candidateResponse;
+            console.log('Webinar API connected:', url);
+            break;
+          }
+
+          lastError = new Error(
+            `Webinar API returned ${candidateResponse.status} ${candidateResponse.statusText}`
+          );
+        } catch (requestError) {
+          console.error(`Webinar API failed: ${url}`, requestError);
+          lastError = requestError;
+        }
+      }
+
+      if (!response) {
+        throw lastError || new Error('Unable to connect to webinar API');
+      }
+
+      const rawData = await response.json();
+      const data = Array.isArray(rawData)
+        ? rawData
+        : Array.isArray(rawData?.webinars)
+          ? rawData.webinars
+          : Array.isArray(rawData?.data)
+            ? rawData.data
+            : [];
+
+      if (!Array.isArray(data)) {
+        throw new Error('Invalid webinar API response');
+      }
+
       const groupedWebinars = data.reduce((acc, webinar) => {
-        const date = new Date(webinar.webinarDate);
-        const month = date.toLocaleString('default', { month: 'long' }).toLowerCase();
-        const year = date.getFullYear();
+        if (!webinar) return acc;
 
-        if (!acc[month]) {
-          acc[month] = [];
+        const date = new Date(webinar.webinarDate);
+        if (Number.isNaN(date.getTime())) {
+          console.warn('Skipping webinar with invalid date:', webinar);
+          return acc;
         }
 
-        // Transform data to match component structure
+        const month = date.toLocaleString('default', { month: 'long' }).toLowerCase();
+        const year = date.getFullYear();
+        const monthKey = `${month}-${year}`;
+        acc[monthKey] ||= [];
+
         const rawMeetingLink = String(webinar.meetingLink || '').trim();
         const resolvedJoinLink = /^https?:\/\//i.test(rawMeetingLink) ? rawMeetingLink : '';
+        const derivedStatus = typeof getDerivedWebinarStatus === 'function'
+          ? getDerivedWebinarStatus(webinar)
+          : { key: 'planned', label: 'PLANNED' };
 
-        const derivedStatus = getDerivedWebinarStatus({
-          ...webinar,
-          status: webinar.status,
-          feedbackCount: webinar.feedbackCount,
-          registeredCount: webinar.registeredCount,
-          hasUploads: webinar.hasUploads,
-          uploadsComplete: webinar.uploadsComplete,
-          webinarDate: webinar.webinarDate,
-          time: webinar.time,
-        });
-
-        acc[month].push({
+        acc[monthKey].push({
           _id: webinar._id,
           phaseId: webinar.phaseId,
-          title: webinar.topic,
-          slot: `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })} ${year}, ${webinar.time}`,
+          title: webinar.topic || webinar.title || 'Untitled Webinar',
+          slot: `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })} ${year}, ${webinar.time || 'TBD'}`,
           formattedDeadline: webinar.deadline ? new Date(webinar.deadline).toLocaleDateString('en-US', {
             day: 'numeric',
             month: 'short',
             year: 'numeric'
           }) : 'TBD',
-          registered: webinar.registeredCount || 0,
-          attendedCount: webinar.attendedCount || 0,
+          registered: Number(webinar.registeredCount || 0),
+          attendedCount: Number(webinar.attendedCount || 0),
           status: derivedStatus.label,
           statusKey: derivedStatus.key,
-          feedbackCount: webinar.feedbackCount || 0,
-          registeredCount: webinar.registeredCount || 0,
+          feedbackCount: Number(webinar.feedbackCount || 0),
+          registeredCount: Number(webinar.registeredCount || 0),
           hasUploads: Boolean(webinar.hasUploads),
           uploadsComplete: Boolean(webinar.uploadsComplete),
-          domain: webinar.domain,
+          domain: webinar.domain || 'TBD',
           speaker: {
             name: webinar.speaker?.name || 'TBD',
             designation: webinar.speaker?.designation || 'TBD',
@@ -670,7 +1018,6 @@ export default function WebinarEvents() {
             companyName: webinar.speaker?.companyName || 'TBD',
             email: webinar.speaker?.email || null
           },
-          // Keep original data for modal
           webinarDate: webinar.webinarDate,
           deadline: webinar.deadline,
           time: webinar.time,
@@ -683,11 +1030,17 @@ export default function WebinarEvents() {
         return acc;
       }, {});
 
+      Object.values(groupedWebinars).forEach((monthWebinars) => {
+        monthWebinars.sort((a, b) => new Date(a.webinarDate) - new Date(b.webinarDate));
+      });
+
+      console.log('Total webinars loaded:', data.length);
       setWebinars(groupedWebinars);
       setError(null);
     } catch (err) {
       console.error('Error fetching webinars:', err);
-      setError('Failed to load webinars. Please try again later.');
+      setWebinars({});
+      setError(`Failed to load webinars. ${err?.message || 'Please try again later.'}`);
     } finally {
       setLoading(false);
     }
@@ -740,11 +1093,14 @@ export default function WebinarEvents() {
   useEffect(() => {
     const fetchUserInfo = () => {
       try {
-        const email = localStorage.getItem('userEmail');
-        const isAdmin = localStorage.getItem('isAdmin') === 'true';
+        const storedEmail = localStorage.getItem('userEmail') || '';
+        const email = decodeWebinarUserEmail(emailParam) || storedEmail;
+        const isAdmin = localStorage.getItem('isAdmin') === 'true' &&
+          (!emailParam || email.trim().toLowerCase() === storedEmail.trim().toLowerCase());
         if (email) {
           setUserEmail(email);
           setIsAdmin(isAdmin);
+          localStorage.setItem('userEmail', email);
         }
       } catch (error) {
         console.error('Error fetching user info:', error);
@@ -756,7 +1112,16 @@ export default function WebinarEvents() {
         const response = await fetch(`${API_BASE_URL}/api/coordinators`);
         if (response.ok) {
           const coordinatorsData = await response.json();
-          setCoordinators(coordinatorsData);
+          const normalizedEmail = (decodeWebinarUserEmail(emailParam) || localStorage.getItem('userEmail') || '').trim().toLowerCase();
+          const matchingAdmin = Array.isArray(coordinatorsData) && coordinatorsData.some((coordinator) => (
+            String(coordinator.email || '').trim().toLowerCase() === normalizedEmail &&
+            String(coordinator.role || '').trim().toLowerCase() === 'admin'
+          ));
+          setCoordinators(Array.isArray(coordinatorsData) ? coordinatorsData : []);
+          setIsAdmin(matchingAdmin || (
+            localStorage.getItem('isAdmin') === 'true' &&
+            normalizedEmail === (localStorage.getItem('userEmail') || '').trim().toLowerCase()
+          ));
         }
       } catch (error) {
         console.error('Error fetching coordinators:', error);
@@ -765,7 +1130,7 @@ export default function WebinarEvents() {
 
     fetchUserInfo();
     fetchCoordinators();
-  }, []);
+  }, [emailParam]);
 
   // Update registrationEmail when userEmail is set
   useEffect(() => {
@@ -933,15 +1298,63 @@ export default function WebinarEvents() {
     }, []);
 
     const isRegistered = registeredWebinars.has(String(webinar._id));
-    const isDeadlinePassed = webinar.deadline && new Date() > new Date(webinar.deadline);
-    const isWithinOneWeek = webinar.deadline && (new Date(webinar.deadline) - new Date()) <= (7 * 24 * 60 * 60 * 1000) && (new Date(webinar.deadline) - new Date()) > 0;
-    const isFeedbackEnabled = webinar.webinarDate && new Date() > new Date(new Date(webinar.webinarDate).getTime() + 24 * 60 * 60 * 1000);
+    const deadlineEnd = getDeadlineEnd(webinar.deadline);
+    const isDeadlinePassed = deadlineEnd && new Date() > deadlineEnd;
+    const isWithinOneWeek = deadlineEnd && (deadlineEnd - new Date()) <= (7 * 24 * 60 * 60 * 1000) && (deadlineEnd - new Date()) > 0;
+    const feedbackWindow = (() => {
+  if (!webinar.webinarDate || !webinar.time) return { enabled: false, closed: false };
+
+  try {
+    // Webinar date
+    const webinarStart = new Date(webinar.webinarDate);
+
+    // Parse time (supports "3:00 PM", "10 AM", "15:00")
+    const match = webinar.time.match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM|am|pm)?/);
+
+    if (!match) return { enabled: false, closed: false };
+
+    let hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2] || "0", 10);
+    const period = match[3]?.toUpperCase();
+
+    // Convert to 24-hour format
+    if (period === "PM" && hours !== 12) {
+      hours += 12;
+    } else if (period === "AM" && hours === 12) {
+      hours = 0;
+    }
+
+    webinarStart.setHours(hours, minutes, 0, 0);
+
+    // Webinar duration = 1 hour
+    const webinarEnd = new Date(webinarStart);
+    webinarEnd.setHours(webinarEnd.getHours() + 1);
+
+    // Feedback is available for one week after the webinar ends.
+    const feedbackCloseTime = new Date(webinarEnd);
+    feedbackCloseTime.setDate(feedbackCloseTime.getDate() + 7);
+    const now = new Date();
+    return {
+      enabled: now >= webinarEnd && now <= feedbackCloseTime,
+      closed: now > feedbackCloseTime
+    };
+  } catch (err) {
+    console.error("Feedback time calculation failed:", err);
+    return { enabled: false, closed: false };
+  }
+})();
+    const isFeedbackEnabled = feedbackWindow.enabled;
     const isCertificateEnabled = webinar.attendedCount > 0;
-    const isCoordinator = coordinators.some(
-      coord => String(coord.email || '').trim().toLowerCase() === userEmail.trim().toLowerCase()
-    );
+    const isCoordinator = coordinators.some((coord) => (
+      String(coord.email || '').trim().toLowerCase() === userEmail.trim().toLowerCase() &&
+      ['student', 'department', 'admin'].includes(String(coord.role || '').trim().toLowerCase())
+    ));
+    const isStudentCoordinator = coordinators.some((coord) => (
+      String(coord.email || '').trim().toLowerCase() === userEmail.trim().toLowerCase() &&
+      String(coord.role || '').trim().toLowerCase() === 'student'
+    ));
     const canUpload = isCoordinator || isAdmin;
-    const canViewStatus = !userEmail || isCoordinator || isAdmin;
+    const canViewStatus = isAdmin || isStudentCoordinator;
     const isOnlineLink = Boolean(webinar.joinLink);
     const derivedStatus = getDerivedWebinarStatus(webinar);
     const statusKey = getStatusCssKey(derivedStatus.key);
@@ -960,9 +1373,11 @@ export default function WebinarEvents() {
 
           {canUpload && (
             <button
-              onClick={() => navigate(`/webinar-details/${webinar._id}/${encodeURIComponent(userEmail)}`, { state: { webinar } })}
+              type="button"
+              onClick={() => navigate(`/webinar-details/${webinar._id}/${encodeURIComponent(userEmail || '')}`, { state: { webinar } })}
               className="view-details-button"
               title="View Webinar Details"
+              aria-label={`View details for ${webinar.title || 'webinar'}`}
             >
               <FiEye size={20} />
             </button>
@@ -1003,16 +1418,15 @@ export default function WebinarEvents() {
               />
               </div>
             </div>
-            {canUpload && (
-              <button
-                type="button"
-                className="webinar-poster-download-button"
-                onClick={handlePosterDownload}
-                disabled={isPosterDownloading}
-              >
-                {isPosterDownloading ? 'Preparing Poster...' : 'Download Poster'}
-              </button>
-            )}
+            <button
+              type="button"
+              className="webinar-poster-download-button"
+              onClick={handlePosterDownload}
+              disabled={isPosterDownloading}
+              aria-label={`Download poster for ${webinar.title || 'webinar'}`}
+            >
+              {isPosterDownloading ? 'Preparing Poster...' : 'Download Poster'}
+            </button>
           </div>
 
           {/* Right Side - Content */}

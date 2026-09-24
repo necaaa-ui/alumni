@@ -58,7 +58,7 @@ function App() {
         
         {/* Dynamic screen IDs - handles all webinar screens via screenId */}
         <Route path="/:screenId" element={<DynamicScreen />} />
-        <Route path="/webinar-details/:id/:encodedUserEmail" element={<WebinarDetails />} />
+        <Route path="/webinar-details/:id/:encodedUserEmail?" element={<WebinarDetails />} />
         <Route path="/webinar-alumni-feedback/:email" element={<WebinarAlumniFeedbackForm />} />
         
         {/* PLACEMENT - unchanged */}

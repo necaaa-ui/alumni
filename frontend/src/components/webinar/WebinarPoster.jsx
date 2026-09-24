@@ -210,12 +210,18 @@ export default function WebinarPoster({
       </div>
 
       {/* -------------------- ALUMNI PHOTO -------------------- */}
-      <div className="absolute top-[540px] right-15">
-        <img
-          src={alumniPhoto}
-          alt="Alumni"
-          className="w-80 h-85 rounded-full object-cover border-4 border-white shadow-xl"
-        />
+      <div className="absolute top-[620px] right-15">
+        <div className="speaker-photo-placeholder relative w-80 h-85 rounded-full border-4 border-white">
+          {alumniPhoto && (
+          <img
+            src={alumniPhoto}
+            alt="Alumni"
+            crossOrigin="anonymous"
+            onError={(event) => { event.currentTarget.style.display = 'none'; }}
+            className="absolute inset-0 w-full h-full rounded-full object-cover"
+          />
+          )}
+        </div>
       </div>
 
       {/* -------------------- ALUMNI DETAILS -------------------- */}
