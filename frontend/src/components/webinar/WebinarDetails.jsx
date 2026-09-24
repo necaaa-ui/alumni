@@ -114,7 +114,10 @@ export default function WebinarDetails() {
     const value = String(photo || '').trim();
     if (!value) return '';
     if (/^https?:\/\//i.test(value) || value.startsWith('data:') || value.startsWith('/')) return value;
-    return `${API_BASE_URL}/uploads/${encodeURIComponent(value)}`;
+    const filename = value.split('/').filter(Boolean).pop();
+    return filename
+      ? `${API_BASE_URL}/api/speaker-photos/${encodeURIComponent(filename)}`
+      : '';
   };
 
 
