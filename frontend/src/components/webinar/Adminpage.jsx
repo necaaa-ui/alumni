@@ -5,6 +5,15 @@ import * as XLSX from 'xlsx';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
+const readApiResponse = async (response) => {
+  const body = await response.text();
+  try {
+    return body ? JSON.parse(body) : {};
+  } catch {
+    throw new Error(`Server returned ${response.status} (${response.statusText}) instead of JSON.`);
+  }
+};
+
 // V
 const validateDomain = (value) => {
   const trimmed = value.trim();
@@ -62,13 +71,14 @@ const getMonthsBetween = (startDateValue, endDateValue) => {
   return months;
 };
 
-const Adminpage = ({ userEmail }) => {
-  const [isWebinarCoordinator, setIsWebinarCoordinator] = useState(true); // FORCE BYPASS - Admin always has access
+const Adminpage = ({ userEmail, readOnly = false, onViewWebinars }) => {
+  const isGuest = readOnly;
+  const [isWebinarCoordinator, setIsWebinarCoordinator] = useState(!isGuest);
 
   useEffect(() => {
     console.log('Adminpage loaded for email:', userEmail);
   }, [userEmail]);
-  const [activeView, setActiveView] = useState('phase');
+  const [activeView, setActiveView] = useState(isGuest ? 'webinarDocs' : 'phase');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showRemoveDomain, setShowRemoveDomain] = useState(false);
   const [domains, setDomains] = useState([{ department: '', domain: '', plannedWebinarCount: 1 }]);
@@ -89,6 +99,12 @@ const Adminpage = ({ userEmail }) => {
   const [deptCoordinatorErrors, setDeptCoordinatorErrors] = useState({ name: '', email: '', department: '', phoneNumber: '' });
   const [coordinators, setCoordinators] = useState([]);
   const [coordinatorsLoading, setCoordinatorsLoading] = useState(false);
+  const [guestAccess, setGuestAccess] = useState([]);
+  const [guestAccessLoading, setGuestAccessLoading] = useState(false);
+  const [guestEmailInput, setGuestEmailInput] = useState('');
+  const [guestNameInput, setGuestNameInput] = useState('');
+  const [guestPhoneInput, setGuestPhoneInput] = useState('');
+  const [guestLookupMessage, setGuestLookupMessage] = useState('');
   const [phaseId, setPhaseId] = useState('');
   const [startingDate, setStartingDate] = useState('');
   const [endingDate, setEndingDate] = useState('');
@@ -260,6 +276,12 @@ const Adminpage = ({ userEmail }) => {
       fetchCoordinators();
     }
   }, [activeView]);
+
+  useEffect(() => {
+    if (activeView === 'coordiators' && activeCoordinatorView === 'guest') {
+      fetchGuestAccess();
+    }
+  }, [activeView, activeCoordinatorView]);
 
   // Fetch prize winners when prize winners view is active
   useEffect(() => {
@@ -800,6 +822,74 @@ const Adminpage = ({ userEmail }) => {
     }
   };
 
+  const fetchGuestAccess = async () => {
+    setGuestAccessLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/guest-access`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to load Guest access');
+      setGuestAccess(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching Guest access:', error);
+      alert(error.message || 'Failed to load Guest access');
+    } finally {
+      setGuestAccessLoading(false);
+    }
+  };
+
+  const addGuestAccess = async () => {
+    try {
+      if (!guestNameInput.trim() || !guestEmailInput.trim() || !guestPhoneInput.trim()) {
+        alert('Please enter the guest name, email, and phone number.');
+        return;
+      }
+      const response = await fetch(`${API_BASE_URL}/api/admin/guest-access`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: guestNameInput, email: guestEmailInput, phone: guestPhoneInput })
+      });
+      const data = await readApiResponse(response);
+      if (!response.ok) throw new Error(data.message || 'Failed to add Guest');
+      setGuestEmailInput('');
+      setGuestNameInput('');
+      setGuestPhoneInput('');
+      await fetchGuestAccess();
+    } catch (error) {
+      alert(error.message || 'Failed to add Guest');
+    }
+  };
+
+  const lookupGuestDetails = async () => {
+    const email = guestEmailInput.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+    setGuestLookupMessage('');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/coordinators/member-by-email?email=${encodeURIComponent(email)}`);
+      const data = await readApiResponse(response);
+      if (!response.ok) throw new Error(data.message || 'Could not look up guest details');
+      const name = data.found ? data.name : '';
+      const phone = data.found ? data.contact_no : '';
+      if (name) setGuestNameInput((current) => current.trim() ? current : name);
+      if (phone) setGuestPhoneInput((current) => current.trim() ? current : phone);
+      if (!name || !phone) setGuestLookupMessage('Member details were not found. Enter the name and phone number manually.');
+    } catch (error) {
+      setGuestLookupMessage(error.message || 'Could not look up guest details. Enter them manually.');
+    }
+  };
+
+  const removeGuestAccess = async (guest) => {
+    if (!window.confirm(`Remove Guest access for ${guest.email}?`)) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/admin/guest-access/${guest._id}`, { method: 'DELETE' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Failed to remove Guest');
+      setGuestAccess((current) => current.filter((item) => item._id !== guest._id));
+      await fetchGuestAccess();
+    } catch (error) {
+      alert(error.message || 'Failed to remove Guest');
+    }
+  };
+
   const filteredWebinars = webinars.filter(webinar => {
     const { phaseId, domain, speakerName, batch, department } = selectedFilters;
     return (
@@ -1017,7 +1107,7 @@ const Adminpage = ({ userEmail }) => {
                 <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Webinar Details Active Page</h2>
               </div>
 
-              <button
+              {!isGuest && <button
                 type="button"
                 className="submit1-btn"
                 style={{
@@ -1033,7 +1123,7 @@ const Adminpage = ({ userEmail }) => {
                 onClick={exportFilteredWebinarDocs}
               >
                 Export Completed Docs
-              </button>
+              </button>}
             </div>
 
             <div className="filters webinar-filters">
@@ -1093,21 +1183,21 @@ const Adminpage = ({ userEmail }) => {
                     <th style={{ minWidth: '130px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Registered Count</th>
                     <th style={{ minWidth: '110px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Attended Count</th>
                     <th style={{ minWidth: '130px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Absentees Count</th>
-                    <th style={{ minWidth: '160px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Documents</th>
+                    {!isGuest && <th style={{ minWidth: '160px', padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Documents</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {completedDocsLoading ? (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: 'center', padding: '20px' }}>Loading completed docs...</td>
+                      <td colSpan={isGuest ? 7 : 8} style={{ textAlign: 'center', padding: '20px' }}>Loading completed docs...</td>
                     </tr>
                   ) : completedDocsError ? (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: 'center', padding: '20px', color: '#b91c1c' }}>{completedDocsError}</td>
+                      <td colSpan={isGuest ? 7 : 8} style={{ textAlign: 'center', padding: '20px', color: '#b91c1c' }}>{completedDocsError}</td>
                     </tr>
                   ) : filteredCompletedDocsRows.length === 0 ? (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: 'center', padding: '20px' }}>No completed webinar documents found for the selected filters.</td>
+                      <td colSpan={isGuest ? 7 : 8} style={{ textAlign: 'center', padding: '20px' }}>No completed webinar documents found for the selected filters.</td>
                     </tr>
                   ) : (
                     filteredCompletedDocsRows.map((row, idx) => {
@@ -1126,18 +1216,20 @@ const Adminpage = ({ userEmail }) => {
                           <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{registeredCount}</td>
                           <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{attendedCount}</td>
                           <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{absenteeCount}</td>
-                          <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
-                            {docsAvailable ? (
-                              <a
-                                href={`${API_BASE_URL}/api/admin/webinars/${webinarId}/completed-documents/download`}
-                                style={{ color: '#16a34a', fontWeight: 700, textDecoration: 'none' }}
-                              >
-                                Download
-                              </a>
-                            ) : (
-                              'Not Available'
-                            )}
-                          </td>
+                          {!isGuest && (
+                            <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                              {docsAvailable ? (
+                                <a
+                                  href={`${API_BASE_URL}/api/admin/webinars/${webinarId}/completed-documents/download`}
+                                  style={{ color: '#16a34a', fontWeight: 700, textDecoration: 'none' }}
+                                >
+                                  Download
+                                </a>
+                              ) : (
+                                'Not Available'
+                              )}
+                            </td>
+                          )}
                         </tr>
                       );
                     })
@@ -1335,12 +1427,12 @@ const Adminpage = ({ userEmail }) => {
                   </tbody>
                 </table>
               </div>
-              <button
+              {!isGuest && <button
                 className="submit1-btn"
                 onClick={() => setDomains([...domains, { department: '', domain: '', plannedWebinarCount: 1 }])}
               >
                 +
-              </button>
+              </button>}
             </div>
             {message && (
               <div style={{
@@ -1370,7 +1462,7 @@ const Adminpage = ({ userEmail }) => {
               <div style={{ flex: '1 1 auto', minWidth: '220px' }}>
                 <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Webinar Speaker Listings</h2>
               </div>
-              <button
+              {!isGuest && <button
                 type="button"
                 onClick={exportFilteredSpeakerDetails}
                 className="submit1-btn"
@@ -1386,7 +1478,7 @@ const Adminpage = ({ userEmail }) => {
                 }}
               >
                 Export Speaker Details
-              </button>
+              </button>}
             </div>
 
             <div className="filters webinar-filters">
@@ -1521,6 +1613,7 @@ const Adminpage = ({ userEmail }) => {
               <button className={`submit1-btn ${activeCoordinatorView === 'student' ? 'active' : ''}`} onClick={() => { setActiveCoordinatorView('student'); setShowAddDepartmentForm(false); setShowAddStudentForm(false); setShowAddAdminForm(false); }}>Student Coordinators</button>
               <button className={`submit1-btn ${activeCoordinatorView === 'department' ? 'active' : ''}`} onClick={() => { setActiveCoordinatorView('department'); setShowAddStudentForm(false); setShowAddDepartmentForm(false); setShowAddAdminForm(false); }}>Department Coordinators</button>
               <button className={`submit1-btn ${activeCoordinatorView === 'admin' ? 'active' : ''}`} onClick={() => { setActiveCoordinatorView('admin'); setShowAddStudentForm(false); setShowAddDepartmentForm(false); setShowAddAdminForm(false); }}>Admin Management</button>
+              <button className={`submit1-btn ${activeCoordinatorView === 'guest' ? 'active' : ''}`} onClick={() => { setActiveCoordinatorView('guest'); setShowAddStudentForm(false); setShowAddDepartmentForm(false); setShowAddAdminForm(false); }}>Guest Access Management</button>
             </div>
             {activeCoordinatorView === 'student' && (
               <div>
@@ -1981,41 +2074,79 @@ const Adminpage = ({ userEmail }) => {
                 </div>
               </div>
             )}
+            {activeCoordinatorView === 'guest' && (
+              <div>
+                <div className="coordinator-header-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h3 className="coordinator-title" style={{ fontWeight: 'bold', fontSize: '30px', margin: 0 }}>Guest Access Management</h3>
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Enter guest name"
+                    value={guestNameInput}
+                    onChange={(event) => setGuestNameInput(event.target.value)}
+                    style={{ flex: '1 1 200px' }}
+                  />
+                  <input
+                    type="email"
+                    className="input-field"
+                    placeholder="Enter guest email"
+                    value={guestEmailInput}
+                    onChange={(event) => setGuestEmailInput(event.target.value)}
+                    onBlur={lookupGuestDetails}
+                    style={{ flex: '1 1 280px' }}
+                  />
+                  <input
+                    type="tel"
+                    className="input-field"
+                    placeholder="Enter phone number"
+                    value={guestPhoneInput}
+                    onChange={(event) => setGuestPhoneInput(event.target.value)}
+                    style={{ flex: '1 1 200px' }}
+                  />
+                  <button className="submit2-btn" onClick={addGuestAccess}>Add Guest</button>
+                </div>
+                {guestLookupMessage && <div style={{ marginBottom: '1rem', color: '#64748b' }}>{guestLookupMessage}</div>}
+                <div className="table-scroll-wrap" style={{ overflowX: 'auto' }}>
+                  <table className="admin-data-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#eee' }}>
+                        <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Name</th>
+                        <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Email ID</th>
+                        <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Phone Number</th>
+                        <th style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {guestAccessLoading ? (
+                        <tr><td colSpan="4" style={{ padding: '20px', textAlign: 'center' }}>Loading Guest access...</td></tr>
+                      ) : guestAccess.length === 0 ? (
+                        <tr><td colSpan="4" style={{ padding: '20px', textAlign: 'center' }}>No Guest users assigned.</td></tr>
+                      ) : guestAccess.map((guest) => (
+                        <tr key={guest._id}>
+                          <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{guest.name || '—'}</td>
+                          <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{guest.email}</td>
+                          <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>{guest.phone || '—'}</td>
+                          <td style={{ padding: '10px', border: '1px solid #ddd', textAlign: 'center' }}>
+                            <button className="coordinator-delete-btn" onClick={() => removeGuestAccess(guest)}>Remove</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         );
       case 'prizeWinners':
         return (
           <div className="form-card filter-card admin-prize-winners">
-            <div className="mobile-compact-filters">
-              <button
-                type="button"
-                className="mobile-export-btn"
-                onClick={exportFilteredPrizeWinners}
-              >
-                Export
-              </button>
-            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
               <div style={{ flex: '1 1 auto', minWidth: '220px' }}>
                 <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: '700' }}>Prize Winners Details</h2>
               </div>
-              <button
-                type="button"
-                className="submit1-btn desktop-export-btn"
-                style={{
-                  backgroundColor: '#16a34a',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '10px 18px',
-                  borderRadius: '12px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap'
-                }}
-                onClick={exportFilteredPrizeWinners}
-              >
-                Export Prize Winners
-              </button>
             </div>
 
             <div className="filters webinar-filters">
@@ -2126,7 +2257,7 @@ const Adminpage = ({ userEmail }) => {
 
               <h1 className="text-2xl font-bold text-[#7d48b9] mb-4 tracking-wider">
                 <br></br>
-                Webinar Coordinator Dashboard</h1>
+                {isGuest ? 'Guest Dashboard' : 'Webinar Coordinator Dashboard'}</h1>
 
             </div>
             {/* Current Phase Display */}
@@ -2185,7 +2316,7 @@ const Adminpage = ({ userEmail }) => {
                     Phase Management
                   </button>
 
-                  <button
+                  {!isGuest && <button
                     type="button"
                     className={`admin-sidebar-item ${activeView === 'webinarDocs' ? 'active' : ''}`}
                     onClick={() => {
@@ -2194,9 +2325,9 @@ const Adminpage = ({ userEmail }) => {
                     }}
                   >
                     Webinar Details
-                  </button>
+                  </button>}
 
-                  <button
+                  {!isGuest && <button
                     type="button"
                     className={`admin-sidebar-item ${activeView === 'webinar' ? 'active' : ''}`}
                     onClick={() => {
@@ -2205,7 +2336,7 @@ const Adminpage = ({ userEmail }) => {
                     }}
                   >
                     Webinar Speaker Details
-                  </button>
+                  </button>}
 
                   <button
                     type="button"
@@ -2234,14 +2365,15 @@ const Adminpage = ({ userEmail }) => {
           )}
 
           <div className="admin-buttons">
-            <button className="submit-btn" onClick={() => setActiveView('phase')}>Phase Management</button>
+            {!isGuest && <button className="submit-btn" onClick={() => setActiveView('phase')}>Phase Management</button>}
+            {isGuest && <button className="submit-btn" onClick={onViewWebinars}>View Webinar Events</button>}
             {/* <button className="submit-btn" onClick={() => setActiveView('webinar')}>Webinar Details</button> */}
             <button className="submit-btn" onClick={() => setActiveView('webinarDocs')}>Webinar Details</button>
             <button className="submit-btn" onClick={() => setActiveView('webinar')}>Webinar Speaker Details</button>
 
             <button className="submit-btn" onClick={() => setActiveView('prizeWinners')}>Prize Winners Details</button>
             {/* <button className="submit-btn" onClick={() => setActiveView('domain')}>Domain Management</button> */}
-            <button className="submit-btn" onClick={() => setActiveView('coordiators')}>Coordinators Management</button>
+            {!isGuest && <button className="submit-btn" onClick={() => setActiveView('coordiators')}>Coordinators Management</button>}
           </div>
           <div className="content-area">
             {renderContent()}

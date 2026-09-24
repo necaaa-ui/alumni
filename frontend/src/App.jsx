@@ -26,6 +26,8 @@ import WebinarCircular from './components/webinar/WebinarCircular';
 import WebinarCertificate from './components/webinar/WebinarCertificate';
 import WebinarEvents from './components/webinar/WebinarEvents';
 import Adminpage from './components/webinar/Adminpage';
+import GuestLogin from './components/webinar/GuestLogin';
+import GuestDashboard from './components/webinar/GuestDashboard';
 import WebinarDetails from './components/webinar/WebinarDetails';
 import OverallWebinarReport from './components/webinar/OverallWebinarReport';
 import LoginPage from "./components/webinar/LoginPage";
@@ -59,6 +61,10 @@ function App() {
         {/* Dynamic screen IDs - handles all webinar screens via screenId */}
         <Route path="/:screenId" element={<DynamicScreen />} />
         <Route path="/webinar-details/:id/:encodedUserEmail?" element={<WebinarDetails />} />
+        <Route path="/webinar-guest-login" element={<GuestLogin />} />
+        <Route path="/guest-login" element={<GuestLogin />} />
+        <Route path="/webinar-guest-dashboard" element={<GuestDashboard />} />
+        <Route path="/guest-dashboard" element={<GuestDashboard />} />
         <Route path="/webinar-alumni-feedback/:email" element={<WebinarAlumniFeedbackForm />} />
         
         {/* PLACEMENT - unchanged */}

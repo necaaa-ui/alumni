@@ -160,30 +160,17 @@ const getDerivedWebinarStatus = (webinar) => {
       const webinarEnd = new Date(webinarStart);
       webinarEnd.setHours(webinarEnd.getHours() + 1);
 
-      const feedbackCount = Number(webinar.feedbackCount || 0);
-      const registeredCount = Number(webinar.registeredCount || 0);
-      const requiredFeedbackCount = registeredCount > 0 ? Math.ceil(registeredCount / 2) : 0;
-      const hasUploads = Boolean(webinar.hasUploads || webinar.uploadsComplete);
-      const feedbackComplete = feedbackCount >= requiredFeedbackCount;
-      const isPastWebinar = new Date() >= webinarEnd;
+      const now = new Date();
 
-      if (new Date() < webinarStart) {
+      if (now < webinarStart) {
         return { key: 'planned', label: 'PLANNED' };
       }
 
-      if (isPastWebinar && feedbackComplete && hasUploads) {
+      if (now >= webinarEnd) {
         return { key: 'completed', label: 'COMPLETED' };
       }
 
-      if (isPastWebinar && registeredCount > 0 && !feedbackComplete && feedbackCount < requiredFeedbackCount) {
-        return { key: 'feedback-to-be-filled', label: 'FEEDBACK TO BE FILLED' };
-      }
-
-      if (isPastWebinar && feedbackComplete && !hasUploads) {
-        return { key: 'in-progress', label: 'IN PROGRESS' };
-      }
-
-      return { key: 'planned', label: 'PLANNED' };
+      return { key: 'in-progress', label: 'IN PROGRESS' };
     }
   } catch (error) {
     console.error('Error deriving webinar status:', error);
@@ -274,7 +261,7 @@ const WebinarDetail = ({ webinar, onClose, registrationEmail, onRegistrationEmai
   );
 };
 
-export default function WebinarEvents({ email: emailParam = '' }) {
+export default function WebinarEvents({ email: emailParam = '', guestMode = false }) {
   const navigate = useNavigate();
   const [selectedWebinar, setSelectedWebinar] = useState(null);
   const [popup, setPopup] = useState({ show: false, message: '', type: 'success' });
@@ -297,6 +284,7 @@ export default function WebinarEvents({ email: emailParam = '' }) {
   const [phaseLoading, setPhaseLoading] = useState(true);
   const routeEmail = decodeWebinarUserEmail(emailParam);
   const storedEmail = localStorage.getItem('userEmail') || '';
+  const isGuest = guestMode;
   const [userEmail, setUserEmail] = useState(routeEmail || storedEmail);
   const [isAdmin, setIsAdmin] = useState(() => (
     localStorage.getItem('isAdmin') === 'true' &&
@@ -1354,9 +1342,16 @@ export default function WebinarEvents({ email: emailParam = '' }) {
       String(coord.role || '').trim().toLowerCase() === 'student'
     ));
     const canUpload = isCoordinator || isAdmin;
-    const canViewStatus = isAdmin || isStudentCoordinator;
+    const canViewStatus = isAdmin || isStudentCoordinator || isGuest;
     const isOnlineLink = Boolean(webinar.joinLink);
-    const derivedStatus = getDerivedWebinarStatus(webinar);
+    const rawStatus = getDerivedWebinarStatus(webinar);
+    const derivedStatus = isGuest
+      ? (rawStatus.key === 'completed'
+        ? rawStatus
+        : rawStatus.key === 'planned'
+          ? rawStatus
+          : { key: 'in-progress', label: 'IN PROGRESS' })
+      : rawStatus;
     const statusKey = getStatusCssKey(derivedStatus.key);
     const statusLabel = derivedStatus.label;
 
@@ -1467,7 +1462,7 @@ export default function WebinarEvents({ email: emailParam = '' }) {
             </div>
 
             <div className="webinar-card-actions">
-              <button
+              {!isGuest && <button
                 onClick={() => !isRegistered && !isDeadlinePassed && isWithinOneWeek && setSelectedWebinar(webinar)}
                 className={`submit-btn text-sm py-3 px-4 flex-1 ${
                   isRegistered || isDeadlinePassed || !isWithinOneWeek
@@ -1483,9 +1478,9 @@ export default function WebinarEvents({ email: emailParam = '' }) {
                   : !isWithinOneWeek
                   ? 'Registration Soon'
                   : 'Register'}
-              </button>
+              </button>}
 
-              <button
+              {!isGuest && <button
                 onClick={() => {
                   if (!currentPhase || !currentPhase.phaseId) {
                     setPopup({
@@ -1509,11 +1504,11 @@ export default function WebinarEvents({ email: emailParam = '' }) {
                 disabled={!isFeedbackEnabled}
               >
                 {isFeedbackEnabled ? 'Feedback' : (feedbackWindow.closed ? 'Feedback Closed' : 'Feedback Open Soon')}
-              </button>
+              </button>}
             </div>
           </div>
         </div>
-        <div className="webinar-card-certificate">
+        {!isGuest && <div className="webinar-card-certificate">
           <button
             onClick={() => handleCertificateDownload(webinar)}
             className={`submit-btn text-sm py-2 px-4 w-full ${
@@ -1523,7 +1518,7 @@ export default function WebinarEvents({ email: emailParam = '' }) {
           >
             {isCertificateEnabled ? 'Certificate' : 'Certificate Not Available'}
           </button>
-        </div>
+        </div>}
       </div>
     );
   };
@@ -1554,6 +1549,15 @@ export default function WebinarEvents({ email: emailParam = '' }) {
             </div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+            {isGuest && (
+              <button
+                type="button"
+                className="submit-btn"
+                onClick={() => navigate('/webinar-guest-dashboard?view=reports')}
+              >
+                View Reports
+              </button>
+            )}
             {/* <label htmlFor="phase-select" style={{ fontWeight: 700, color: '#4b3f91', whiteSpace: 'nowrap' }}>Phase</label> */}
             <select
               id="phase-select"

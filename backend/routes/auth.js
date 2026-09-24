@@ -2,7 +2,44 @@
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 const User = require('../models/User');
+
+const createGuestToken = (email) => {
+  const secret = process.env.GUEST_TOKEN_SECRET;
+  const payload = Buffer.from(JSON.stringify({
+    role: 'guest',
+    email,
+    exp: Date.now() + (8 * 60 * 60 * 1000)
+  })).toString('base64url');
+  const signature = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
+  return `${payload}.${signature}`;
+};
+
+router.post('/guest-login', async (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const password = String(req.body?.password || '');
+  const configuredEmail = String(process.env.GUEST_EMAIL || '').trim().toLowerCase();
+  const configuredPassword = String(process.env.GUEST_PASSWORD || '');
+
+  if (!configuredEmail || !configuredPassword || !process.env.GUEST_TOKEN_SECRET) {
+    return res.status(503).json({ success: false, message: 'Guest login is not configured' });
+  }
+
+  if (password !== configuredPassword) {
+    return res.status(401).json({ success: false, message: 'Invalid guest credentials' });
+  }
+
+  const adminDb = mongoose.connection.useDb('local_Administration');
+  try {
+    const guest = await adminDb.collection('guest_access').findOne({ email, enabled: true });
+    if (!guest) return res.status(403).json({ success: false, message: 'Guest access is disabled or not assigned' });
+    return res.json({ success: true, role: 'guest', email, token: createGuestToken(email) });
+  } catch (error) {
+    console.error('Guest access lookup failed:', error);
+    return res.status(500).json({ success: false, message: 'Guest login unavailable' });
+  }
+});
 
 // Import models for mentorship tables
 const MentorRegistration = require('../models/MentorRegistration');
@@ -480,6 +517,29 @@ router.get('/', async (req, res) => {
     
     const cleanEmail = email.toLowerCase().trim();
     console.log('Clean email:', cleanEmail);
+
+    const adminDb = mongoose.connection.useDb('local_Administration');
+    const guestAccess = await adminDb.collection('guest_access').findOne({ email: cleanEmail, enabled: true });
+    if (guestAccess) {
+      return res.json({
+        success: true,
+        role: 'Guest',
+        userType: 'guest',
+        roleIds: [],
+        roleNames: ['Guest'],
+        isGuest: true,
+        quickActions: [{
+          id: 'guest-dashboard',
+          title: 'Guest Dashboard',
+          description: 'View webinar events and guest reports',
+          icon: 'Calendar',
+          path: '/guest-dashboard',
+          module: 'WEBINAR',
+          roleName: 'Guest',
+          permissions: { canView: true, canCreate: false, canEdit: false, canDelete: false }
+        }]
+      });
+    }
     
     // Get user from database
     console.log('🔍 Looking up user in database...');
@@ -503,8 +563,7 @@ router.get('/', async (req, res) => {
     console.log('User batch:', user.batch);
     console.log('User graduationYear field:', user.graduationYear);
     
-    // Connect to local_Administration database
-    const adminDb = mongoose.connection.useDb("local_Administration");
+    // Use the local_Administration database for assigned roles.
     console.log('🔌 Connected to local_Administration database');
     
     // Check if user exists in assign_roles table
