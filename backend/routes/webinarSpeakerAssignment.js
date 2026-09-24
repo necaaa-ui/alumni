@@ -2,18 +2,36 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const nodemailer = require('nodemailer');
 
 const MAX_SPEAKER_PHOTO_SIZE_BYTES = 200 * 1024;
+const uploadsDirectory = path.join(__dirname, '../uploads');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, '../uploads'));
+    fs.mkdir(uploadsDirectory, { recursive: true }, (error) => cb(error, uploadsDirectory));
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname));
   }
+});
+
+// Serve speaker photos through the API so they work behind the production
+// /alumnimain reverse proxy as well as on localhost.
+router.get('/speaker-photos/:filename', (req, res) => {
+  const filename = path.basename(req.params.filename || '');
+  if (!filename || filename !== req.params.filename) {
+    return res.status(400).json({ error: 'Invalid speaker photo filename' });
+  }
+
+  const photoPath = path.join(uploadsDirectory, filename);
+  if (!fs.existsSync(photoPath) || !fs.statSync(photoPath).isFile()) {
+    return res.status(404).json({ error: 'Speaker photo not found' });
+  }
+
+  return res.sendFile(photoPath);
 });
 const upload = multer({
   storage,
@@ -156,8 +174,9 @@ router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) =
   try {
     const {
       email, designation, companyName, alumniCity, domain, topic,
-      webinarVenue, meetingLink, webinarType, slots, phaseId
-    } = req.body;
+      webinarVenue, meetingLink, webinarType, slots, phaseId,
+      phoneNumber, alumniPhoneNumber, name, department, batch
+    } = req.body || {};
 
     console.log('Received data:', { email, designation, companyName, alumniCity, domain, topic, webinarVenue, meetingLink, webinarType, slots });
 
@@ -195,7 +214,7 @@ router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) =
       : 'In Person';
 
     // Validate required fields
-    const normalizedPhoneNumber = (phoneNumber || alumniPhoneNumber || '').trim();
+    const normalizedPhoneNumber = String(phoneNumber || alumniPhoneNumber || '').trim();
 
     if (!email || !designation || !companyName || !normalizedPhoneNumber || !alumniCity || !domain || !topic || !webinarVenue || !speakerPhoto) {
       return res.status(400).json({ error: 'All required fields must be provided' });
@@ -368,11 +387,12 @@ if (!speakerBatch) {
     // Create speaker
     const speakerData = {
       email,
-      name,
-      department: department || '',
-      batch: batch || '',
+      name: speakerName,
+      department: speakerDepartment,
+      batch: speakerBatch,
       designation,
       companyName,
+      phoneNumber: normalizedPhoneNumber,
       speakerPhoto,
       domain,
       topic,
