@@ -6,7 +6,7 @@ import Popup from './Popup';
 
 // Add API base URL
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
-const MAX_SPEAKER_PHOTO_SIZE_BYTES = 100 * 1024;
+const MAX_SPEAKER_PHOTO_SIZE_BYTES = 50 * 1024;
 
 const typeOptions = [
   { value: "Full Stack Development", label: "FULL STACK DEVELOPMENT" },
@@ -280,7 +280,7 @@ useEffect(() => {
 
     if (name === 'speakerPhoto' && newValue) {
       if (newValue.size > MAX_SPEAKER_PHOTO_SIZE_BYTES) {
-        setErrors(prev => ({ ...prev, speakerPhoto: 'Speaker photo must be 100 KB or less' }));
+        setErrors(prev => ({ ...prev, speakerPhoto: 'Speaker photo must be 50 KB or less' }));
         e.target.value = '';
         return;
       }
@@ -408,7 +408,7 @@ useEffect(() => {
       if (!firstErrorField) firstErrorField = 'speakerPhoto';
     } else {
       if (formData.speakerPhoto.size > MAX_SPEAKER_PHOTO_SIZE_BYTES) {
-        setErrors(prev => ({ ...prev, speakerPhoto: "Speaker photo must be 100 KB or less" }));
+        setErrors(prev => ({ ...prev, speakerPhoto: "Speaker photo must be 50 KB or less" }));
         hasErrors = true;
         if (!firstErrorField) firstErrorField = 'speakerPhoto';
       } else {
@@ -663,7 +663,7 @@ useEffect(() => {
               <div className="grid grid-cols-1 gap-6 mt-2">
                 <div className="form-group">
                   <label className="field-label">
-                    <Upload className="field-icon" /> Speaker Photo <span className="required">*</span>
+                    <Upload className="field-icon" /> Speaker Photo (max 50 KB) <span className="required">*</span>
                   </label>
                   <input type="file" name="speakerPhoto" id="speaker-photo-upload" accept="image/*" className="input-field hidden" onChange={handleChange} />
                   <label

@@ -97,6 +97,10 @@ export default function WebinarPoster({
   };
 
   const resolvedAlumniPhoto = resolveImageUrl(alumniPhoto);
+  const getLegacyPhotoUrl = (value) => {
+    const filename = String(value || '').split('/').filter(Boolean).pop();
+    return filename ? `${API_BASE_URL}/uploads/${encodeURIComponent(filename)}` : null;
+  };
   const photoInitials = (alumniName || 'ALUMNI')
     .split(' ')
     .filter(Boolean)
@@ -217,7 +221,14 @@ export default function WebinarPoster({
             src={alumniPhoto}
             alt="Alumni"
             crossOrigin="anonymous"
-            onError={(event) => { event.currentTarget.style.display = 'none'; }}
+            onError={(event) => {
+              const fallbackUrl = getLegacyPhotoUrl(alumniPhoto);
+              if (fallbackUrl && event.currentTarget.src !== fallbackUrl) {
+                event.currentTarget.src = fallbackUrl;
+                return;
+              }
+              event.currentTarget.style.display = 'none';
+            }}
             className="absolute inset-0 w-full h-full rounded-full object-cover"
           />
           )}

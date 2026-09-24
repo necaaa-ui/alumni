@@ -1,22 +1,24 @@
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
 const router = express.Router();
 
-const MAX_SPEAKER_PHOTO_SIZE_BYTES = 200 * 1024;
-const speakerPhotoStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, '../uploads')),
-  filename: (req, file, cb) => cb(null, `${Date.now()}${path.extname(file.originalname)}`)
-});
+const MAX_SPEAKER_PHOTO_SIZE_BYTES = 50 * 1024;
 const uploadSpeakerPhoto = multer({
-  storage: speakerPhotoStorage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: MAX_SPEAKER_PHOTO_SIZE_BYTES },
   fileFilter: (req, file, cb) => cb(null, file.mimetype.startsWith('image/'))
+});
+const handleSpeakerPhotoUpload = (req, res, next) => uploadSpeakerPhoto.single('speakerPhoto')(req, res, (error) => {
+  if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: 'Speaker photo must be 50 KB or smaller' });
+  }
+  if (error) return res.status(400).json({ error: error.message || 'Invalid speaker photo' });
+  return next();
 });
 
 // Update webinar main schedule fields (topic/domain/webinarDate/time/venue/meetingLink/alumniCity)
 // and optionally speaker fields.
-router.put('/webinars/:webinarId/main', uploadSpeakerPhoto.single('speakerPhoto'), async (req, res) => {
+router.put('/webinars/:webinarId/main', handleSpeakerPhotoUpload, async (req, res) => {
   try {
     const { webinarId } = req.params;
     if (!webinarId) return res.status(400).json({ error: 'webinarId is required' });
@@ -105,7 +107,9 @@ router.put('/webinars/:webinarId/main', uploadSpeakerPhoto.single('speakerPhoto'
       if (speaker.companyName !== undefined) speakerUpdate.companyName = speaker.companyName;
       if (speaker.department !== undefined) speakerUpdate.department = speaker.department;
       if (speaker.batch !== undefined) speakerUpdate.batch = speaker.batch;
-      if (req.file) speakerUpdate.speakerPhoto = req.file.filename;
+      if (req.file) {
+        speakerUpdate.speakerPhoto = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+      }
 
       await Speaker.findByIdAndUpdate(webinarDoc.speaker, speakerUpdate, { new: true });
     }

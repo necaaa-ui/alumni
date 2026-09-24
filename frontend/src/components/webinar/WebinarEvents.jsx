@@ -171,7 +171,7 @@ const getDerivedWebinarStatus = (webinar) => {
         return { key: 'planned', label: 'PLANNED' };
       }
 
-      if (isPastWebinar && registeredCount > 0 && feedbackComplete && hasUploads) {
+      if (isPastWebinar && feedbackComplete && hasUploads) {
         return { key: 'completed', label: 'COMPLETED' };
       }
 
@@ -179,7 +179,7 @@ const getDerivedWebinarStatus = (webinar) => {
         return { key: 'feedback-to-be-filled', label: 'FEEDBACK TO BE FILLED' };
       }
 
-      if (isPastWebinar && registeredCount > 0 && feedbackComplete && !hasUploads) {
+      if (isPastWebinar && feedbackComplete && !hasUploads) {
         return { key: 'in-progress', label: 'IN PROGRESS' };
       }
 

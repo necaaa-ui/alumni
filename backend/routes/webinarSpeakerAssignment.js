@@ -5,18 +5,11 @@ const path = require('path');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
 
-const MAX_SPEAKER_PHOTO_SIZE_BYTES = 200 * 1024;
+const MAX_SPEAKER_PHOTO_SIZE_BYTES = 50 * 1024;
 const uploadsDirectory = path.join(__dirname, '../uploads');
 
 // Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    fs.mkdir(uploadsDirectory, { recursive: true }, (error) => cb(error, uploadsDirectory));
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
-});
+const storage = multer.memoryStorage();
 
 // Serve speaker photos through the API so they work behind the production
 // /alumnimain reverse proxy as well as on localhost.
@@ -38,6 +31,13 @@ const upload = multer({
   limits: {
     fileSize: MAX_SPEAKER_PHOTO_SIZE_BYTES
   }
+});
+const uploadSpeakerPhoto = (req, res, next) => upload.single('speakerPhoto')(req, res, (error) => {
+  if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({ error: 'Speaker photo must be 50 KB or smaller' });
+  }
+  if (error) return res.status(400).json({ error: error.message || 'Invalid speaker photo' });
+  return next();
 });
 
 // GET route to get member by email
@@ -170,7 +170,7 @@ router.get('/member-by-email', async (req, res) => {
 });
 
 // POST route to assign speaker
-router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) => {
+router.post('/assign-speaker', uploadSpeakerPhoto, async (req, res) => {
   try {
     const {
       email, designation, companyName, alumniCity, domain, topic,
@@ -180,7 +180,9 @@ router.post('/assign-speaker', upload.single('speakerPhoto'), async (req, res) =
 
     console.log('Received data:', { email, designation, companyName, alumniCity, domain, topic, webinarVenue, meetingLink, webinarType, slots });
 
-    const speakerPhoto = req.file ? req.file.filename : null;
+    const speakerPhoto = req.file
+      ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`
+      : null;
     console.log('Speaker photo:', speakerPhoto);
 
     // Parse slots

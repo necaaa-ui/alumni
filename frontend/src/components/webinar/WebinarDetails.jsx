@@ -15,6 +15,7 @@ const isLocalDev = typeof window !== 'undefined' && ['localhost', '127.0.0.1'].i
 const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL || (isLocalDev ? 'http://localhost:5000' : '/alumnimain')
 ).replace(/\/$/, '');
+const MAX_SPEAKER_PHOTO_SIZE_BYTES = 50 * 1024;
 
 const getTodayDateInputValue = () => {
   const today = new Date();
@@ -460,9 +461,12 @@ export default function WebinarDetails() {
                   venue: webinar.venue || '',
                   meetingLink: webinar.meetingLink || '',
                   alumniCity: webinar.alumniCity || '',
-                  status: ['cancelled', 'postponed'].includes(String(webinar.status || '').trim().toLowerCase())
-                    ? String(webinar.status).trim().toLowerCase()
-                    : '',
+                  status: (() => {
+                    const normalizedStatus = String(webinar.status || '').trim().toLowerCase();
+                    if (['cancelled', 'deterred', 'deferred', 'cancelled / deterred', 'cancelled / deferred'].includes(normalizedStatus)) return 'cancelled';
+                    if (normalizedStatus === 'postponed') return 'postponed';
+                    return '';
+                  })(),
                   speaker: {
                     name: webinar.speaker?.name || '',
                     email: webinar.speaker?.email || '',
@@ -733,8 +737,8 @@ export default function WebinarDetails() {
                         className="input-field"
                         onChange={(event) => {
                           const file = event.target.files?.[0] || null;
-                          if (file && file.size > 200 * 1024) {
-                            setPopup({ message: 'Speaker photo must be 200 KB or smaller.', type: 'error' });
+                          if (file && file.size > MAX_SPEAKER_PHOTO_SIZE_BYTES) {
+                            setPopup({ message: 'Speaker photo must be 50 KB or smaller.', type: 'error' });
                             event.target.value = '';
                             return;
                           }
@@ -742,7 +746,7 @@ export default function WebinarDetails() {
                           if (file) setSpeakerPhotoPreview(URL.createObjectURL(file));
                         }}
                       />
-                      <p style={{ marginTop: '4px', color: '#6b7280', fontSize: '0.75rem' }}>Choose a new JPG, PNG, or WEBP image up to 200 KB. Leave this empty to keep the current photo.</p>
+                      <p style={{ marginTop: '4px', color: '#6b7280', fontSize: '0.75rem' }}>Choose a new JPG, PNG, or WEBP image up to 50 KB. Leave this empty to keep the current photo.</p>
                     </div>
                   </div>
                 </div>
@@ -762,6 +766,11 @@ export default function WebinarDetails() {
 
                       if (!editForm.webinarDate || editForm.webinarDate < minimumWebinarDate) {
                         setPopup({ message: 'Webinar date must be today or a future date.', type: 'error' });
+                        return;
+                      }
+
+                      if (speakerPhotoFile && speakerPhotoFile.size > MAX_SPEAKER_PHOTO_SIZE_BYTES) {
+                        setPopup({ message: 'Speaker photo must be 50 KB or smaller.', type: 'error' });
                         return;
                       }
 
