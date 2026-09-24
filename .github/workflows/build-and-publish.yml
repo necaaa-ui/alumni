@@ -6,6 +6,7 @@ on:
       - closed
     branches:
       - refined
+  workflow_dispatch:
 
 jobs:
   publish:
@@ -49,4 +50,16 @@ jobs:
           git add .
           git commit -m "Latest web code" || echo "No changes"
           git push "https://x-access-token:${{ secrets.COMPILED_REPO_TOKEN }}@github.com/necaaa-ui/alumni-compiled-repo.git" HEAD:main
+
+      - name: Trigger backend deployment
+        env:
+          BACKEND_DEPLOY_HOOK: ${{ secrets.BACKEND_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$BACKEND_DEPLOY_HOOK" ]; then
+            echo "::error::Add BACKEND_DEPLOY_HOOK in repository Actions secrets to enable backend deployment."
+            exit 1
+          fi
+
+          curl --fail-with-body --silent --show-error \
+            --request POST "$BACKEND_DEPLOY_HOOK"
 
