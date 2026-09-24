@@ -345,6 +345,12 @@ app.get('/api/webinars', async (req, res) => {
           (completedDoc?.signedReport && String(completedDoc.signedReport).length > 0) ||
           (Array.isArray(completedDoc?.eventImages) && completedDoc.eventImages.length > 0)
         );
+        // Attendance sheet and signed report are required to finish webinar
+        // uploads. Event images are optional in the completion form.
+        const uploadsComplete = Boolean(
+          completedDoc?.attendanceSheet && String(completedDoc.attendanceSheet).length > 0 &&
+          completedDoc?.signedReport && String(completedDoc.signedReport).length > 0
+        );
         const webinarObj = webinar.toObject();
         // Map domain to full name for display
         webinarObj.domain = domainMappings[webinarObj.domain] || webinarObj.domain;
@@ -353,7 +359,7 @@ app.get('/api/webinars', async (req, res) => {
           registeredCount: registrationCount,
           feedbackCount,
           hasUploads,
-          uploadsComplete: hasUploads
+          uploadsComplete
         };
       })
     );

@@ -167,6 +167,19 @@ const getDerivedWebinarStatus = (webinar) => {
       }
 
       if (now >= webinarEnd) {
+        const registrationCount = Math.max(0, Number(webinar.registeredCount ?? webinar.registrationCount ?? 0));
+        const feedbackCount = Math.max(0, Number(webinar.feedbackCount || 0));
+        const feedbackComplete = feedbackCount >= Math.ceil(registrationCount / 2);
+        const uploadsComplete = Boolean(webinar.uploadsComplete);
+
+        if (!feedbackComplete) {
+          return { key: 'feedback-to-be-filled', label: 'FEEDBACK YET TO BE FILLED' };
+        }
+
+        if (!uploadsComplete) {
+          return { key: 'in-progress', label: 'IN PROGRESS' };
+        }
+
         return { key: 'completed', label: 'COMPLETED' };
       }
 
@@ -989,6 +1002,7 @@ export default function WebinarEvents({ email: emailParam = '', guestMode = fals
             year: 'numeric'
           }) : 'TBD',
           registered: Number(webinar.registeredCount || 0),
+          registrationCount: Number(webinar.registeredCount || 0),
           attendedCount: Number(webinar.attendedCount || 0),
           status: derivedStatus.label,
           statusKey: derivedStatus.key,
@@ -1345,13 +1359,9 @@ export default function WebinarEvents({ email: emailParam = '', guestMode = fals
     const canViewStatus = isAdmin || isStudentCoordinator || isGuest;
     const isOnlineLink = Boolean(webinar.joinLink);
     const rawStatus = getDerivedWebinarStatus(webinar);
-    const derivedStatus = isGuest
-      ? (rawStatus.key === 'completed'
-        ? rawStatus
-        : rawStatus.key === 'planned'
-          ? rawStatus
-          : { key: 'in-progress', label: 'IN PROGRESS' })
-      : rawStatus;
+    // The status badge reflects the saved manual override (Deterred or
+    // Postponed) and the date-derived states for every viewer, including guests.
+    const derivedStatus = rawStatus;
     const statusKey = getStatusCssKey(derivedStatus.key);
     const statusLabel = derivedStatus.label;
 
